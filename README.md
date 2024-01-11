@@ -3,7 +3,7 @@ An addon module for portapack to add extra sensors to it for more fun.
 
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
 
-### Features: (will be)Features: (will be)
+### Features: (will be)
 
 - **GPS**
   - See yourself in the maps, to know the relative positions. Great while hunting weather balloons.
