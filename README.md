@@ -19,6 +19,8 @@ An addon module for portapack to add extra sensors to it for more fun.
   - Remote controller from a phone.
   - File exchange with phone.
   - Share sensor data with the phone too, for more advanced usage.
+- **IR blaster**
+  - To add IR remote functions to PP.
 
 
 ### Compatible modules:
