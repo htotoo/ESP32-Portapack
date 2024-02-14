@@ -17,9 +17,7 @@ An addon module for portapack to add extra sensors to it for more fun.
   - Mark the location of the signals you saw.
   - Help with the Foxhunt (for the Foxhunt app, that is under development)
 
-- **Compass**
-  - To see where the signal comes from while using a directional antenna. (eg for Foxhunt)
-  - Helps find satellites.
+
 
 ### Features not yet ready: 
 
@@ -38,7 +36,9 @@ An addon module for portapack to add extra sensors to it for more fun.
 
 - **IR blaster**
   - To add IR remote functions to PP.
-
+- **Compass**
+  - To see where the signal comes from while using a directional antenna. (eg for Foxhunt)
+  - Helps find satellites.
 
 ### Compatible modules:
 - ESP32S3 (there are files for S2, but recommend the S3 edition!)
