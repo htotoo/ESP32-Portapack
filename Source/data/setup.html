@@ -1,0 +1,48 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>ESP32PP Setup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+    <style>
+        body {
+            box-sizing: border-box;
+            background-color: #120707;
+            color: white;
+            margin: 0;
+            padding: 3px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>ESP32 PP Setup</h1>
+    <form method="post">
+        <p>HostName:
+            <input type="text" maxlength="60" name="wifiHostName" value="%s" /><br />
+        </p>
+        <p>Wifi AP<br />
+            SSID: <input type="text" maxlength="60" name="wifiAPSSID" value="%s" /><br />
+            Pass: <input type="text" maxlength="60" name="wifiAPPASS" value="%s" />
+        </p>
+        <p>Wifi STA<br />
+            SSID: <input type="text" maxlength="60" name="wifiStaSSID" value="%s" /><br />
+            Pass: <input type="text" maxlength="60" name="wifiStaPASS" value="%s" />
+        </p>
+        <input type="submit" name="submit" value="Save" />&nbsp; &nbsp; <a href="/">Cancel</a>
+    </form>
+    <a href="/ota.html">OTA update ESP</a>
+</body>
+
+</html>

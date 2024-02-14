@@ -1,0 +1,419 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>ESP32PP v0.1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            box-sizing: border-box;
+            background-color: #120707;
+            color: white;
+            margin: 0;
+            padding: 3px;
+        }
+
+        h1,
+        h2 {
+            font-weight: bold;
+        }
+
+        .log {
+            background-color: black;
+            width: 99%;
+        }
+
+        .devremote {
+            width: 270px;
+            display: block;
+        }
+
+        .btnControl {
+            box-shadow: none;
+            border-radius: 10px;
+            padding: 0;
+            margin: 10px;
+            overflow: hidden;
+            width: 65px;
+            height: 65px;
+            display: inline;
+        }
+
+        .btnLine {
+            display: block;
+            text-align: center;
+        }
+
+        .greenbtn {
+            background-color: #00a96f;
+        }
+
+        .redbtn {
+            background-color: #ef4c53;
+        }
+
+        .yellowbtn {
+            background-color: #e0a700;
+        }
+
+        .bluebtn {
+            background-color: #00b3f0;
+        }
+
+        .management {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 10px;
+        }
+
+        .screenholder {
+            display: block;
+            padding: 5px;
+        }
+
+        #screen {
+            width: 240px;
+            height: 320px;
+            box-shadow: 0px 0px 17px -3px rgba(255, 255, 255, 0.75);
+        }
+
+        #connState,
+        #connStatePP {
+            display: inline;
+        }
+
+        .setupicon {
+            float: right;
+            text-align: right;
+            font-size: 30px;
+        }
+
+        .setupicon a {
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="setupicon"><a href="setup.html">&#9881;</a></div>
+
+    <h1>ESP32 PP v0.1</h1>
+    <div id="connState">WS Connecting...</div>
+    <div id="connStatePP">PP not connected to ESP</div>
+    <div class="management">
+        <div class="screenholder">
+            <canvas id="screen" height="320" width="240">No gui support</canvas>
+            <br />
+            <input type="checkbox" id="screenRefresh" name="autoScreenRefresh" checked />
+            <label for="screenRefresh">Auto refresh</label><br />
+            <button id="bntRefresh" class="greenbtn" onclick="refreshScreen()">Refresh</button>
+        </div>
+        <div class="devremote">
+            <div class="btnLine">
+                <div class="btnControl">&nbsp;</div>
+                <button id="btnCtrUp" class="btnControl greenbtn" onclick="sendButton(4)">&uarr;</button>
+                <div class="btnControl">&nbsp;</div>
+            </div>
+            <div class="btnLine">
+                <button id="btnCtrLeft" class="btnControl greenbtn" onclick="sendButton(2)">&larr;</button>
+                <button id="btnCtrEnter" class="btnControl bluebtn" onclick="sendButton(5)">O</button>
+                <button id="btnCtrRight" class="btnControl greenbtn" onclick="sendButton(1)">&rarr;</button>
+            </div>
+            <div class="btnLine">
+                <button id="btnCtrRotLeft" class="btnControl greenbtn" onclick="sendButton(8)">&#8635;</button>
+                <button id="btnCtrDown" class="btnControl greenbtn" onclick="sendButton(3)">&darr;</button>
+                <button id="btnCtrRotRight" class="btnControl greenbtn" onclick="sendButton(7)">&#8634;</button>
+            </div>
+            <div class="btnLine">
+                <button id="btnCtrDFU" class="btnControl redbtn" onclick="sendButton(6)">DFU</button>
+                <button id="btnCtrRST" class="btnControl redbtn" onclick="sendReboot()">RESET</button>
+            </div>
+        </div>
+        <div class="devdatas">
+            <div id="devTemp">Temp: ?</div>
+            <div id="devGpsLat">Lat: ?</div>
+            <div id="devGpsLon">Lon: ?</div>
+            <div id="devHead">Heading: ?</div>
+            <div id="devGpsSats">Sats: ?</div>
+            <button onclick="getGPSPosition();" id="btnGps">&#128204;</button>
+        </div>
+    </div>
+    <div id="manualcommand">
+        <input type="text" id="manualtxt" /><button onclick="manualSend()" id="btnManualSend">Send</button>
+        <pre id="log"></pre>
+    </div>
+
+    <script>
+        const PROMPT = "ch> ";
+        var respWaiting = PROMPT;
+        var respCallBack = null;
+        var enableSend = false; //keep track if sending is allowed or not
+        var gateway = `ws://${window.location.hostname}/ws`;
+        var websocket;
+        var respLines = []; //resp lines list.
+        var respLastLine = ""; //last line of resp
+        var preventSrenneRefresh = false;
+        var gpsQueryInProgress = false;
+        window.addEventListener('load', onLoad);
+
+        function enadisaControls(ena) {
+            enableSend = ena;
+            document.getElementById("btnCtrUp").disabled = !ena;
+            document.getElementById("btnCtrLeft").disabled = !ena;
+            document.getElementById("btnCtrEnter").disabled = !ena;
+            document.getElementById("btnCtrRight").disabled = !ena;
+            document.getElementById("btnCtrRotLeft").disabled = !ena;
+            document.getElementById("btnCtrDown").disabled = !ena;
+            document.getElementById("btnCtrRotRight").disabled = !ena;
+            document.getElementById("btnCtrDFU").disabled = !ena;
+            document.getElementById("btnCtrRST").disabled = !ena;
+            document.getElementById("bntRefresh").disabled = !ena;
+            document.getElementById("btnManualSend").disabled = !ena;
+            document.getElementById("btnGps").disabled = !ena;
+        }
+
+        function log(data) {
+            if (!data.endsWith("\r\n")) { data += "\r\n"; }
+            var logc = document.getElementById("log")
+            logc.innerHTML = data + logc.innerHTML;
+            if (logc.innerHTML.length > 2048) {
+                logc.innerHTML = logc.innerHTML.substring(0, 2048);
+            }
+        }
+
+        function initWebSocket() {
+            log("WS Connecting...");
+            websocket = new WebSocket(gateway);
+            websocket.onopen = onOpen;
+            websocket.onclose = onClose;
+            websocket.onmessage = onMessage;
+        }
+        function onOpen(event) {
+            log("WS Connected");
+            document.getElementById("connState").innerHTML = "WS Connected.";
+            websocket.send("#$##$$#GETUSBSTATE\r\n");
+        }
+
+        function onClose(event) {
+            enadisaControls(false);
+            log("WS Closed");
+            document.getElementById("connState").innerHTML = "WS Reconnecting...";
+            setTimeout(initWebSocket, 1000);
+        }
+        function gotGps(data) {
+            document.getElementById("devTemp").innerHTML = "Temp: " + data.temp + " &#8451;";
+            if (data.lat != 0 && data.lon != 0) {
+                document.getElementById("devGpsLat").innerHTML = "Lat: " + data.lat;
+                document.getElementById("devGpsLon").innerHTML = "Lon: " + data.lon;
+            }
+            document.getElementById("devHead").innerHTML = "Heading: " + data.head + "&#176;";
+            document.getElementById("devGpsSats").innerHTML = "Sats: " + data.siu + "/" + data.siv;
+        }
+
+        //when all the required data in
+        function onDataArrived() {
+            log("Command executed");
+            try {
+                if (respCallBack) respCallBack();
+            } catch (err) { console.log(err); }
+
+            respCallBack = null;
+            respLines = [];
+            enadisaControls(true);
+            if (!preventSrenneRefresh) autoScreenRefresh();
+            else preventSrenneRefresh = false;
+        }
+        //one line received
+        function onMessageLine(msg) {
+            try {
+                if (msg.startsWith("#$##$$#")) {
+                    if (msg == "#$##$$#USB_DC\r\n") {
+                        log("PP Disconnected");
+                        enadisaControls(false);
+                        const canvas = document.getElementById("screen");
+                        const ctx = canvas.getContext("2d");
+                        ctx.fillStyle = "#000";
+                        ctx.fillRect(0, 0, 240, 320);
+                        document.getElementById("connStatePP").innerHTML = "PP NOT connected to ESP";
+                        return;
+                    }
+                    if (msg == "#$##$$#USB_CC\r\n") {
+                        log("PP Connected");
+                        enadisaControls(true);
+                        document.getElementById("connStatePP").innerHTML = "PP connected to ESP";
+                        autoScreenRefresh();
+                        return;
+                    }
+                    if (msg.startsWith("#$##$$#GOTGPS")) {
+                        var jsStr = msg.substring(13);
+                        var gpsdata = JSON.parse(jsStr);
+                        gotGps(gpsdata);
+                        return;
+                    }
+                }
+                log("> " + msg + "\r\n");
+            } catch (err) { console.log(err); };
+        }
+        //any ws message
+        function onMessage(event) {
+            var str = String(event.data);
+            for (let i = 0; i < str.length; i++) {
+                var resetline = false;
+                respLastLine += str[i];
+                if (str[i] == "\n") {
+                    respLines.push(respLastLine);
+                    onMessageLine(respLastLine);
+                    resetline = true;
+                }
+                if (respLastLine.endsWith(respWaiting)) {
+                    onDataArrived();
+                }
+                if (respLastLine.endsWith(PROMPT)) {//this counts too
+                    onMessageLine(respLastLine);
+                    resetline = true;
+                }
+                if (resetline) respLastLine = "";
+            }
+        }
+
+        function sendMessage(data) {
+            try {
+                log("< " + data)
+                websocket.send(data);
+            } catch (err) { console.log(err); }
+        }
+
+        function gotCursorPosition(canvas, event) {
+            if (!enableSend) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor(event.clientX - rect.left);
+            const y = Math.floor(event.clientY - rect.top);
+            sendTouch(x, y);
+        }
+
+        function onLoad(event) {
+            initWebSocket();
+            enadisaControls(false);
+            var canvas = document.getElementById("screen");
+            canvas.addEventListener('mousedown', function (e) {
+                gotCursorPosition(canvas, e);
+            })
+        }
+        function screenUpdated() {
+            const canvas = document.getElementById("screen");
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, 240, 320);
+            let y = -1;
+            for (let i = 0; i < respLines.length; i++) {
+                if (respLines[i].length < 230) continue;
+                y++;
+                for (let x = 0; x < respLines[i].length; x++) {
+                    if (x > 240) break;
+                    try {
+                        let by = respLines[i].charCodeAt(x) - 32;
+                        let r = ((by >> 4) & 3) << 6;
+                        let g = ((by >> 2) & 3) << 6;
+                        let b = (by & 3) << 6;
+                        ctx.fillStyle = `rgb(${r},${g},${b})`;
+                        ctx?.fillRect(x, y, 1, 1);
+                    }
+                    catch (err) { console.log(err); }
+                }
+            }
+        }
+
+        function sendGps(lat, lon, alt) {
+            const altitude = alt !== null && alt !== undefined ? alt : 0;
+            var tosend = "gotgps " + String(lat) + " " + String(lon) + " " + String(altitude) + "\r\n";
+            respWaiting = PROMPT;
+            respLines = [];
+            enadisaControls(false);
+            preventSrenneRefresh = true;
+            sendMessage(tosend);
+        }
+        function sendButton(btn) {
+            var tosend = "button " + String(btn) + "\r\n";
+            respWaiting = PROMPT;
+            respLines = [];
+            enadisaControls(false);
+            sendMessage(tosend);
+        }
+        function sendTouch(x, y) {
+            var tosend = "touch " + String(x) + " " + String(y) + "\r\n";
+            respWaiting = PROMPT;
+            respLines = [];
+            enadisaControls(false);
+            sendMessage(tosend);
+        }
+        function sendReboot() {
+            var tosend = "reboot\r\n";
+            respWaiting = PROMPT;
+            respLines = [];
+            enadisaControls(false);
+            preventSrenneRefresh = true;
+            sendMessage(tosend);
+        }
+        function autoScreenRefresh() {
+            var checkbox = document.getElementById("screenRefresh");
+            if (checkbox.checked) {
+                refreshScreen();
+            }
+        }
+        function refreshScreen() {
+            var tosend = "screenframeshort\r\n";
+            respWaiting = PROMPT;
+            respLines = [];
+            enadisaControls(false);
+            preventSrenneRefresh = true;
+            respCallBack = screenUpdated;
+            sendMessage(tosend);
+        }
+        function manualSend() {
+            var tosend = document.getElementById("manualtxt").value;
+            if (!tosend.endsWith("\r\n")) { tosend += "\r\n"; }
+            respWaiting = PROMPT;
+            respLines = [];
+            enadisaControls(false);
+            sendMessage(tosend);
+            document.getElementById("manualtxt").value = "";
+        }
+
+        function getGPSPosition() {
+            if (gpsQueryInProgress) return;
+            if (navigator.geolocation) {
+                gpsQueryInProgress = true;
+                navigator.geolocation.getCurrentPosition(
+                    function (position) {
+                        gpsQueryInProgress = false;
+                        document.getElementById("devGpsLat").innerHTML = "Lat: " + position.coords.latitude;
+                        document.getElementById("devGpsLon").innerHTML = "Lon: " + position.coords.longitude;
+                        sendGps(position.coords.latitude, position.coords.longitude, position.coords.altitude)
+                    },
+                    function (error) {
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                log("User denied the request for Geolocation.");
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                log("Location information is unavailable.");
+                                break;
+                            case error.TIMEOUT:
+                                log("The request to get user location timed out.");
+                                break;
+                            default:
+                                log("An unknown error occurred.");
+                                break;
+                        }
+                        gpsQueryInProgress = false;
+                    }
+                );
+            } else {
+                log("Geolocation is not supported by this browser.");
+            }
+        }
+
+    </script>
+</body>
+
+</html>
