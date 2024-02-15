@@ -29,12 +29,14 @@ static const char *TAG = "ESP32PP";
 #include "usbpart.h"
 #include "wifim.h"
 
-#include "hmc5883l.h"
+#include "orientation.h"
 
 bool hcmInited = false;
 
 float heading = 0.0;
+float temperatureEsp = 0.0;
 float temperature = 0.0;
+uint8_t humidity = 0;
 gps_t gpsdata;
 
 static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
@@ -129,40 +131,32 @@ void app_main(void)
   ESP_LOGI(TAG, "Enable temperature sensor");
   ESP_ERROR_CHECK(temperature_sensor_enable(temp_sensor));
   i2cdevInit(I2C0_DEV);
-  hmc5883lInit(I2C0_DEV);
-  if (hmc5883lTestConnection())
-  {
-    hmc5883lSetMode(0);
-    ESP_LOGI(TAG, "hmc5883lTestConnection OK");
-    hcmInited = true;
-  }
-  else
-  {
-    ESP_LOGI(TAG, "hmc5883lTestConnection FAIL");
-  }
+  init_orientation();
+
   while (true)
   {
-    ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperature));
-    if (hcmInited)
-      heading = hmc5883lGetHeadingX();
+    ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp));
+    heading = get_heading_degrees();
     if (!getInCommand())
     {
-      char buff[400] = {0};
-      sprintf(buff,
-              "#$##$$#GOTGPS"
-              "{\"year\":%d,\"month\":%d,\"day\":%d,\"hour\":%d,\"minute\":%d,"
-              "\"sec\":%d,"
-              "\"siu\":%d,"
-              "\"siv\":%d,"
-              "\"temp\":%.01f,"
-              "\"head\":%.01f,"
-              "\"lat\":%.06f,"
-              "\"lon\":%.06f,"
-              "\"alt\":%.02f,"
-              "\"speed\":%f}\r\n",
-              gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour + TIME_ZONE, gpsdata.tim.minute, gpsdata.tim.second,
-              gpsdata.sats_in_use, gpsdata.sats_in_view, temperature, heading,
-              gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed);
+      char buff[300] = {0};
+      snprintf(buff, 300,
+               "#$##$$#GOTGPS"
+               "{\"year\":%d,\"month\":%d,\"day\":%d,\"hour\":%d,\"minute\":%d,"
+               "\"sec\":%d,"
+               "\"siu\":%d,"
+               "\"siv\":%d,"
+               "\"tempesp\":%.01f,"
+               "\"temp\":%.01f,"
+               "\"humi\":%d,"
+               "\"head\":%.01f,"
+               "\"lat\":%.06f,"
+               "\"lon\":%.06f,"
+               "\"alt\":%.02f,"
+               "\"speed\":%f}\r\n",
+               gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour + TIME_ZONE, gpsdata.tim.minute, gpsdata.tim.second,
+               gpsdata.sats_in_use, gpsdata.sats_in_view, temperatureEsp, temperature, humidity, heading,
+               gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed);
       ws_sendall((uint8_t *)buff, strlen(buff));
       char gotusb[300];
       if (gpsdata.latitude != 0 || gpsdata.longitude != 0)

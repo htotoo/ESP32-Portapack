@@ -51,8 +51,8 @@ typedef struct
 
 typedef struct
 {
-  const I2cDef *def; //< Definition of the i2c
-  // SemaphoreHandle_t isBusFreeMutex;  //< Mutex to protect buss
+  const I2cDef *def;                //< Definition of the i2c
+  SemaphoreHandle_t isBusFreeMutex; //< Mutex to protect buss
 } I2cDrv;
 
 // Definitions of i2c busses found in c file.

@@ -31,83 +31,34 @@ extern char wifiStaSSID[64];
 extern char wifiStaPASS[64];
 extern char wifiHostName[64];
 
-static char index_html[16000];
-static char setup_html[3000];
-static char ota_html[4000];
 static char setup_html_out[3000];
-
-// load files to ram
-static void initi_web_page_buffer(void)
-{
-  esp_vfs_spiffs_conf_t conf = {.base_path = "/spiffs",
-                                .partition_label = NULL,
-                                .max_files = 5,
-                                .format_if_mount_failed = true};
-  ESP_ERROR_CHECK(esp_vfs_spiffs_register(&conf));
-  memset((void *)index_html, 0, sizeof(index_html));
-  memset((void *)setup_html, 0, sizeof(setup_html));
-  memset((void *)ota_html, 0, sizeof(ota_html));
-  struct stat st;
-  if (stat(INDEX_HTML_PATH, &st))
-  {
-    ESP_LOGE(TAG, "index.html not found");
-    return;
-  }
-  // index.html
-  FILE *fp = fopen(INDEX_HTML_PATH, "r");
-  if (fread(index_html, st.st_size, 1, fp) == 0)
-  {
-    ESP_LOGE(TAG, "fread failed");
-  }
-  fclose(fp);
-
-  // setup.html
-  if (stat(SETUP_HTML_PATH, &st))
-  {
-    ESP_LOGE(TAG, "setup.html not found");
-    return;
-  }
-  fp = fopen(SETUP_HTML_PATH, "r");
-  if (fread(setup_html, st.st_size, 1, fp) == 0)
-  {
-    ESP_LOGE(TAG, "fread failed");
-  }
-  fclose(fp);
-  // ota.html
-  if (stat(OTA_HTML_PATH, &st))
-  {
-    ESP_LOGE(TAG, "ota.html not found");
-    return;
-  }
-  fp = fopen(OTA_HTML_PATH, "r");
-  if (fread(ota_html, st.st_size, 1, fp) == 0)
-  {
-    ESP_LOGE(TAG, "fread failed");
-  }
-  fclose(fp);
-}
+extern const char index_start[] asm("_binary_index_html_start");
+extern const char index_end[] asm("_binary_index_html_end");
+extern const char setup_start[] asm("_binary_setup_html_start");
+extern const char setup_end[] asm("_binary_setup_html_end");
+extern const char ota_start[] asm("_binary_ota_html_start");
+extern const char ota_end[] asm("_binary_ota_html_end");
 
 // root / get handler.
 static esp_err_t get_req_handler(httpd_req_t *req)
 {
-  int response;
-  response = httpd_resp_send(req, index_html, HTTPD_RESP_USE_STRLEN);
+  const uint32_t index_len = index_end - index_start;
+  int response = httpd_resp_send(req, index_start, index_len);
   return response;
 }
 
 /// setup.html get handler
 static esp_err_t get_req_handler_setup(httpd_req_t *req)
 {
-  int response;
-  sprintf(setup_html_out, setup_html, wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS);
-  response = httpd_resp_send(req, setup_html_out, HTTPD_RESP_USE_STRLEN);
+  snprintf(setup_html_out, sizeof(setup_html_out), setup_start, wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS);
+  int response = httpd_resp_send(req, setup_html_out, HTTPD_RESP_USE_STRLEN);
   return response;
 }
 /// setup.html get handler
 static esp_err_t get_req_handler_ota(httpd_req_t *req)
 {
-  int response;
-  response = httpd_resp_send(req, ota_html, HTTPD_RESP_USE_STRLEN);
+  const uint32_t ota_len = ota_end - ota_start;
+  int response = httpd_resp_send(req, ota_start, ota_len);
   return response;
 }
 
@@ -386,6 +337,5 @@ static httpd_handle_t setup_websocket_server(void)
 // start web server, set it up,..
 void init_httpd()
 {
-  initi_web_page_buffer();
   server = setup_websocket_server();
 }

@@ -85,7 +85,7 @@ static void i2cdrvInitBus(I2cDrv *i2c)
   }
 
   // DEBUG_PRINTI(" i2c %d driver install return = %d", i2c->def->i2cPort, err);
-  // i2c->isBusFreeMutex = xSemaphoreCreateMutex();
+  i2c->isBusFreeMutex = xSemaphoreCreateMutex();
   isinit_i2cPort[i2c->def->i2cPort] = true;
 }
 

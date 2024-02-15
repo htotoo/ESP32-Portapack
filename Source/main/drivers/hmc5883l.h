@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include <stdbool.h>
 #include "i2cdev.h"
 
-#define HMC5883L_ADDRESS 0x1E  // this device only has one address
+#define HMC5883L_ADDRESS 0x1E // this device only has one address
 #define HMC5883L_DEFAULT_ADDRESS 0x1E
 
 #define HMC5883L_RA_CONFIG_A 0x00
@@ -97,10 +97,10 @@ THE SOFTWARE.
 #define HMC5883L_STATUS_LOCK_BIT 1
 #define HMC5883L_STATUS_READY_BIT 0
 
-#define HMC5883L_ST_GAIN HMC5883L_GAIN_440  // Gain value during self-test
+#define HMC5883L_ST_GAIN HMC5883L_GAIN_440 // Gain value during self-test
 #define HMC5883L_ST_GAIN_NBR 440
-#define HMC5883L_ST_ERROR 0.2     // Max error
-#define HMC5883L_ST_DELAY_MS 250  // delay in millisec during self test */
+#define HMC5883L_ST_ERROR 0.2    // Max error
+#define HMC5883L_ST_DELAY_MS 250 // delay in millisec during self test */
 #define HMC5883L_ST_X_NORM (int32_t)(1.16 * HMC5883L_ST_GAIN_NBR)
 #define HMC5883L_ST_X_MIN \
   (int32_t)(HMC5883L_ST_X_NORM - (HMC5883L_ST_X_NORM * HMC5883L_ST_ERROR))
@@ -117,13 +117,13 @@ THE SOFTWARE.
 #define HMC5883L_ST_Z_MAX \
   (int32_t)(HMC5883L_ST_Z_NORM + (HMC5883L_ST_Z_NORM * HMC5883L_ST_ERROR))
 
-void hmc5883lInit(I2C_Dev* i2cPort);
+void hmc5883lInit(I2C_Dev *i2cPort);
 bool hmc5883lTestConnection();
 bool hmc5883lSelfTest();
 bool hmc5883lEvaluateSelfTest(int16_t min,
                               int16_t max,
                               int16_t value,
-                              char* string);
+                              char *string);
 
 // CONFIG_A register
 uint8_t hmc5883lGetSampleAveraging();
@@ -142,7 +142,7 @@ uint8_t hmc5883lGetMode();
 void hmc5883lSetMode(uint8_t mode);
 
 // DATA* registers
-void hmc5883lGetHeading(int16_t* x, int16_t* y, int16_t* z);
+void hmc5883lGetHeading(int16_t *x, int16_t *y, int16_t *z);
 int16_t hmc5883lGetHeadingX();
 int16_t hmc5883lGetHeadingY();
 int16_t hmc5883lGetHeadingZ();
