@@ -74,7 +74,7 @@ void app_main(void)
   ESP_ERROR_CHECK(err);
   // load prev settings
   nvs_handle_t nvs_handle;
-  err = nvs_open("storage", NVS_READWRITE, &nvs_handle); // https://github.com/espressif/esp-idf/blob/v5.1.2/examples/storage/nvs_rw_value/main/nvs_value_example_main.c
+  err = nvs_open("wifi", NVS_READWRITE, &nvs_handle); // https://github.com/espressif/esp-idf/blob/v5.1.2/examples/storage/nvs_rw_value/main/nvs_value_example_main.c
   if (err != ESP_OK)
   {
     printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));

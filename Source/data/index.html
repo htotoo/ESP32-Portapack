@@ -60,6 +60,10 @@
             background-color: #00b3f0;
         }
 
+        #mainscreencontent {
+            display: flex;
+        }
+
         .management {
             display: flex;
             flex-wrap: wrap;
@@ -91,6 +95,10 @@
         .setupicon a {
             text-decoration: none;
         }
+
+        #fileList {
+            min-width: 200px;
+        }
     </style>
 </head>
 
@@ -101,45 +109,66 @@
     <div id="connState">WS Connecting...</div>
     <div id="connStatePP">PP not connected to ESP</div>
     <div class="management">
-        <div class="screenholder">
-            <canvas id="screen" height="320" width="240">No gui support</canvas>
+        <div id="filemanager" style="display: none;">
+            Path: <span id="filePath">/</span><br />
+            <select id="fileList" size=20>
+            </select>
             <br />
-            <input type="checkbox" id="screenRefresh" name="autoScreenRefresh" checked />
-            <label for="screenRefresh">Auto refresh</label><br />
-            <button id="bntRefresh" class="greenbtn" onclick="refreshScreen()">Refresh</button>
+            <button class="uicontrols" onclick="cwdup(); return false;">Cd ..</button>
+            <button class="uicontrols" onclick="ls(); return false;">Refresh</button><br />
+            <button class="uicontrols" onclick="fileUpload(); return false;">Upload</button>
+            <button class="uicontrols" onclick="fileDownload(); return false;">Download</button>
+            <button class="uicontrols" onclick="fileFlash(); return false;">Flash</button><br /><br />
+            <button class="uicontrols" onclick="fileManClose(); return false;">Close file manager</button>
         </div>
-        <div class="devremote">
-            <div class="btnLine">
-                <div class="btnControl">&nbsp;</div>
-                <button id="btnCtrUp" class="btnControl greenbtn" onclick="sendButton(4)">&uarr;</button>
-                <div class="btnControl">&nbsp;</div>
+        <div id="mainscreencontent">
+            <div class="screenholder">
+                <canvas id="screen" height="320" width="240">No gui support</canvas>
+                <br />
+                <input type="checkbox" id="screenRefresh" name="autoScreenRefresh" checked />
+                <label for="screenRefresh">Auto refresh</label><br />
+                <button id="bntRefresh" class="greenbtn uicontrols" onclick="refreshScreen()">Refresh</button>
             </div>
-            <div class="btnLine">
-                <button id="btnCtrLeft" class="btnControl greenbtn" onclick="sendButton(2)">&larr;</button>
-                <button id="btnCtrEnter" class="btnControl bluebtn" onclick="sendButton(5)">O</button>
-                <button id="btnCtrRight" class="btnControl greenbtn" onclick="sendButton(1)">&rarr;</button>
+            <div class="devremote">
+                <div class="btnLine">
+                    <div class="btnControl">&nbsp;</div>
+                    <button id="btnCtrUp" class="btnControl greenbtn uicontrols" onclick="sendButton(4)">&uarr;</button>
+                    <div class="btnControl">&nbsp;</div>
+                </div>
+                <div class="btnLine">
+                    <button id="btnCtrLeft" class="btnControl greenbtn uicontrols"
+                        onclick="sendButton(2)">&larr;</button>
+                    <button id="btnCtrEnter" class="btnControl bluebtn uicontrols" onclick="sendButton(5)">O</button>
+                    <button id="btnCtrRight" class="btnControl greenbtn uicontrols"
+                        onclick="sendButton(1)">&rarr;</button>
+                </div>
+                <div class="btnLine">
+                    <button id="btnCtrRotLeft" class="btnControl greenbtn uicontrols"
+                        onclick="sendButton(8)">&#8635;</button>
+                    <button id="btnCtrDown" class="btnControl greenbtn uicontrols"
+                        onclick="sendButton(3)">&darr;</button>
+                    <button id="btnCtrRotRight" class="btnControl greenbtn uicontrols"
+                        onclick="sendButton(7)">&#8634;</button>
+                </div>
+                <div class="btnLine">
+                    <button id="btnCtrDFU" class="btnControl redbtn uicontrols" onclick="sendButton(6)">DFU</button>
+                    <button id="btnCtrRST" class="btnControl redbtn uicontrols" onclick="sendReboot()">RESET</button>
+                </div>
             </div>
-            <div class="btnLine">
-                <button id="btnCtrRotLeft" class="btnControl greenbtn" onclick="sendButton(8)">&#8635;</button>
-                <button id="btnCtrDown" class="btnControl greenbtn" onclick="sendButton(3)">&darr;</button>
-                <button id="btnCtrRotRight" class="btnControl greenbtn" onclick="sendButton(7)">&#8634;</button>
+            <div class="devdatas">
+                <div id="devTemp">Temp: ?</div>
+                <div id="devGpsLat">Lat: ?</div>
+                <div id="devGpsLon">Lon: ?</div>
+                <div id="devHead">Heading: ?</div>
+                <div id="devGpsSats">Sats: ?</div>
+                <button onclick="getGPSPosition();" id="btnGps" class="uicontrols">&#128204;</button>
+                <button class="uicontrols" onclick="fileManOpen(); return false;">Open file manager</button>
             </div>
-            <div class="btnLine">
-                <button id="btnCtrDFU" class="btnControl redbtn" onclick="sendButton(6)">DFU</button>
-                <button id="btnCtrRST" class="btnControl redbtn" onclick="sendReboot()">RESET</button>
-            </div>
-        </div>
-        <div class="devdatas">
-            <div id="devTemp">Temp: ?</div>
-            <div id="devGpsLat">Lat: ?</div>
-            <div id="devGpsLon">Lon: ?</div>
-            <div id="devHead">Heading: ?</div>
-            <div id="devGpsSats">Sats: ?</div>
-            <button onclick="getGPSPosition();" id="btnGps">&#128204;</button>
         </div>
     </div>
     <div id="manualcommand">
-        <input type="text" id="manualtxt" /><button onclick="manualSend()" id="btnManualSend">Send</button>
+        <input type="text" id="manualtxt" /><button onclick="manualSend()" id="btnManualSend"
+            class="uicontrols">Send</button>
         <pre id="log"></pre>
     </div>
 
@@ -148,7 +177,8 @@
         var respWaiting = PROMPT;
         var respCallBack = null;
         var enableSend = false; //keep track if sending is allowed or not
-        var gateway = `ws://${window.location.hostname}/ws`;
+        //var gateway = `ws://${window.location.hostname}/ws`;
+        var gateway = `ws://192.168.4.1/ws`;
         var websocket;
         var respLines = []; //resp lines list.
         var respLastLine = ""; //last line of resp
@@ -158,18 +188,10 @@
 
         function enadisaControls(ena) {
             enableSend = ena;
-            document.getElementById("btnCtrUp").disabled = !ena;
-            document.getElementById("btnCtrLeft").disabled = !ena;
-            document.getElementById("btnCtrEnter").disabled = !ena;
-            document.getElementById("btnCtrRight").disabled = !ena;
-            document.getElementById("btnCtrRotLeft").disabled = !ena;
-            document.getElementById("btnCtrDown").disabled = !ena;
-            document.getElementById("btnCtrRotRight").disabled = !ena;
-            document.getElementById("btnCtrDFU").disabled = !ena;
-            document.getElementById("btnCtrRST").disabled = !ena;
-            document.getElementById("bntRefresh").disabled = !ena;
-            document.getElementById("btnManualSend").disabled = !ena;
-            document.getElementById("btnGps").disabled = !ena;
+            var elementsToDisable = document.querySelectorAll('.uicontrols');
+            elementsToDisable.forEach(function (element) {
+                element.disabled = !ena;
+            });
         }
 
         function log(data) {
@@ -187,7 +209,14 @@
             websocket.onopen = onOpen;
             websocket.onclose = onClose;
             websocket.onmessage = onMessage;
+            websocket.error = onError;
         }
+
+        function onError(event) {
+            log("WS error");
+            console.log(event);
+        }
+
         function onOpen(event) {
             log("WS Connected");
             document.getElementById("connState").innerHTML = "WS Connected.";
@@ -256,23 +285,28 @@
         }
         //any ws message
         function onMessage(event) {
-            var str = String(event.data);
-            for (let i = 0; i < str.length; i++) {
-                var resetline = false;
-                respLastLine += str[i];
-                if (str[i] == "\n") {
-                    respLines.push(respLastLine);
-                    onMessageLine(respLastLine);
-                    resetline = true;
+            try {
+                var str = String(event.data);
+                for (let i = 0; i < str.length; i++) {
+                    var resetline = false;
+                    respLastLine += str[i];
+                    if (str[i] == "\n") {
+                        respLines.push(respLastLine);
+                        onMessageLine(respLastLine);
+                        resetline = true;
+                    }
+                    if (respLastLine.endsWith(respWaiting)) {
+                        onDataArrived();
+                    }
+                    if (respLastLine.endsWith(PROMPT)) {//this counts too
+                        onMessageLine(respLastLine);
+                        resetline = true;
+                    }
+                    if (resetline) respLastLine = "";
                 }
-                if (respLastLine.endsWith(respWaiting)) {
-                    onDataArrived();
-                }
-                if (respLastLine.endsWith(PROMPT)) {//this counts too
-                    onMessageLine(respLastLine);
-                    resetline = true;
-                }
-                if (resetline) respLastLine = "";
+            }
+            catch (err) {
+                console.log(err);
             }
         }
 
@@ -369,6 +403,111 @@
             respCallBack = screenUpdated;
             sendMessage(tosend);
         }
+
+        function fileSelected() {
+            var selectElement = document.getElementById("fileList");
+            var selectedOption = selectElement.options[selectElement.selectedIndex];
+            var selectedValue = selectedOption.value;
+            if (selectedValue == "..") {
+                cwdup();
+                return;
+            }
+            if (selectedValue.endsWith("/")) {
+                var path = document.getElementById("filePath").innerHTML;
+                path += selectedValue;
+                document.getElementById("filePath").innerHTML = path;
+                ls();
+                return;
+            }
+            else {
+                if (!selectedValue.endsWith(".tar") && !selectedValue.endsWith(".bin")) {
+                    fileDownload();
+                }
+                else {
+                    fileFlash();
+                }
+            }
+        }
+
+        function fileDownload() {
+            var path = document.getElementById("filePath").innerHTML;
+            if (!path.endsWith("/") && path.length > 1) path = path + "/";
+            var selectElement = document.getElementById("fileList");
+            var selectedOption = selectElement.options[selectElement.selectedIndex];
+            var selectedValue = selectedOption.value;
+            if (selectedValue.endsWith("/")) {
+                log("Can't download a folder yet.");
+            }
+            else {
+                //start file download
+                alert("NIY"); //todo
+            }
+        }
+
+        function fileUpload() {
+            alert("NIY"); //todo
+        }
+
+        function fileFlash() {
+            var path = document.getElementById("filePath").innerHTML;
+            if (!path.endsWith("/") && path.length > 1) path = path + "/";
+            var selectElement = document.getElementById("fileList");
+            var selectedOption = selectElement.options[selectElement.selectedIndex];
+            var selectedValue = selectedOption.value;
+            if (!selectedValue.endsWith(".tar") && !selectedValue.endsWith(".bin")) {
+                log("Can flash only TAR and BIN files. Selected: " + selectedValue);
+            }
+            else {
+                if (confirm("Really flash " + selectedValue + " ?")) {
+                    alert("NIY"); //todo
+                }
+
+            }
+        }
+
+        function filesLsArrived() {
+            var fl = document.getElementById("fileList");
+            fl.innerHTML = "";
+            var path = document.getElementById("filePath").innerHTML;
+            if (path != "/") {
+                fl.innerHTML += "<option ondblclick='fileSelected(); return false;' value='..'>..</option>";
+            }
+            for (let i = 0; i < respLines.length; i++) {
+                var line = respLines[i].trim();
+                if (line.startsWith("ls ")) continue;
+                if (line.startsWith(PROMPT)) continue;
+                fl.innerHTML += "<option ondblclick='fileSelected(); return false;' value='" + line + "'>" + line + "</option>";
+            }
+        }
+        function ls() {
+            var path = document.getElementById("filePath").innerHTML;
+            if (path.endsWith("/") && path.length > 1) path = path.substring(0, path.length - 1);
+            var tosend = "ls " + path + "\r\n";
+            respWaiting = PROMPT;
+            respLines = [];
+            enadisaControls(false);
+            preventSrenneRefresh = true;
+            respCallBack = filesLsArrived;
+            sendMessage(tosend);
+        }
+
+        function cwdup() {
+            var path = document.getElementById("filePath").innerHTML;
+            if (path.length > 1) {
+                path = path.replace(/\/+$/, ''); // Remove trailing '/'
+
+                // Find the last occurrence of '/'
+                let lastSlashIndex = path.lastIndexOf('/');
+
+                // If '/' is found, remove the last segment
+                if (lastSlashIndex >= 0) {
+                    path = path.substring(0, lastSlashIndex + 1);
+                }
+            }
+            document.getElementById("filePath").innerHTML = path;
+            ls();
+        }
+
         function manualSend() {
             var tosend = document.getElementById("manualtxt").value;
             if (!tosend.endsWith("\r\n")) { tosend += "\r\n"; }
@@ -411,6 +550,19 @@
             } else {
                 log("Geolocation is not supported by this browser.");
             }
+        }
+
+        function fileManClose() {
+            document.getElementById("filemanager").style.display = "none";
+            document.getElementById("mainscreencontent").style.display = "flex";
+            document.getElementById("manualcommand").style.display = "block";
+        }
+        function fileManOpen() {
+            document.getElementById("filemanager").style.display = "block";
+            document.getElementById("mainscreencontent").style.display = "none";
+            document.getElementById("manualcommand").style.display = "none";
+
+            ls();
         }
 
     </script>

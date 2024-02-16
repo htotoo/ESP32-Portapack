@@ -38,7 +38,9 @@ static void event_handler(void *arg,
   {
     ESP_LOGI(TAG, "WIFI_EVENT_STA_DISCONNECTED");
     if (ap_client_num <= 0)
-      esp_wifi_connect(); // only when no ap clients presents
+    {
+      // esp_wifi_connect(); // only when no ap clients presents
+    }
   }
   else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED)
   {
@@ -52,7 +54,9 @@ static void event_handler(void *arg,
     ap_client_num--;
     ESP_LOGI(TAG, "WIFI_EVENT_AP_STADISCONNECTED");
     if (ap_client_num <= 0)
-      esp_wifi_connect();
+    {
+      esp_wifi_connect(); // todo connect later
+    }
   }
 
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
@@ -106,7 +110,7 @@ static bool wifi_apsta()
   wifi_config_t sta_config = {0};
   strcpy((char *)sta_config.sta.ssid, wifiStaSSID);
   strcpy((char *)sta_config.sta.password, wifiStaPASS);
-  sta_config.sta.failure_retry_cnt = 255;
+  sta_config.sta.failure_retry_cnt = 0;
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
   ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
