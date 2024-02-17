@@ -116,7 +116,9 @@
             <br />
             <button class="uicontrols" onclick="cwdup(); return false;">Cd ..</button>
             <button class="uicontrols" onclick="ls(); return false;">Refresh</button><br />
-            <button class="uicontrols" onclick="fileUpload(); return false;">Upload</button>
+            <button class="uicontrols" onclick="fileDelete(); return false;">Delete</button><br />
+            <input class="uicontrols" type="file" id="fileUpfile" />
+            <button class="uicontrols" onclick="fileUpload(); return false;">Upload</button>><br />
             <button class="uicontrols" onclick="fileDownload(); return false;">Download</button>
             <button class="uicontrols" onclick="fileFlash(); return false;">Flash</button><br /><br />
             <button class="uicontrols" onclick="fileManClose(); return false;">Close file manager</button>
@@ -177,12 +179,12 @@
         var respWaiting = PROMPT;
         var respCallBack = null;
         var enableSend = false; //keep track if sending is allowed or not
-        //var gateway = `ws://${window.location.hostname}/ws`;
-        var gateway = `ws://192.168.4.1/ws`;
+        var gateway = `ws://${window.location.hostname}/ws`;
+        //var gateway = `ws://192.168.4.1/ws`;
         var websocket;
         var respLines = []; //resp lines list.
         var respLastLine = ""; //last line of resp
-        var preventSrenneRefresh = false;
+        var preventSceenRefresh = false;
         var gpsQueryInProgress = false;
         window.addEventListener('load', onLoad);
 
@@ -220,7 +222,7 @@
         function onOpen(event) {
             log("WS Connected");
             document.getElementById("connState").innerHTML = "WS Connected.";
-            websocket.send("#$##$$#GETUSBSTATE\r\n");
+            sendMessage("#$##$$#GETUSBSTATE\r\n");
         }
 
         function onClose(event) {
@@ -249,8 +251,8 @@
             respCallBack = null;
             respLines = [];
             enadisaControls(true);
-            if (!preventSrenneRefresh) autoScreenRefresh();
-            else preventSrenneRefresh = false;
+            if (!preventSceenRefresh) autoScreenRefresh();
+            else preventSceenRefresh = false;
         }
         //one line received
         function onMessageLine(msg) {
@@ -295,7 +297,7 @@
                         onMessageLine(respLastLine);
                         resetline = true;
                     }
-                    if (respLastLine.endsWith(respWaiting)) {
+                    if (respLastLine.endsWith(respWaiting) || respLastLine.startsWith(respWaiting)) {
                         onDataArrived();
                     }
                     if (respLastLine.endsWith(PROMPT)) {//this counts too
@@ -316,6 +318,14 @@
                 websocket.send(data);
             } catch (err) { console.log(err); }
         }
+
+        function sendBinaryMessage(data) {
+            try {
+                log("< BIN " + data.length)
+                websocket.send(data);
+            } catch (err) { console.log(err); }
+        }
+
 
         function gotCursorPosition(canvas, event) {
             if (!enableSend) return;
@@ -363,7 +373,7 @@
             respWaiting = PROMPT;
             respLines = [];
             enadisaControls(false);
-            preventSrenneRefresh = true;
+            preventSceenRefresh = true;
             sendMessage(tosend);
         }
         function sendButton(btn) {
@@ -385,7 +395,7 @@
             respWaiting = PROMPT;
             respLines = [];
             enadisaControls(false);
-            preventSrenneRefresh = true;
+            preventSceenRefresh = true;
             sendMessage(tosend);
         }
         function autoScreenRefresh() {
@@ -399,7 +409,7 @@
             respWaiting = PROMPT;
             respLines = [];
             enadisaControls(false);
-            preventSrenneRefresh = true;
+            preventSceenRefresh = true;
             respCallBack = screenUpdated;
             sendMessage(tosend);
         }
@@ -444,8 +454,100 @@
             }
         }
 
+        function fileDelete() {
+            var path = document.getElementById("filePath").innerHTML;
+            if (!path.endsWith("/") && path.length > 1) path = path + "/";
+            var selectElement = document.getElementById("fileList");
+            var selectedOption = selectElement.options[selectElement.selectedIndex];
+            var selectedValue = selectedOption.value;
+            if (selectedValue.length < 1 || selectedValue == "..") {
+                log("Please select a valid file.")
+                return;
+            }
+            if (selectedValue.endsWith("/")) {
+                log("Can't delete a folder yet.");
+            }
+            else {
+                var target = path + fileName;
+                var tosend = "unlink " + target + "\r\n";
+                respWaiting = PROMPT;
+                respLines = [];
+                enadisaControls(false);
+                preventSceenRefresh = true;
+                sendMessage(tosend);
+            }
+        }
+
         function fileUpload() {
-            alert("NIY"); //todo
+            var fileInput = document.getElementById('fileUpfile');
+            if (fileInput.files.length > 0) {
+                var fileName = fileInput.files[0].name;
+                var file = fileInput.files[0];
+                var path = document.getElementById("filePath").innerHTML;
+                if (!path.endsWith("/") && path.length > 1) path = path + "/";
+
+                var target = path + fileName;
+                var tosend = "unlink " + target + "\r\n";
+                respWaiting = PROMPT;
+                respLines = [];
+                enadisaControls(false);
+                preventSceenRefresh = true;
+                respCallBack = function () {
+                    enadisaControls(false);
+                    var tosend = "fopen " + target + "\r\n";
+                    respWaiting = PROMPT;
+                    respLines = [];
+                    enadisaControls(false);
+                    preventSceenRefresh = true;
+                    respCallBack = function () {
+                        enadisaControls(false);
+                        var tosend = "fwb " + file.size.toString() + "\r\n";
+                        respWaiting = "send ";
+                        respLines = [];
+                        enadisaControls(false);
+                        preventSceenRefresh = true;
+                        respCallBack = function () {
+
+                            var chunkSize = 300;
+                            var offset = 0;
+                            var reader = new FileReader();
+                            reader.onload = function () {
+                                if (websocket.readyState === WebSocket.OPEN) {
+                                    websocket.send(reader.result);
+                                    offset += reader.result.length;
+                                    if (offset < file.size) {
+                                        readSlice(offset);
+                                    } else {
+                                        //SENT ALL
+                                        log("File sent");
+                                        setTimeout(function () {
+                                            var tosend = "fclose\r\n";
+                                            respWaiting = PROMPT;
+                                            respLines = [];
+                                            enadisaControls(false);
+                                            preventSceenRefresh = true;
+                                            respCallBack = function () {
+                                                ls();
+                                            };
+                                            sendMessage(tosend);
+                                        }, 500);
+                                    }
+                                }
+                            };
+                            function readSlice(start) {
+                                var slice = file.slice(start, start + chunkSize);
+                                reader.readAsArrayBuffer(slice);
+                            }
+                            readSlice(0);
+                        };//fwb
+                        sendMessage(tosend);
+                    };//fopen
+                    sendMessage(tosend);
+                };//unlink
+                sendMessage(tosend);
+            } else {
+                log('Please select a file to upload.');
+            }
         }
 
         function fileFlash() {
@@ -454,16 +556,22 @@
             var selectElement = document.getElementById("fileList");
             var selectedOption = selectElement.options[selectElement.selectedIndex];
             var selectedValue = selectedOption.value;
+            var target = path + selectedValue;
             if (!selectedValue.endsWith(".tar") && !selectedValue.endsWith(".bin")) {
-                log("Can flash only TAR and BIN files. Selected: " + selectedValue);
+                log("Can flash only TAR and BIN files. Selected: " + target);
             }
             else {
-                if (confirm("Really flash " + selectedValue + " ?")) {
-                    alert("NIY"); //todo
+                if (confirm("Really flash " + target + " ?")) {
+                    var tosend = "flash " + target + "\r\n";
+                    respWaiting = PROMPT; //not needed, since pp will reconnect
+                    respLines = [];
+                    enadisaControls(false);
+                    preventSceenRefresh = true;
+                    sendMessage(tosend);
                 }
-
             }
         }
+
 
         function filesLsArrived() {
             var fl = document.getElementById("fileList");
@@ -479,6 +587,7 @@
                 fl.innerHTML += "<option ondblclick='fileSelected(); return false;' value='" + line + "'>" + line + "</option>";
             }
         }
+
         function ls() {
             var path = document.getElementById("filePath").innerHTML;
             if (path.endsWith("/") && path.length > 1) path = path.substring(0, path.length - 1);
@@ -486,7 +595,7 @@
             respWaiting = PROMPT;
             respLines = [];
             enadisaControls(false);
-            preventSrenneRefresh = true;
+            preventSceenRefresh = true;
             respCallBack = filesLsArrived;
             sendMessage(tosend);
         }

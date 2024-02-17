@@ -217,16 +217,13 @@ void usb_init()
   };
   ESP_ERROR_CHECK(usb_host_install(&host_config));
 
-  BaseType_t task_created = xTaskCreate(usb_lib_task, "usb_lib", 4096,
-                                        xTaskGetCurrentTaskHandle(), 20, NULL);
+  BaseType_t task_created = xTaskCreate(usb_lib_task, "usb_lib", 4096, xTaskGetCurrentTaskHandle(), 20, NULL);
   assert(task_created == pdTRUE);
-  BaseType_t task_buffer_created = xTaskCreate(usb_buffer_task, "usb_buffer", 4096,
-                                               xTaskGetCurrentTaskHandle(), 20, NULL);
+  BaseType_t task_buffer_created = xTaskCreate(usb_buffer_task, "usb_buffer", 4096, xTaskGetCurrentTaskHandle(), 20, NULL);
   assert(task_buffer_created == pdTRUE);
   ESP_LOGI(TAG, "Installing CDC-ACM driver");
   ESP_ERROR_CHECK(cdc_acm_host_install(NULL));
 
-  BaseType_t task_created2 = xTaskCreate(tryconnectUsb, "tryconnectUsb", 4096,
-                                         xTaskGetCurrentTaskHandle(), 20, NULL);
+  BaseType_t task_created2 = xTaskCreate(tryconnectUsb, "tryconnectUsb", 4096, xTaskGetCurrentTaskHandle(), 20, NULL);
   assert(task_created2 == pdTRUE);
 }

@@ -164,10 +164,14 @@ void app_main(void)
         snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed);
         ESP_LOGI(TAG, "%s", gotusb);
         wait_till_usb_sending(3000);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        wait_till_usb_sending(3000);
         write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
       }
       snprintf(gotusb, 290, "gotorientation %.01f\r\n", heading);
       ESP_LOGI(TAG, "%s", gotusb);
+      wait_till_usb_sending(3000);
+      vTaskDelay(100 / portTICK_PERIOD_MS);
       wait_till_usb_sending(3000);
       write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
       ESP_LOGI(TAG, "sensorreport end");
