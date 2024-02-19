@@ -118,7 +118,7 @@
             <button class="uicontrols" onclick="ls(); return false;">Refresh</button><br />
             <button class="uicontrols" onclick="fileDelete(); return false;">Delete</button><br />
             <input class="uicontrols" type="file" id="fileUpfile" />
-            <button class="uicontrols" onclick="fileUpload(); return false;">Upload</button>><br />
+            <button class="uicontrols" onclick="fileUpload(); return false;">Upload</button><br />
             <button class="uicontrols" onclick="fileDownload(); return false;">Download</button>
             <button class="uicontrols" onclick="fileFlash(); return false;">Flash</button><br /><br />
             <button class="uicontrols" onclick="fileManClose(); return false;">Close file manager</button>
@@ -179,13 +179,17 @@
         var respWaiting = PROMPT;
         var respCallBack = null;
         var enableSend = false; //keep track if sending is allowed or not
-        var gateway = `ws://${window.location.hostname}/ws`;
-        //var gateway = `ws://192.168.4.1/ws`;
+        //var gateway = `ws://${window.location.hostname}/ws`;
+        var gateway = `ws://192.168.4.1/ws`;
         var websocket;
         var respLines = []; //resp lines list.
+        var respLinestp = []; //resp lines list to parse
         var respLastLine = ""; //last line of resp
-        var preventSceenRefresh = false;
         var gpsQueryInProgress = false;
+        var receivedChunks = []; //for file down
+        var expectedFileSize = 0; //file size
+        var resolveSt = null; //if wait for the resolve;
+        var screensupdState = 0; //0-not that cmd, 1 = begin, 2 = second line
         window.addEventListener('load', onLoad);
 
         function enadisaControls(ena) {
@@ -245,18 +249,23 @@
         function onDataArrived() {
             log("Command executed");
             try {
-                if (respCallBack) respCallBack();
+                respLinestp = respLines;
+                var tmpCb = respCallBack;
+                respCallBack = null;
+                if (tmpCb) tmpCb();
+                if (resolveSt != null) {
+                    var tmp = resolveSt;
+                    resolveSt = null;
+                    tmp();
+                }
             } catch (err) { console.log(err); }
-
-            respCallBack = null;
             respLines = [];
             enadisaControls(true);
-            if (!preventSceenRefresh) autoScreenRefresh();
-            else preventSceenRefresh = false;
         }
         //one line received
         function onMessageLine(msg) {
             try {
+                console.log(msg);
                 if (msg.startsWith("#$##$$#")) {
                     if (msg == "#$##$$#USB_DC\r\n") {
                         log("PP Disconnected");
@@ -271,6 +280,7 @@
                     if (msg == "#$##$$#USB_CC\r\n") {
                         log("PP Connected");
                         enadisaControls(true);
+                        fileManClose();
                         document.getElementById("connStatePP").innerHTML = "PP connected to ESP";
                         autoScreenRefresh();
                         return;
@@ -282,13 +292,17 @@
                         return;
                     }
                 }
-                log("> " + msg + "\r\n");
+                if (screensupdState == 0) log("> " + msg + "\r\n");
+                if (screensupdState == 1) {
+                    screensupdState = 2;
+                    log("screen data arriving..");
+                }
             } catch (err) { console.log(err); };
         }
         //any ws message
-        function onMessage(event) {
+        async function onMessage(event) {
             try {
-                var str = String(event.data);
+                var str = await event.data.text();//String(event.data);
                 for (let i = 0; i < str.length; i++) {
                     var resetline = false;
                     respLastLine += str[i];
@@ -314,9 +328,21 @@
 
         function sendMessage(data) {
             try {
-                log("< " + data)
+                respLines = [];
+                log("< " + data);
+                screensupdState = 0;
+                if (data.startsWith("screenframe")) screensupdState = 1;
                 websocket.send(data);
             } catch (err) { console.log(err); }
+        }
+
+        async function sendAndWait(data) {
+            return new Promise((resolve) => {
+                try {
+                    resolveSt = resolve;
+                    sendMessage(data);
+                } catch (err) { console.log(err); }
+            });
         }
 
         function sendBinaryMessage(data) {
@@ -349,13 +375,13 @@
             ctx.fillStyle = "#000";
             ctx.fillRect(0, 0, 240, 320);
             let y = -1;
-            for (let i = 0; i < respLines.length; i++) {
-                if (respLines[i].length < 230) continue;
+            for (let i = 0; i < respLinestp.length; i++) {
+                if (respLinestp[i].length < 230) continue;
                 y++;
-                for (let x = 0; x < respLines[i].length; x++) {
+                for (let x = 0; x < respLinestp[i].length; x++) {
                     if (x > 240) break;
                     try {
-                        let by = respLines[i].charCodeAt(x) - 32;
+                        let by = respLinestp[i].charCodeAt(x) - 32;
                         let r = ((by >> 4) & 3) << 6;
                         let g = ((by >> 2) & 3) << 6;
                         let b = (by & 3) << 6;
@@ -371,31 +397,27 @@
             const altitude = alt !== null && alt !== undefined ? alt : 0;
             var tosend = "gotgps " + String(lat) + " " + String(lon) + " " + String(altitude) + "\r\n";
             respWaiting = PROMPT;
-            respLines = [];
             enadisaControls(false);
-            preventSceenRefresh = true;
             sendMessage(tosend);
         }
-        function sendButton(btn) {
+        async function sendButton(btn) {
             var tosend = "button " + String(btn) + "\r\n";
             respWaiting = PROMPT;
-            respLines = [];
             enadisaControls(false);
-            sendMessage(tosend);
+            await sendAndWait(tosend);
+            autoScreenRefresh();
         }
-        function sendTouch(x, y) {
+        async function sendTouch(x, y) {
             var tosend = "touch " + String(x) + " " + String(y) + "\r\n";
             respWaiting = PROMPT;
-            respLines = [];
             enadisaControls(false);
-            sendMessage(tosend);
+            await sendAndWait(tosend);
+            autoScreenRefresh();
         }
         function sendReboot() {
             var tosend = "reboot\r\n";
             respWaiting = PROMPT;
-            respLines = [];
             enadisaControls(false);
-            preventSceenRefresh = true;
             sendMessage(tosend);
         }
         function autoScreenRefresh() {
@@ -407,9 +429,7 @@
         function refreshScreen() {
             var tosend = "screenframeshort\r\n";
             respWaiting = PROMPT;
-            respLines = [];
             enadisaControls(false);
-            preventSceenRefresh = true;
             respCallBack = screenUpdated;
             sendMessage(tosend);
         }
@@ -439,7 +459,7 @@
             }
         }
 
-        function fileDownload() {
+        async function fileDownload() {
             var path = document.getElementById("filePath").innerHTML;
             if (!path.endsWith("/") && path.length > 1) path = path + "/";
             var selectElement = document.getElementById("fileList");
@@ -449,12 +469,40 @@
                 log("Can't download a folder yet.");
             }
             else {
-                //start file download
-                alert("NIY"); //todo
+                receivedChunks = [];
+                expectedFileSize = 0; //todo query it
+                var target = path + selectedValue;
+                enadisaControls(false);
+                var tosend = "fclose\r\n";
+                respWaiting = PROMPT;
+                await sendAndWait(tosend);
+                enadisaControls(false);
+                tosend = "filesize " + target + "\r\n";
+                respWaiting = PROMPT;
+                await sendAndWait(tosend);
+                //todo process response
+                enadisaControls(false);
+                tosend = "fopen " + target + "\r\n";
+                respWaiting = PROMPT;
+                await sendAndWait(tosend);
+                //file opened
+                enadisaControls(false);
+                var tosend = "fseek 0\r\n";
+                respWaiting = PROMPT;
+                await sendAndWait(tosend);
+                enadisaControls(false);
+                var tosend = "fread " + expectedFileSize.toString() + "\r\n";
+                respWaiting = PROMPT;//?!
+                sendMessage(tosend);
+                //todo binary read
+                enadisaControls(false);
+                var tosend = "fclose\r\n";
+                respWaiting = PROMPT;
+                await sendAndWait(tosend);
             }
         }
 
-        function fileDelete() {
+        async function fileDelete() {
             var path = document.getElementById("filePath").innerHTML;
             if (!path.endsWith("/") && path.length > 1) path = path + "/";
             var selectElement = document.getElementById("fileList");
@@ -468,17 +516,16 @@
                 log("Can't delete a folder yet.");
             }
             else {
-                var target = path + fileName;
+                var target = path + selectedValue;
                 var tosend = "unlink " + target + "\r\n";
                 respWaiting = PROMPT;
-                respLines = [];
                 enadisaControls(false);
-                preventSceenRefresh = true;
-                sendMessage(tosend);
+                await sendAndWait(tosend);
+                ls();
             }
         }
 
-        function fileUpload() {
+        async function fileUpload() {
             var fileInput = document.getElementById('fileUpfile');
             if (fileInput.files.length > 0) {
                 var fileName = fileInput.files[0].name;
@@ -489,62 +536,48 @@
                 var target = path + fileName;
                 var tosend = "unlink " + target + "\r\n";
                 respWaiting = PROMPT;
-                respLines = [];
                 enadisaControls(false);
-                preventSceenRefresh = true;
-                respCallBack = function () {
-                    enadisaControls(false);
-                    var tosend = "fopen " + target + "\r\n";
-                    respWaiting = PROMPT;
-                    respLines = [];
-                    enadisaControls(false);
-                    preventSceenRefresh = true;
-                    respCallBack = function () {
-                        enadisaControls(false);
-                        var tosend = "fwb " + file.size.toString() + "\r\n";
-                        respWaiting = "send ";
-                        respLines = [];
-                        enadisaControls(false);
-                        preventSceenRefresh = true;
-                        respCallBack = function () {
+                await sendAndWait(tosend);
+                enadisaControls(false);
+                tosend = "fopen " + target + "\r\n";
+                respWaiting = PROMPT;
+                enadisaControls(false);
+                await sendAndWait(tosend);
+                enadisaControls(false);
+                tosend = "fwb " + file.size.toString() + "\r";
+                respWaiting = "send ";
+                enadisaControls(false);
+                await sendAndWait(tosend);
+                var chunkSize = 300;
+                var offset = 0;
+                var reader = new FileReader();
+                reader.onload = function () {
+                    if (websocket.readyState === WebSocket.OPEN) {
+                        log("Sending data part " + offset.toString() + " / " + file.size.toString() + " ( " + (offset / file.size * 100) + "% )");
+                        websocket.send(reader.result);
+                        offset += reader.result.byteLength;
+                        if (offset < file.size) {
+                            readSlice(offset);
+                        } else {
+                            //SENT ALL
+                            log("File sent");
+                            setTimeout(async function () {
+                                var tosend = "fclose\r\n";
+                                respWaiting = PROMPT;
+                                enadisaControls(false);
+                                await sendAndWait(tosend);
+                                ls();
+                            }, 500);
+                        }
+                    }
+                };
+                async function readSlice(start) {
+                    await new Promise(r => setTimeout(r, 1));
+                    var slice = file.slice(start, start + chunkSize);
+                    reader.readAsArrayBuffer(slice);
+                }
+                readSlice(0);
 
-                            var chunkSize = 300;
-                            var offset = 0;
-                            var reader = new FileReader();
-                            reader.onload = function () {
-                                if (websocket.readyState === WebSocket.OPEN) {
-                                    websocket.send(reader.result);
-                                    offset += reader.result.length;
-                                    if (offset < file.size) {
-                                        readSlice(offset);
-                                    } else {
-                                        //SENT ALL
-                                        log("File sent");
-                                        setTimeout(function () {
-                                            var tosend = "fclose\r\n";
-                                            respWaiting = PROMPT;
-                                            respLines = [];
-                                            enadisaControls(false);
-                                            preventSceenRefresh = true;
-                                            respCallBack = function () {
-                                                ls();
-                                            };
-                                            sendMessage(tosend);
-                                        }, 500);
-                                    }
-                                }
-                            };
-                            function readSlice(start) {
-                                var slice = file.slice(start, start + chunkSize);
-                                reader.readAsArrayBuffer(slice);
-                            }
-                            readSlice(0);
-                        };//fwb
-                        sendMessage(tosend);
-                    };//fopen
-                    sendMessage(tosend);
-                };//unlink
-                sendMessage(tosend);
             } else {
                 log('Please select a file to upload.');
             }
@@ -564,9 +597,7 @@
                 if (confirm("Really flash " + target + " ?")) {
                     var tosend = "flash " + target + "\r\n";
                     respWaiting = PROMPT; //not needed, since pp will reconnect
-                    respLines = [];
                     enadisaControls(false);
-                    preventSceenRefresh = true;
                     sendMessage(tosend);
                 }
             }
@@ -580,8 +611,8 @@
             if (path != "/") {
                 fl.innerHTML += "<option ondblclick='fileSelected(); return false;' value='..'>..</option>";
             }
-            for (let i = 0; i < respLines.length; i++) {
-                var line = respLines[i].trim();
+            for (let i = 0; i < respLinestp.length; i++) {
+                var line = respLinestp[i].trim();
                 if (line.startsWith("ls ")) continue;
                 if (line.startsWith(PROMPT)) continue;
                 fl.innerHTML += "<option ondblclick='fileSelected(); return false;' value='" + line + "'>" + line + "</option>";
@@ -593,9 +624,7 @@
             if (path.endsWith("/") && path.length > 1) path = path.substring(0, path.length - 1);
             var tosend = "ls " + path + "\r\n";
             respWaiting = PROMPT;
-            respLines = [];
             enadisaControls(false);
-            preventSceenRefresh = true;
             respCallBack = filesLsArrived;
             sendMessage(tosend);
         }
@@ -621,7 +650,6 @@
             var tosend = document.getElementById("manualtxt").value;
             if (!tosend.endsWith("\r\n")) { tosend += "\r\n"; }
             respWaiting = PROMPT;
-            respLines = [];
             enadisaControls(false);
             sendMessage(tosend);
             document.getElementById("manualtxt").value = "";
@@ -664,12 +692,12 @@
         function fileManClose() {
             document.getElementById("filemanager").style.display = "none";
             document.getElementById("mainscreencontent").style.display = "flex";
-            document.getElementById("manualcommand").style.display = "block";
+            //document.getElementById("manualcommand").style.display = "block";
         }
         function fileManOpen() {
             document.getElementById("filemanager").style.display = "block";
             document.getElementById("mainscreencontent").style.display = "none";
-            document.getElementById("manualcommand").style.display = "none";
+            //document.getElementById("manualcommand").style.display = "none";
 
             ls();
         }

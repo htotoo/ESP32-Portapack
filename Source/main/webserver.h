@@ -285,6 +285,7 @@ static esp_err_t handle_ws_req(httpd_req_t *req)
       return ESP_OK;
     }
     write_usb(ws_pkt.payload, ws_pkt.len, false, true);
+    free(buf);
   }
   return ESP_OK;
 }
