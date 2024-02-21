@@ -151,7 +151,7 @@ bool ws_sendall(uint8_t *data, size_t len)
   memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
   ws_pkt.payload = (uint8_t *)data;
   ws_pkt.len = len;
-  ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+  ws_pkt.type = HTTPD_WS_TYPE_BINARY;
 
   static size_t max_clients = CONFIG_LWIP_MAX_LISTENING_TCP;
   size_t fds = max_clients;
@@ -285,6 +285,7 @@ static esp_err_t handle_ws_req(httpd_req_t *req)
       return ESP_OK;
     }
     write_usb(ws_pkt.payload, ws_pkt.len, false, true);
+    free(buf);
   }
   return ESP_OK;
 }
