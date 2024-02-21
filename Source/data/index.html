@@ -480,7 +480,11 @@
                 tosend = "filesize " + target + "\r\n";
                 respWaiting = PROMPT;
                 await sendAndWait(tosend);
-                //todo process response
+                if (!respLinestp[2].startsWith("ok")) {
+                    log("File read error");
+                    return;
+                }
+                expectedFileSize = parseInt(respLinestp[1].trim());
                 enadisaControls(false);
                 tosend = "fopen " + target + "\r\n";
                 respWaiting = PROMPT;
@@ -493,8 +497,21 @@
                 enadisaControls(false);
                 var tosend = "fread " + expectedFileSize.toString() + "\r\n";
                 respWaiting = PROMPT;//?!
-                sendMessage(tosend);
-                //todo binary read
+                await sendAndWait(tosend);
+
+                let concatenatedHexData = respLinestp.slice(1, -1).join('').replace(/\r\n/g, "");
+                respLinestp = [];//save ram
+
+                const bytes = new Uint8Array(concatenatedHexData.length / 2);
+                for (let i = 0; i < concatenatedHexData.length; i += 2) {
+                    bytes[i / 2] = parseInt(concatenatedHexData.substr(i, 2), 16);
+                }
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(new Blob([bytes]));
+                link.download = selectedValue;
+                link.click();
+
+
                 enadisaControls(false);
                 var tosend = "fclose\r\n";
                 respWaiting = PROMPT;
@@ -532,7 +549,6 @@
                 var file = fileInput.files[0];
                 var path = document.getElementById("filePath").innerHTML;
                 if (!path.endsWith("/") && path.length > 1) path = path + "/";
-
                 var target = path + fileName;
                 var tosend = "unlink " + target + "\r\n";
                 respWaiting = PROMPT;
@@ -632,12 +648,8 @@
         function cwdup() {
             var path = document.getElementById("filePath").innerHTML;
             if (path.length > 1) {
-                path = path.replace(/\/+$/, ''); // Remove trailing '/'
-
-                // Find the last occurrence of '/'
+                path = path.replace(/\/+$/, '');
                 let lastSlashIndex = path.lastIndexOf('/');
-
-                // If '/' is found, remove the last segment
                 if (lastSlashIndex >= 0) {
                     path = path.substring(0, lastSlashIndex + 1);
                 }
