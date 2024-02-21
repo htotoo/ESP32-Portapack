@@ -41,13 +41,17 @@ An addon module for portapack to add extra sensors to it for more fun.
   - Helps find satellites.
 
 ### Compatible modules:
-- ESP32S3 (there are files for S2, but recommend the S3 edition!)
+- ESP32S3 (recommended: https://s.click.aliexpress.com/e/_DeaSKvJ - select the S3, not the C3!)
 - USB cable that fits your needs. (to wire with PP, and supply enough power to it!)
-- GPS, any NMEA uart with baud 9600.
+- GPS, any NMEA over UART. For example the NEO 7M: https://s.click.aliexpress.com/e/_DkDZHaV . Select NEO 7M or 8M for much better precision, 6M is GPS only!
 - Compass, HMC5883L supported for now (can suggest better in the Issues)
-- Temperature+humidity: SHT30 I2C (not yet ready).
+- Temperature+humidity: SHT30 I2C (not yet ready). https://s.click.aliexpress.com/e/_DFU9Ra9 
 
 ### Screenshots:
 **ADS-B with location**
 
 ![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords.png?raw=true)  ![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords_with_orientation.png?raw=true)
+
+### Support
+- Links are affiliate links! If you don't want to use them, feel free to just search for the modules yourself. Using the affiliate links gives me some credits, so I can buy and integrate more modules to this (or other) projects.
+- If you want, you can buy me a coffee (fuel of programmers): https://www.buymeacoffee.com/htotoo
