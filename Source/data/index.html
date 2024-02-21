@@ -121,7 +121,9 @@
             <button class="uicontrols" onclick="fileUpload(); return false;">Upload</button><br />
             <button class="uicontrols" onclick="fileDownload(); return false;">Download</button>
             <button class="uicontrols" onclick="fileFlash(); return false;">Flash</button><br /><br />
-            <button class="uicontrols" onclick="fileManClose(); return false;">Close file manager</button>
+            <button class="uicontrols" onclick="fileManClose(); return false;">Close file manager</button><br />
+            <progress id="fileProgress" value="0" max="100"></progress>
+
         </div>
         <div id="mainscreencontent">
             <div class="screenholder">
@@ -200,6 +202,18 @@
             });
         }
 
+        function setProgress(prog) {
+            var pb = document.getElementById("fileProgress");
+            if (prog < 0) //hide
+            {
+                pb.style.display = "none";
+            }
+            else {
+                pb.style.display = "block";
+                pb.value = prog;
+            }
+        }
+
         function log(data) {
             if (!data.endsWith("\r\n")) { data += "\r\n"; }
             var logc = document.getElementById("log")
@@ -275,7 +289,7 @@
                         ctx.fillStyle = "#000";
                         ctx.fillRect(0, 0, 240, 320);
                         document.getElementById("connStatePP").innerHTML = "PP NOT connected to ESP";
-                        return;
+                        return false;
                     }
                     if (msg == "#$##$$#USB_CC\r\n") {
                         log("PP Connected");
@@ -283,21 +297,24 @@
                         fileManClose();
                         document.getElementById("connStatePP").innerHTML = "PP connected to ESP";
                         autoScreenRefresh();
-                        return;
+                        return false;
                     }
                     if (msg.startsWith("#$##$$#GOTGPS")) {
                         var jsStr = msg.substring(13);
                         var gpsdata = JSON.parse(jsStr);
                         gotGps(gpsdata);
-                        return;
+                        return false;
                     }
                 }
-                if (screensupdState == 0) log("> " + msg + "\r\n");
                 if (screensupdState == 1) {
                     screensupdState = 2;
                     log("screen data arriving..");
                 }
+                if (screensupdState >= 0) return true;
+                if (expectedFileSize > 0) return true;
+                log("> " + msg + "\r\n");
             } catch (err) { console.log(err); };
+            return true;
         }
         //any ws message
         async function onMessage(event) {
@@ -310,6 +327,15 @@
                         respLines.push(respLastLine);
                         onMessageLine(respLastLine);
                         resetline = true;
+                        //need a download progressbar?
+                        if (expectedFileSize > 0) {
+                            var gotlines = respLines.length - 1;
+                            var byteperline = (respLastLine.length - 2) / 2;
+                            var gotbytes = gotlines * byteperline;
+                            var progress = gotbytes / expectedFileSize * 100;
+                            if (progress > 100) progress = 100;
+                            setProgress(progress);
+                        }
                     }
                     if (respLastLine.endsWith(respWaiting) || respLastLine.startsWith(respWaiting)) {
                         onDataArrived();
@@ -451,7 +477,7 @@
             }
             else {
                 if (!selectedValue.endsWith(".tar") && !selectedValue.endsWith(".bin")) {
-                    fileDownload();
+                    if (confirm("Download can take some time, start it?")) fileDownload();
                 }
                 else {
                     fileFlash();
@@ -480,6 +506,10 @@
                 tosend = "filesize " + target + "\r\n";
                 respWaiting = PROMPT;
                 await sendAndWait(tosend);
+                if (respLinestp.length <= 2) {
+                    log("Error downloading file");
+                    return;
+                }
                 if (!respLinestp[2].startsWith("ok")) {
                     log("File read error");
                     return;
@@ -498,10 +528,10 @@
                 var tosend = "fread " + expectedFileSize.toString() + "\r\n";
                 respWaiting = PROMPT;//?!
                 await sendAndWait(tosend);
-
+                expectedFileSize = 0;
                 let concatenatedHexData = respLinestp.slice(1, -1).join('').replace(/\r\n/g, "");
                 respLinestp = [];//save ram
-
+                setProgress(-1);
                 const bytes = new Uint8Array(concatenatedHexData.length / 2);
                 for (let i = 0; i < concatenatedHexData.length; i += 2) {
                     bytes[i / 2] = parseInt(concatenatedHexData.substr(i, 2), 16);
@@ -534,11 +564,13 @@
             }
             else {
                 var target = path + selectedValue;
-                var tosend = "unlink " + target + "\r\n";
-                respWaiting = PROMPT;
-                enadisaControls(false);
-                await sendAndWait(tosend);
-                ls();
+                if (confirm("Really delete this file? " + target)) {
+                    var tosend = "unlink " + target + "\r\n";
+                    respWaiting = PROMPT;
+                    enadisaControls(false);
+                    await sendAndWait(tosend);
+                    ls();
+                }
             }
         }
 
@@ -569,7 +601,7 @@
                 var reader = new FileReader();
                 reader.onload = function () {
                     if (websocket.readyState === WebSocket.OPEN) {
-                        log("Sending data part " + offset.toString() + " / " + file.size.toString() + " ( " + (offset / file.size * 100) + "% )");
+                        setProgress(offset / file.size * 100);
                         websocket.send(reader.result);
                         offset += reader.result.byteLength;
                         if (offset < file.size) {
@@ -577,6 +609,7 @@
                         } else {
                             //SENT ALL
                             log("File sent");
+                            setProgress(-1);
                             setTimeout(async function () {
                                 var tosend = "fclose\r\n";
                                 respWaiting = PROMPT;
@@ -630,6 +663,7 @@
             for (let i = 0; i < respLinestp.length; i++) {
                 var line = respLinestp[i].trim();
                 if (line.startsWith("ls ")) continue;
+                if (line.startsWith("#$##$$#")) continue;
                 if (line.startsWith(PROMPT)) continue;
                 fl.innerHTML += "<option ondblclick='fileSelected(); return false;' value='" + line + "'>" + line + "</option>";
             }
