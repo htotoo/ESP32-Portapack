@@ -55,3 +55,4 @@ An addon module for portapack to add extra sensors to it for more fun.
 ### Support
 - Links are affiliate links! If you don't want to use them, feel free to just search for the modules yourself. Using the affiliate links gives me some credits, so I can buy and integrate more modules to this (or other) projects.
 - If you want, you can buy me a coffee (fuel of programmers): https://www.buymeacoffee.com/htotoo
+- This FW will be always open source and free to use all functions!
