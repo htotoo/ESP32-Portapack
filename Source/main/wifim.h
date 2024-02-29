@@ -122,3 +122,8 @@ static bool wifi_apsta()
 
   return true;
 }
+/*
+void wifi_loop(uint32_t millis)
+{
+}
+*/

@@ -540,8 +540,6 @@
                 link.href = URL.createObjectURL(new Blob([bytes]));
                 link.download = selectedValue;
                 link.click();
-
-
                 enadisaControls(false);
                 var tosend = "fclose\r\n";
                 respWaiting = PROMPT;

@@ -110,6 +110,8 @@ float get_heading()
 
 float get_heading_degrees()
 {
+    if (orientation_inited == Orientation_none)
+        return 400;
     return get_heading() * 180 / M_PI + declinationAngle;
 }
 

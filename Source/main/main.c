@@ -13,6 +13,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 #include "esp_task_wdt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -30,6 +31,18 @@ static const char *TAG = "ESP32PP";
 #include "wifim.h"
 
 #include "orientation.h"
+
+typedef enum TimerEntry
+{
+  TimerEntry_SENSORGET,
+  TimerEntry_REPORTPPGPS,
+  TimerEntry_REPORTPPORI,
+  TimerEntry_REPORTWEB,
+  TimerEntry_MAX
+} TimerEntry;
+
+uint32_t last_millis[TimerEntry_MAX] = {0};
+uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 2000, 2000};
 
 bool hcmInited = false;
 
@@ -133,11 +146,25 @@ void app_main(void)
   i2cdevInit(I2C0_DEV);
   init_orientation();
 
+  uint32_t time_millis = 0;
+
   while (true)
   {
-    ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp));
-    heading = get_heading_degrees();
-    if (!getInCommand())
+    time_millis = esp_timer_get_time() / 1000;
+
+    // GET ALL SENSOR DATA
+    if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET])
+    {
+      // GPS IS AUTO
+      ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp)); // TEMPINT
+      heading = get_heading_degrees();                                               // ORIENTATION
+      // TILT
+
+      last_millis[TimerEntry_SENSORGET] = time_millis;
+    }
+
+    // REPORT ALL SENSOR DATA TO WEB
+    if (!getInCommand() && (time_millis - last_millis[TimerEntry_REPORTWEB] > timer_millis[TimerEntry_REPORTWEB]))
     {
       char buff[300] = {0};
       snprintf(buff, 300,
@@ -158,24 +185,40 @@ void app_main(void)
                gpsdata.sats_in_use, gpsdata.sats_in_view, temperatureEsp, temperature, humidity, heading,
                gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed);
       ws_sendall((uint8_t *)buff, strlen(buff));
-      char gotusb[300];
+      last_millis[TimerEntry_REPORTWEB] = time_millis;
+    }
+
+    // REPORT SENSOR DATA TO PP. EACH HAS OWN TIMER!
+    char gotusb[300];
+    if (!getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS]))
+    {
       if (gpsdata.latitude != 0 || gpsdata.longitude != 0)
       {
         snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed);
         ESP_LOGI(TAG, "%s", gotusb);
-        wait_till_usb_sending(3000);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-        wait_till_usb_sending(3000);
-        write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
+        if (wait_till_usb_sending(1))
+        {
+          write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
+          last_millis[TimerEntry_REPORTPPGPS] = time_millis;
+          ESP_LOGI(TAG, "gotgps sent");
+        }
       }
-      snprintf(gotusb, 290, "gotorientation %.01f\r\n", heading);
-      ESP_LOGI(TAG, "%s", gotusb);
-      wait_till_usb_sending(3000);
-      vTaskDelay(100 / portTICK_PERIOD_MS);
-      wait_till_usb_sending(3000);
-      write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
-      ESP_LOGI(TAG, "sensorreport end");
     }
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
-  }
+    if (!getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI]))
+    {
+      if (heading < 400) // got heading data
+      {
+        snprintf(gotusb, 290, "gotorientation %.01f\r\n", heading);
+        ESP_LOGI(TAG, "%s", gotusb);
+        if (wait_till_usb_sending(1))
+        {
+          write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
+          last_millis[TimerEntry_REPORTPPORI] = time_millis;
+          ESP_LOGI(TAG, "gotorientation sent");
+        }
+      }
+    }
+    }
+
+  vTaskDelay(50 / portTICK_PERIOD_MS);
 }

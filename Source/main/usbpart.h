@@ -76,11 +76,11 @@ bool write_usb_blocking(const uint8_t *data, size_t len, bool mute, bool buffer)
   return xSemaphoreTake(send_block_sem, 4000 / portTICK_PERIOD_MS);
 }
 
-void wait_till_usb_sending(uint32_t timeoutMs)
+bool wait_till_usb_sending(uint32_t timeoutMs)
 {
   if (!inCommand)
-    return;
-  xSemaphoreTake(send_block_sem, timeoutMs / portTICK_PERIOD_MS);
+    return true;
+  return xSemaphoreTake(send_block_sem, timeoutMs / portTICK_PERIOD_MS) == pdTRUE;
 }
 
 static bool handle_rx(const uint8_t *data, size_t data_len, void *arg)
