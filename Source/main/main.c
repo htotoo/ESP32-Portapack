@@ -218,7 +218,8 @@ void app_main(void)
         }
       }
     }
-    }
-
-  vTaskDelay(50 / portTICK_PERIOD_MS);
+    // try wifi client connect
+    wifi_loop(time_millis);
+    vTaskDelay(50 / portTICK_PERIOD_MS);
+  }
 }

@@ -10,6 +10,8 @@
 
 #define CONFIG_AP_MAX_STA_CONN 4
 
+#define WIFI_CLIENR_RC_TIME 45000
+
 char wifiAPSSID[64] = {0};
 char wifiAPPASS[64] = {0};
 
@@ -19,6 +21,9 @@ char wifiStaPASS[64] = {0};
 char wifiHostName[64] = {0};
 
 int ap_client_num = 0;
+
+uint32_t last_wifi_conntry = 0;
+bool wifi_sta_ok = false;
 
 void initialise_mdns(void)
 {
@@ -39,6 +44,7 @@ static void event_handler(void *arg,
     ESP_LOGI(TAG, "WIFI_EVENT_STA_DISCONNECTED");
     if (ap_client_num <= 0)
     {
+      wifi_sta_ok = false;
       // esp_wifi_connect(); // only when no ap clients presents
     }
   }
@@ -55,12 +61,13 @@ static void event_handler(void *arg,
     ESP_LOGI(TAG, "WIFI_EVENT_AP_STADISCONNECTED");
     if (ap_client_num <= 0)
     {
-      esp_wifi_connect(); // todo connect later
+      last_wifi_conntry = 0; // do it now!
     }
   }
 
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
   {
+    wifi_sta_ok = true;
     ESP_LOGI(TAG, "IP_EVENT_STA_GOT_IP");
   }
 }
@@ -122,8 +129,15 @@ static bool wifi_apsta()
 
   return true;
 }
-/*
+
 void wifi_loop(uint32_t millis)
 {
+  if (ap_client_num > 0 || wifi_sta_ok)
+    return;
+  if (millis - last_wifi_conntry > WIFI_CLIENR_RC_TIME)
+  {
+    ESP_LOGI(TAG, "esp_wifi_connect started.");
+    esp_wifi_connect();
+    last_wifi_conntry = millis;
+  }
 }
-*/
