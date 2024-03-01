@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.1</title>
+    <title>ESP32PP v0.8</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -109,7 +109,7 @@
 <body>
     <div class="setupicon"><a href="setup.html">&#9881;</a></div>
 
-    <h1>ESP32 PP v0.1</h1>
+    <h1>ESP32 PP v0.8</h1>
     <div id="connState">WS Connecting...</div>
     <div id="connStatePP">PP not connected to ESP</div>
     <div class="management">
@@ -254,13 +254,15 @@
             setTimeout(initWebSocket, 1000);
         }
         function gotSensor(data) {
-            document.getElementById("devTemp").innerHTML = "Temp: " + data.temp + " &#8451;";
-            if (data.lat != 0 && data.lon != 0) {
-                document.getElementById("devGpsLat").innerHTML = "Lat: " + data.lat;
-                document.getElementById("devGpsLon").innerHTML = "Lon: " + data.lon;
+            document.getElementById("devTemp").innerHTML = "Temp: " + data.env.temp + " &#8451;";
+            if (data.gps.lat != 0 && data.gps.lon != 0) {
+                document.getElementById("devGpsLat").innerHTML = "Lat: " + data.gps.lat;
+                document.getElementById("devGpsLon").innerHTML = "Lon: " + data.gps.lon;
             }
-            document.getElementById("devHead").innerHTML = "Heading: " + data.head + "&#176;";
-            document.getElementById("devGpsSats").innerHTML = "Sats: " + data.siu + "/" + data.siv;
+            var headstr = "Heading: " + data.ori.head + "&#176;";
+            if (data.ori.tilt < 400) headstr += " Tilt: " + data.ori.tilt + "&#176;";
+            document.getElementById("devHead").innerHTML = headstr;
+            document.getElementById("devGpsSats").innerHTML = "Sats: " + data.gps.siu + "/" + data.gps.siv;
         }
 
         //when all the required data in
@@ -304,7 +306,7 @@
                         return false;
                     }
                     if (msg.startsWith("#$##$$#GOTSENS")) {
-                        var jsStr = msg.substring(13);
+                        var jsStr = msg.substring(14);
                         var gpsdata = JSON.parse(jsStr);
                         gotSensor(gpsdata);
                         return false;

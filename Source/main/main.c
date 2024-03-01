@@ -47,6 +47,7 @@ uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 2000, 2000};
 bool hcmInited = false;
 
 float heading = 0.0;
+float tilt = 0.0;
 float temperatureEsp = 0.0;
 float temperature = 0.0;
 uint8_t humidity = 0;
@@ -158,7 +159,7 @@ void app_main(void)
       // GPS IS AUTO
       ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp)); // TEMPINT
       heading = get_heading_degrees();                                               // ORIENTATION
-      // TILT
+      tilt = 400;                                                                    // TILT //TODO
 
       last_millis[TimerEntry_SENSORGET] = time_millis;
     }
@@ -168,22 +169,16 @@ void app_main(void)
     {
       char buff[300] = {0};
       snprintf(buff, 300,
-               "#$##$$#GOTGPS"
-               "{\"year\":%d,\"month\":%d,\"day\":%d,\"hour\":%d,\"minute\":%d,"
-               "\"sec\":%d,"
-               "\"siu\":%d,"
-               "\"siv\":%d,"
-               "\"tempesp\":%.01f,"
-               "\"temp\":%.01f,"
-               "\"humi\":%d,"
-               "\"head\":%.01f,"
-               "\"lat\":%.06f,"
-               "\"lon\":%.06f,"
-               "\"alt\":%.02f,"
-               "\"speed\":%f}\r\n",
+               "#$##$$#GOTSENS"
+               "{\"gps\":{\"y\":%d,\"m\":%d,\"d\":%d,\"h\":%d,\"mi\":%d,\"s\":%d,"
+               "\"siu\":%d,\"siv\":%d,\"lat\":%.06f,\"lon\":%.06f,\"alt\":%.02f,\"speed\":%f},"
+               "\"ori\":{\"head\":%.01f, \"tilt\":%.01f },"
+               "\"env\":{\"tempesp\":%.01f,\"temp\":%.01f,\"humi\":%d }"
+               "}\r\n",
                gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour + TIME_ZONE, gpsdata.tim.minute, gpsdata.tim.second,
-               gpsdata.sats_in_use, gpsdata.sats_in_view, temperatureEsp, temperature, humidity, heading,
-               gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed);
+               gpsdata.sats_in_use, gpsdata.sats_in_view, gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed,
+               heading, tilt,
+               temperatureEsp, temperature, humidity);
       ws_sendall((uint8_t *)buff, strlen(buff));
       last_millis[TimerEntry_REPORTWEB] = time_millis;
     }
@@ -208,7 +203,7 @@ void app_main(void)
     {
       if (heading < 400) // got heading data
       {
-        snprintf(gotusb, 290, "gotorientation %.01f\r\n", heading);
+        snprintf(gotusb, 290, "gotorientation %.01f %.01f\r\n", heading, tilt);
         ESP_LOGI(TAG, "%s", gotusb);
         if (wait_till_usb_sending(1))
         {
