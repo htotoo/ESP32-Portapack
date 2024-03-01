@@ -97,7 +97,11 @@
         }
 
         #fileList {
-            min-width: 200px;
+            min-width: 300px;
+        }
+
+        #fileProgress {
+            display: none;
         }
     </style>
 </head>
@@ -115,7 +119,7 @@
             </select>
             <br />
             <button class="uicontrols" onclick="cwdup(); return false;">Cd ..</button>
-            <button class="uicontrols" onclick="ls(); return false;">Refresh</button><br />
+            <button class="uicontrols" onclick="ls(); return false;">Refresh</button>
             <button class="uicontrols" onclick="fileDelete(); return false;">Delete</button><br />
             <input class="uicontrols" type="file" id="fileUpfile" />
             <button class="uicontrols" onclick="fileUpload(); return false;">Upload</button><br />
@@ -181,8 +185,8 @@
         var respWaiting = PROMPT;
         var respCallBack = null;
         var enableSend = false; //keep track if sending is allowed or not
-        //var gateway = `ws://${window.location.hostname}/ws`;
-        var gateway = `ws://192.168.4.1/ws`;
+        var gateway = `ws://${window.location.hostname}/ws`;
+        if (window.location.protocol === "file:") gateway = `ws://192.168.4.1/ws`;
         var websocket;
         var respLines = []; //resp lines list.
         var respLinestp = []; //resp lines list to parse
@@ -190,7 +194,7 @@
         var gpsQueryInProgress = false;
         var receivedChunks = []; //for file down
         var expectedFileSize = 0; //file size
-        var resolveSt = null; //if wait for the resolve;
+        var resolveSt = null; //if wait for the resolve during send
         var screensupdState = 0; //0-not that cmd, 1 = begin, 2 = second line
         window.addEventListener('load', onLoad);
 
@@ -216,10 +220,11 @@
 
         function log(data) {
             if (!data.endsWith("\r\n")) { data += "\r\n"; }
+            console.log(data);
             var logc = document.getElementById("log")
             logc.innerHTML = data + logc.innerHTML;
-            if (logc.innerHTML.length > 2048) {
-                logc.innerHTML = logc.innerHTML.substring(0, 2048);
+            if (logc.innerHTML.length > 1024) {
+                logc.innerHTML = logc.innerHTML.substring(0, 1024);
             }
         }
 
@@ -234,7 +239,6 @@
 
         function onError(event) {
             log("WS error");
-            console.log(event);
         }
 
         function onOpen(event) {
@@ -249,7 +253,7 @@
             document.getElementById("connState").innerHTML = "WS Reconnecting...";
             setTimeout(initWebSocket, 1000);
         }
-        function gotGps(data) {
+        function gotSensor(data) {
             document.getElementById("devTemp").innerHTML = "Temp: " + data.temp + " &#8451;";
             if (data.lat != 0 && data.lon != 0) {
                 document.getElementById("devGpsLat").innerHTML = "Lat: " + data.lat;
@@ -262,8 +266,10 @@
         //when all the required data in
         function onDataArrived() {
             log("Command executed");
+            enadisaControls(true);
             try {
                 respLinestp = respLines;
+                respLines = [];
                 var tmpCb = respCallBack;
                 respCallBack = null;
                 if (tmpCb) tmpCb();
@@ -273,8 +279,6 @@
                     tmp();
                 }
             } catch (err) { console.log(err); }
-            respLines = [];
-            enadisaControls(true);
         }
         //one line received
         function onMessageLine(msg) {
@@ -299,16 +303,16 @@
                         autoScreenRefresh();
                         return false;
                     }
-                    if (msg.startsWith("#$##$$#GOTGPS")) {
+                    if (msg.startsWith("#$##$$#GOTSENS")) {
                         var jsStr = msg.substring(13);
                         var gpsdata = JSON.parse(jsStr);
-                        gotGps(gpsdata);
+                        gotSensor(gpsdata);
                         return false;
                     }
                 }
                 if (screensupdState == 1) {
                     screensupdState = 2;
-                    log("screen data arriving..");
+                    log("Screen data arriving...");
                 }
                 if (screensupdState >= 0) return true;
                 if (expectedFileSize > 0) return true;
@@ -395,12 +399,19 @@
                 gotCursorPosition(canvas, e);
             })
         }
-        function screenUpdated() {
+        async function screenUpdated() {
             const canvas = document.getElementById("screen");
             const ctx = canvas.getContext("2d");
             ctx.fillStyle = "#000";
             ctx.fillRect(0, 0, 240, 320);
             let y = -1;
+            if (respLinestp.length < 300 && respLinestp[respLinestp.length - 1].startsWith("ChibiOS")) {
+                await sendAndWait("");
+                if (respLinestp.length < 300) {
+                    refreshScreen();
+                    return;
+                }
+            }
             for (let i = 0; i < respLinestp.length; i++) {
                 if (respLinestp[i].length < 230) continue;
                 y++;
@@ -594,10 +605,12 @@
                 respWaiting = "send ";
                 enadisaControls(false);
                 await sendAndWait(tosend);
+                respWaiting = PROMPT;
                 var chunkSize = 300;
                 var offset = 0;
+                enadisaControls(false);
                 var reader = new FileReader();
-                reader.onload = function () {
+                reader.onload = async function () {
                     if (websocket.readyState === WebSocket.OPEN) {
                         setProgress(offset / file.size * 100);
                         websocket.send(reader.result);
@@ -608,13 +621,13 @@
                             //SENT ALL
                             log("File sent");
                             setProgress(-1);
-                            setTimeout(async function () {
-                                var tosend = "fclose\r\n";
-                                respWaiting = PROMPT;
-                                enadisaControls(false);
-                                await sendAndWait(tosend);
-                                ls();
-                            }, 500);
+                            respWaiting = PROMPT;
+                            await sendAndWait(""); //wait for send end prompt
+                            tosend = "fclose\r\n";
+                            enadisaControls(false);
+                            await sendAndWait(tosend);
+                            enadisaControls(false);
+                            ls();
                         }
                     }
                 };
