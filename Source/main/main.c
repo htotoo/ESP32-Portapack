@@ -1,5 +1,10 @@
 // TODO CHECK NMEA PARSER. DATE BAD WHEN NO FIX
 // todo save hmc calibration, and load and use, and recalibrate on the fly
+// SENSORS:
+// - BH1750  - 0x23
+// - HMC5883L  - 0x1E  - PARTLY
+// - ADXL345 - 0x53
+// - MPU925X ( 0x68 ) + 280  ( 0x76 )
 
 // no need to change, just connect to the AP, and change in the settings.
 #define DEFAULT_WIFI_HOSTNAME "ESP32PP"
@@ -20,7 +25,7 @@
 #include "freertos/task.h"
 #include "nvs_flash.h"
 
-#include "driver/temperature_sensor.h"
+#include <driver/temperature_sensor.h>
 
 static const char *TAG = "ESP32PP";
 
@@ -31,6 +36,7 @@ static const char *TAG = "ESP32PP";
 #include "wifim.h"
 
 #include "orientation.h"
+#include "environment.h"
 
 typedef enum TimerEntry
 {
@@ -50,8 +56,28 @@ float heading = 0.0;
 float tilt = 0.0;
 float temperatureEsp = 0.0;
 float temperature = 0.0;
-uint8_t humidity = 0;
+float humidity = 0.0;
+float pressure = 0.0;
 gps_t gpsdata;
+
+static void i2c_scan()
+{
+  esp_err_t res;
+  printf("i2c scan: \n");
+  i2c_dev_t dev = {0};
+  dev.cfg.sda_io_num = 5;
+  dev.cfg.scl_io_num = 4;
+  dev.cfg.master.clk_speed = 400000;
+  for (uint8_t i = 1; i < 127; i++)
+  {
+    dev.addr = i;
+    res = i2c_dev_probe(&dev, I2C_DEV_WRITE);
+    if (res == 0)
+    {
+      printf("Found device at: 0x%2x\n", i);
+    }
+  }
+}
 
 static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -129,6 +155,10 @@ void app_main(void)
 
   // end config load
 
+  i2cdev_init();
+  //  i2c scanner
+  i2c_scan();
+
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   usb_init();
 
@@ -139,13 +169,15 @@ void app_main(void)
   nmea_parser_handle_t nmea_hdl = nmea_parser_init(&nmeaconfig);
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
   esp_task_wdt_deinit();
+
   temperature_sensor_handle_t temp_sensor = NULL;
   temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(-10, 80);
   ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_sensor));
   ESP_LOGI(TAG, "Enable temperature sensor");
   ESP_ERROR_CHECK(temperature_sensor_enable(temp_sensor));
-  i2cdevInit(I2C0_DEV);
+
   init_orientation();
+  init_environment();
 
   uint32_t time_millis = 0;
 
@@ -160,6 +192,7 @@ void app_main(void)
       ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp)); // TEMPINT
       heading = get_heading_degrees();                                               // ORIENTATION
       tilt = 400;                                                                    // TILT //TODO
+      get_environment_meas(&temperature, &pressure, &humidity);                      // env data
 
       last_millis[TimerEntry_SENSORGET] = time_millis;
     }
@@ -173,19 +206,19 @@ void app_main(void)
                "{\"gps\":{\"y\":%d,\"m\":%d,\"d\":%d,\"h\":%d,\"mi\":%d,\"s\":%d,"
                "\"siu\":%d,\"siv\":%d,\"lat\":%.06f,\"lon\":%.06f,\"alt\":%.02f,\"speed\":%f},"
                "\"ori\":{\"head\":%.01f, \"tilt\":%.01f },"
-               "\"env\":{\"tempesp\":%.01f,\"temp\":%.01f,\"humi\":%d }"
+               "\"env\":{\"tempesp\":%.01f,\"temp\":%.01f,\"humi\":%.01f, \"press\":%.01f }"
                "}\r\n",
                gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour + TIME_ZONE, gpsdata.tim.minute, gpsdata.tim.second,
                gpsdata.sats_in_use, gpsdata.sats_in_view, gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed,
                heading, tilt,
-               temperatureEsp, temperature, humidity);
+               temperatureEsp, temperature, humidity, pressure);
       ws_sendall((uint8_t *)buff, strlen(buff));
       last_millis[TimerEntry_REPORTWEB] = time_millis;
     }
 
     // REPORT SENSOR DATA TO PP. EACH HAS OWN TIMER!
     char gotusb[300];
-    if (!getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS]))
+    if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS]))
     {
       if (gpsdata.latitude != 0 || gpsdata.longitude != 0)
       {
@@ -199,7 +232,7 @@ void app_main(void)
         }
       }
     }
-    if (!getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI]))
+    if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI]))
     {
       if (heading < 400) // got heading data
       {

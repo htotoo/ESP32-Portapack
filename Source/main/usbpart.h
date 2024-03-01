@@ -36,6 +36,11 @@ bool getInCommand()
   return inCommand;
 }
 
+bool getUsbConnected()
+{
+  return cdc_dev != NULL;
+}
+
 char *PROMPT = "ch> ";
 char searchPrompt[5] = {0};
 

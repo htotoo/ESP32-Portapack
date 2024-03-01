@@ -1,8 +1,11 @@
 
 #include "orientation.h"
 #include "nvs_flash.h"
+#include <string.h>
 
 float declinationAngle = 0; // todo setup to web interface http://www.magnetic-declination.com/
+
+hmc5883l_dev_t dev_hmc5883l;
 
 OrientationSensors orientation_inited = Orientation_none;
 
@@ -67,12 +70,21 @@ void save_calibration()
 void init_orientation()
 {
     // HCM5883l
-    hmc5883lInit(I2C0_DEV);
-    if (hmc5883lTestConnection())
+    memset(&dev_hmc5883l, 0, sizeof(hmc5883l_dev_t));
+    hmc5883l_init_desc(&dev_hmc5883l, 0, 5, 4);
+
+    if (hmc5883l_init(&dev_hmc5883l) == ESP_OK)
     {
-        hmc5883lSetMode(HMC5883L_MODE_CONTINUOUS);
+        hmc5883l_set_opmode(&dev_hmc5883l, HMC5883L_MODE_CONTINUOUS);
+        hmc5883l_set_samples_averaged(&dev_hmc5883l, HMC5883L_SAMPLES_8);
+        hmc5883l_set_data_rate(&dev_hmc5883l, HMC5883L_DATA_RATE_07_50);
+        hmc5883l_set_gain(&dev_hmc5883l, HMC5883L_GAIN_1090);
         ESP_LOGI("Orientation", "hmc5883lTestConnection OK");
         orientation_inited = Orientation_hmc5883l;
+    }
+    else
+    {
+        hmc5883l_free_desc(&dev_hmc5883l);
     }
 
     // end of list
@@ -101,9 +113,13 @@ float get_heading()
         return 0;
     if (orientation_inited == Orientation_hmc5883l)
     {
-        int16_t x, y, z = 0;
-        hmc5883lGetHeading(&x, &y, &z);
-        return atan2(y, x);
+        hmc5883l_data_t data;
+        if (hmc5883l_get_data(&dev_hmc5883l, &data) == ESP_OK)
+        {
+            // printf("Magnetic data: X:%.2f mG, Y:%.2f mG, Z:%.2f mG\n", data.x, data.y, data.z);
+            // todo use calibration
+            return atan2(data.y, data.x);
+        }
     }
     return 0;
 }

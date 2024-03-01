@@ -1,253 +1,268 @@
-/**
+/*
+ * The MIT License (MIT)
  *
- * ESP-Drone Firmware
+ * Copyright (c) 2018 Ruslan V. Uss <unclerus@gmail.com>
  *
- * Copyright 2019-2020  Espressif Systems (Shanghai)
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, in version 3.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- *
- * i2cdev.h - Functions to write to I2C devices
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
+/**
+ * @file i2cdev.h
+ * @defgroup i2cdev i2cdev
+ * @{
+ *
+ * ESP-IDF I2C master thread-safe functions for communication with I2C slave
+ *
+ * Copyright (c) 2018 Ruslan V. Uss <unclerus@gmail.com>
+ *
+ * MIT Licensed as described in the file LICENSE
+ */
 #ifndef __I2CDEV_H__
 #define __I2CDEV_H__
 
-#define M2T(X) ((unsigned int)(X) / portTICK_PERIOD_MS)  // ms to tick
-#define F2T(X) ((unsigned int)((configTICK_RATE_HZ / (X))))
-#define T2M(X) ((unsigned int)(X) * portTICK_PERIOD_MS)  // tick to ms
+#include <driver/i2c.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <esp_err.h>
+#include "esp_idf_lib_helpers.h"
 
-// Seconds to OS ticks
-#define S2T(X) ((portTickType)((X) * configTICK_RATE_HZ))
-#define T2S(X) ((X) / (float)configTICK_RATE_HZ)
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
-#include <stdbool.h>
-#include <stdint.h>
+#define CONFIG_I2CDEV_TIMEOUT 1000
+    // #define I2CDEV_NOLOCK
 
-#include "i2c_drv.h"
+#if HELPER_TARGET_IS_ESP8266
 
-#define I2CDEV_NO_MEM_ADDR 0xFF
+#define I2CDEV_MAX_STRETCH_TIME 0xffffffff
 
-typedef I2cDrv I2C_Dev;
-#define I2C0_DEV &sensorsBus
+#else
 
-// For compatibility
-#define i2cdevWrite16 i2cdevWriteReg16
-#define i2cdevRead16 i2cdevReadReg16
+#include <soc/i2c_reg.h>
+#if defined(I2C_TIME_OUT_VALUE_V)
+#define I2CDEV_MAX_STRETCH_TIME I2C_TIME_OUT_VALUE_V
+#elif defined(I2C_TIME_OUT_REG_V)
+#define I2CDEV_MAX_STRETCH_TIME I2C_TIME_OUT_REG_V
+#else
+#define I2CDEV_MAX_STRETCH_TIME 0x00ffffff
+#endif
 
-#define I2C_TIMEOUT 5
-#define I2CDEV_CLK_TS (1000000 / 100000)
+#endif /* HELPER_TARGET_IS_ESP8266 */
 
-#define I2C_MASTER_ACK_EN true   /*!< Enable ack check for master */
-#define I2C_MASTER_ACK_DIS false /*!< Disable ack check for master */
-/**
- * Read bytes from an I2C peripheral
- * @param dev  Pointer to I2C peripheral to read from
- * @param devAddress  The device address to read from
- * @param len  Number of bytes to read.
- * @param data  Pointer to a buffer to read the data to.
- *
- * @return TRUE if read was successful, otherwise FALSE.
- */
-bool i2cdevRead(I2C_Dev* dev, uint8_t devAddress, uint16_t len, uint8_t* data);
+    /**
+     * I2C device descriptor
+     */
+    typedef struct
+    {
+        i2c_port_t port;         //!< I2C port number
+        i2c_config_t cfg;        //!< I2C driver configuration
+        uint8_t addr;            //!< Unshifted address
+        SemaphoreHandle_t mutex; //!< Device mutex
+        uint32_t timeout_ticks;  /*!< HW I2C bus timeout (stretch time), in ticks. 80MHz APB clock
+                                      ticks for ESP-IDF, CPU ticks for ESP8266.
+                                      When this value is 0, I2CDEV_MAX_STRETCH_TIME will be used */
+    } i2c_dev_t;
 
-/**
- * Read bytes from an I2C peripheral
- * @param dev  Pointer to I2C peripheral to read from
- * @param devAddress  The device address to read from
- * @param memAddress  The internal address to read from, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param len  Number of bytes to read.
- * @param data  Pointer to a buffer to read the data to.
- *
- * @return TRUE if read was successful, otherwise FALSE.
- */
-bool i2cdevReadReg8(I2C_Dev* dev,
-                    uint8_t devAddress,
-                    uint8_t memAddress,
-                    uint16_t len,
-                    uint8_t* data);
+    /**
+     * I2C transaction type
+     */
+    typedef enum
+    {
+        I2C_DEV_WRITE = 0, /**< Write operation */
+        I2C_DEV_READ       /**< Read operation */
+    } i2c_dev_type_t;
 
-/**
- * Read bytes from an I2C peripheral with a 16bit internal reg/mem address
- * @param dev  Pointer to I2C peripheral to read from
- * @param devAddress  The device address to read from
- * @param memAddress  The internal address to read from, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param len  Number of bytes to read.
- * @param data  Pointer to a buffer to read the data to.
- *
- * @return TRUE if read was successful, otherwise FALSE.
- */
-bool i2cdevReadReg16(I2C_Dev* dev,
-                     uint8_t devAddress,
-                     uint16_t memAddress,
-                     uint16_t len,
-                     uint8_t* data);
+    /**
+     * @brief Init library
+     *
+     * The function must be called before any other
+     * functions of this library.
+     *
+     * @return ESP_OK on success
+     */
+    esp_err_t i2cdev_init();
 
-/**
- * I2C device init function.
- * @param dev  Pointer to I2C peripheral to initialize.
- *
- * @return TRUE if initialization went OK otherwise FALSE.
- */
-int i2cdevInit(I2C_Dev* dev);
+    /**
+     * @brief Finish work with library
+     *
+     * Uninstall i2c drivers.
+     *
+     * @return ESP_OK on success
+     */
+    esp_err_t i2cdev_done();
 
-/**
- * Read a byte from an I2C peripheral
- * @param dev  Pointer to I2C peripheral to read from
- * @param devAddress  The device address to read from
- * @param memAddress  The internal address to read from, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param data  Pointer to a buffer to read the data to.
- *
- * @return TRUE if read was successful, otherwise FALSE.
- */
-bool i2cdevReadByte(I2C_Dev* dev,
-                    uint8_t devAddress,
-                    uint8_t memAddress,
-                    uint8_t* data);
+    /**
+     * @brief Create mutex for device descriptor
+     *
+     * This function does nothing if option CONFIG_I2CDEV_NOLOCK is enabled.
+     *
+     * @param dev Device descriptor
+     * @return ESP_OK on success
+     */
+    esp_err_t i2c_dev_create_mutex(i2c_dev_t *dev);
 
-/**
- * Read a bit from an I2C peripheral
- * @param dev  Pointer to I2C peripheral to read from
- * @param devAddress  The device address to read from
- * @param memAddress  The internal address to read from, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param bitNum  The bit number 0 - 7 to read.
- * @param data  Pointer to a buffer to read the data to.
- *
- * @return TRUE if read was successful, otherwise FALSE.
- */
-bool i2cdevReadBit(I2C_Dev* dev,
-                   uint8_t devAddress,
-                   uint8_t memAddress,
-                   uint8_t bitNum,
-                   uint8_t* data);
-/**
- * Read up to 8 bits from an I2C peripheral
- * @param dev  Pointer to I2C peripheral to read from
- * @param devAddress  The device address to read from
- * @param memAddress  The internal address to read from, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param bitStart The bit to start from, 0 - 7, MSB at 0
- * @param length  The number of bits to read, 1 - 8.
- * @param data  Pointer to a buffer to read the data to.
- *
- * @return TRUE if read was successful, otherwise FALSE.
- */
-bool i2cdevReadBits(I2C_Dev* dev,
-                    uint8_t devAddress,
-                    uint8_t memAddress,
-                    uint8_t bitStart,
-                    uint8_t length,
-                    uint8_t* data);
+    /**
+     * @brief Delete mutex for device descriptor
+     *
+     * This function does nothing if option CONFIG_I2CDEV_NOLOCK is enabled.
+     *
+     * @param dev Device descriptor
+     * @return ESP_OK on success
+     */
+    esp_err_t i2c_dev_delete_mutex(i2c_dev_t *dev);
 
-/**
- * Write bytes to an I2C peripheral
- * @param dev  Pointer to I2C peripheral to write to
- * @param devAddress  The device address to write to
- * @param len  Number of bytes to read.
- * @param data  Pointer to a buffer to read the data from that will be written.
- *
- * @return TRUE if write was successful, otherwise FALSE.
- */
-bool i2cdevWrite(I2C_Dev* dev, uint8_t devAddress, uint16_t len, uint8_t* data);
+    /**
+     * @brief Take device mutex
+     *
+     * This function does nothing if option CONFIG_I2CDEV_NOLOCK is enabled.
+     *
+     * @param dev Device descriptor
+     * @return ESP_OK on success
+     */
+    esp_err_t i2c_dev_take_mutex(i2c_dev_t *dev);
 
-/**
- * Write bytes to an I2C peripheral
- * @param dev  Pointer to I2C peripheral to write to
- * @param devAddress  The device address to write to
- * @param memAddress  The internal address to write to, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param len  Number of bytes to read.
- * @param data  Pointer to a buffer to read the data from that will be written.
- *
- * @return TRUE if write was successful, otherwise FALSE.
- */
-bool i2cdevWriteReg8(I2C_Dev* dev,
-                     uint8_t devAddress,
-                     uint8_t memAddress,
-                     uint16_t len,
-                     uint8_t* data);
+    /**
+     * @brief Give device mutex
+     *
+     * This function does nothing if option CONFIG_I2CDEV_NOLOCK is enabled.
+     *
+     * @param dev Device descriptor
+     * @return ESP_OK on success
+     */
+    esp_err_t i2c_dev_give_mutex(i2c_dev_t *dev);
 
-/**
- * Write bytes to an I2C peripheral with 16bit internal reg/mem address.
- * @param dev  Pointer to I2C peripheral to write to
- * @param devAddress  The device address to write to
- * @param memAddress  The internal address to write to, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param len  Number of bytes to read.
- * @param data  Pointer to a buffer to read the data from that will be written.
- *
- * @return TRUE if write was successful, otherwise FALSE.
- */
-bool i2cdevWriteReg16(I2C_Dev* dev,
-                      uint8_t devAddress,
-                      uint16_t memAddress,
-                      uint16_t len,
-                      uint8_t* data);
+    /**
+     * @brief Check the availability of the device
+     *
+     * Issue an operation of \p operation_type to the I2C device then stops.
+     *
+     * @param dev Device descriptor
+     * @param operation_type Operation type
+     * @return ESP_OK if device is available
+     */
+    esp_err_t i2c_dev_probe(const i2c_dev_t *dev, i2c_dev_type_t operation_type);
 
-/**
- * Write a byte to an I2C peripheral
- * @param dev  Pointer to I2C peripheral to write to
- * @param devAddress  The device address to write to
- * @param memAddress  The internal address to write from, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param data  The byte to write.
- *
- * @return TRUE if write was successful, otherwise FALSE.
- */
-bool i2cdevWriteByte(I2C_Dev* dev,
-                     uint8_t devAddress,
-                     uint8_t memAddress,
-                     uint8_t data);
+    /**
+     * @brief Read from slave device
+     *
+     * Issue a send operation of \p out_data register address, followed by reading \p in_size bytes
+     * from slave into \p in_data .
+     * Function is thread-safe.
+     *
+     * @param dev Device descriptor
+     * @param out_data Pointer to data to send if non-null
+     * @param out_size Size of data to send
+     * @param[out] in_data Pointer to input data buffer
+     * @param in_size Number of byte to read
+     * @return ESP_OK on success
+     */
+    esp_err_t i2c_dev_read(const i2c_dev_t *dev, const void *out_data,
+                           size_t out_size, void *in_data, size_t in_size);
 
-/**
- * Write a bit to an I2C peripheral
- * @param dev  Pointer to I2C peripheral to write to
- * @param devAddress  The device address to write to
- * @param memAddress  The internal address to write to, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param bitNum  The bit number, 0 - 7, to write.
- * @param data  The bit to write.
- *
- * @return TRUE if read was successful, otherwise FALSE.
- */
-bool i2cdevWriteBit(I2C_Dev* dev,
-                    uint8_t devAddress,
-                    uint8_t memAddress,
-                    uint8_t bitNum,
-                    uint8_t data);
+    /**
+     * @brief Write to slave device
+     *
+     * Write \p out_size bytes from \p out_data to slave into \p out_reg register address.
+     * Function is thread-safe.
+     *
+     * @param dev Device descriptor
+     * @param out_reg Pointer to register address to send if non-null
+     * @param out_reg_size Size of register address
+     * @param out_data Pointer to data to send
+     * @param out_size Size of data to send
+     * @return ESP_OK on success
+     */
+    esp_err_t i2c_dev_write(const i2c_dev_t *dev, const void *out_reg,
+                            size_t out_reg_size, const void *out_data, size_t out_size);
 
-/**
- * Write up to 8 bits to an I2C peripheral
- * @param dev  Pointer to I2C peripheral to write to
- * @param devAddress  The device address to write to
- * @param memAddress  The internal address to write to, I2CDEV_NO_MEM_ADDR if
- * none.
- * @param bitStart The bit to start from, 0 - 7.
- * @param length  The number of bits to write, 1 - 8.
- * @param data  The byte containing the bits to write.
- *
- * @return TRUE if read was successful, otherwise FALSE.
- */
-bool i2cdevWriteBits(I2C_Dev* dev,
-                     uint8_t devAddress,
-                     uint8_t memAddress,
-                     uint8_t bitStart,
-                     uint8_t length,
-                     uint8_t data);
+    /**
+     * @brief Read from register with an 8-bit address
+     *
+     * Shortcut to ::i2c_dev_read().
+     *
+     * @param dev Device descriptor
+     * @param reg Register address
+     * @param[out] in_data Pointer to input data buffer
+     * @param in_size Number of byte to read
+     * @return ESP_OK on success
+     */
+    esp_err_t i2c_dev_read_reg(const i2c_dev_t *dev, uint8_t reg,
+                               void *in_data, size_t in_size);
 
-#endif  //__I2CDEV_H__
+    /**
+     * @brief Write to register with an 8-bit address
+     *
+     * Shortcut to ::i2c_dev_write().
+     *
+     * @param dev Device descriptor
+     * @param reg Register address
+     * @param out_data Pointer to data to send
+     * @param out_size Size of data to send
+     * @return ESP_OK on success
+     */
+    esp_err_t i2c_dev_write_reg(const i2c_dev_t *dev, uint8_t reg,
+                                const void *out_data, size_t out_size);
+
+#define I2C_DEV_TAKE_MUTEX(dev)                 \
+    do                                          \
+    {                                           \
+        esp_err_t __ = i2c_dev_take_mutex(dev); \
+        if (__ != ESP_OK)                       \
+            return __;                          \
+    } while (0)
+
+#define I2C_DEV_GIVE_MUTEX(dev)                 \
+    do                                          \
+    {                                           \
+        esp_err_t __ = i2c_dev_give_mutex(dev); \
+        if (__ != ESP_OK)                       \
+            return __;                          \
+    } while (0)
+
+#define I2C_DEV_CHECK(dev, X)        \
+    do                               \
+    {                                \
+        esp_err_t ___ = X;           \
+        if (___ != ESP_OK)           \
+        {                            \
+            I2C_DEV_GIVE_MUTEX(dev); \
+            return ___;              \
+        }                            \
+    } while (0)
+
+#define I2C_DEV_CHECK_LOGE(dev, X, msg, ...)   \
+    do                                         \
+    {                                          \
+        esp_err_t ___ = X;                     \
+        if (___ != ESP_OK)                     \
+        {                                      \
+            I2C_DEV_GIVE_MUTEX(dev);           \
+            ESP_LOGE(TAG, msg, ##__VA_ARGS__); \
+            return ___;                        \
+        }                                      \
+    } while (0)
+
+#ifdef __cplusplus
+}
+#endif
+
+/**@}*/
+
+#endif /* __I2CDEV_H__ */
