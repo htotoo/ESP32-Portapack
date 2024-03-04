@@ -45,5 +45,6 @@ void get_environment_meas(float *temperature, float *pressure, float *humidity)
     if (environment_inited == Environment_bme280 || environment_inited == Environment_bmp280)
     {
         bmp280_read_float(&dev_bmp280, temperature, pressure, humidity);
+        return;
     }
 }

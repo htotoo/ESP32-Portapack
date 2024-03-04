@@ -25,6 +25,16 @@ int ap_client_num = 0;
 uint32_t last_wifi_conntry = 0;
 bool wifi_sta_ok = false;
 
+bool getWifiStaStatus()
+{
+  return wifi_sta_ok;
+}
+
+int getWifiApClientNum()
+{
+  return ap_client_num;
+}
+
 void initialise_mdns(void)
 {
   ESP_ERROR_CHECK(mdns_init());
@@ -34,10 +44,7 @@ void initialise_mdns(void)
   ESP_ERROR_CHECK(mdns_service_subtype_add_for_host(NULL, "_http", "_tcp", NULL, "_server"));
 }
 
-static void event_handler(void *arg,
-                          esp_event_base_t event_base,
-                          int32_t event_id,
-                          void *event_data)
+static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
   {

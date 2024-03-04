@@ -3,8 +3,11 @@
 // SENSORS:
 // - BH1750  - 0x23
 // - HMC5883L  - 0x1E  - PARTLY
-// - ADXL345 - 0x53
+// - ADXL345 - 0x53  //https://github.com/craigpeacock/ESP32_Node/blob/master/main/adxl345.h
 // - MPU925X ( 0x68 ) + 280  ( 0x76 )
+
+// rgb led: GPIO48 on ESP S3. set to -1 to disable //todo set it up from web
+#define RGB_LED_PIN 48
 
 // no need to change, just connect to the AP, and change in the settings.
 #define DEFAULT_WIFI_HOSTNAME "ESP32PP"
@@ -44,13 +47,12 @@ typedef enum TimerEntry
   TimerEntry_REPORTPPGPS,
   TimerEntry_REPORTPPORI,
   TimerEntry_REPORTWEB,
+  TimerEntry_REPORTRGB,
   TimerEntry_MAX
 } TimerEntry;
 
 uint32_t last_millis[TimerEntry_MAX] = {0};
-uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 2000, 2000};
-
-bool hcmInited = false;
+uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 2000, 2000, 1000};
 
 float heading = 0.0;
 float tilt = 0.0;
@@ -59,6 +61,8 @@ float temperature = 0.0;
 float humidity = 0.0;
 float pressure = 0.0;
 gps_t gpsdata;
+
+#include "led.h"
 
 static void i2c_scan()
 {
@@ -154,7 +158,6 @@ void app_main(void)
   }
 
   // end config load
-
   i2cdev_init();
   //  i2c scanner
   i2c_scan();
@@ -175,6 +178,9 @@ void app_main(void)
   ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_sensor));
   ESP_LOGI(TAG, "Enable temperature sensor");
   ESP_ERROR_CHECK(temperature_sensor_enable(temp_sensor));
+
+  init_rgb();
+  rgb_set(255, 255, 255);
 
   init_orientation();
   init_environment();
@@ -245,6 +251,11 @@ void app_main(void)
           ESP_LOGI(TAG, "gotorientation sent");
         }
       }
+    }
+    if (time_millis - last_millis[TimerEntry_REPORTRGB] > timer_millis[TimerEntry_REPORTRGB])
+    {
+      rgb_set_by_status();
+      last_millis[TimerEntry_REPORTRGB] = time_millis;
     }
     // try wifi client connect
     wifi_loop(time_millis);
