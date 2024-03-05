@@ -7,6 +7,7 @@
 #include "drivers/i2cdev.h"
 
 #include "drivers/bmp280.h"
+#include "drivers/bh1750.h"
 
 typedef enum EnvironmentSensors
 {
@@ -15,8 +16,15 @@ typedef enum EnvironmentSensors
     Environment_bme280 = 2
 } EnvironmentSensors;
 
+typedef enum EnvironmentLightSensors
+{
+    Environment_light_none = 0,
+    Environment_light_bh1750 = 1
+} EnvironmentLightSensors;
+
 void init_environment();
+void init_environment_light();
 
 void get_environment_meas(float *temperature, float *pressure, float *humidity);
-
+void get_environment_light(uint16_t *light);
 #endif

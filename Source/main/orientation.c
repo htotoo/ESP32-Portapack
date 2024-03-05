@@ -91,6 +91,7 @@ void init_orientation()
     if (orientation_inited == Orientation_none)
     {
         ESP_LOGI("Orientation", "No compatible sensor found");
+        return;
     }
 
     // load calibration data

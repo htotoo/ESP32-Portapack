@@ -60,6 +60,7 @@ float temperatureEsp = 0.0;
 float temperature = 0.0;
 float humidity = 0.0;
 float pressure = 0.0;
+uint16_t light = 0;
 gps_t gpsdata;
 
 #include "led.h"
@@ -199,7 +200,7 @@ void app_main(void)
       heading = get_heading_degrees();                                               // ORIENTATION
       tilt = 400;                                                                    // TILT //TODO
       get_environment_meas(&temperature, &pressure, &humidity);                      // env data
-
+      get_environment_light(&light);                                                 // light (lux) data
       last_millis[TimerEntry_SENSORGET] = time_millis;
     }
 
@@ -212,12 +213,12 @@ void app_main(void)
                "{\"gps\":{\"y\":%d,\"m\":%d,\"d\":%d,\"h\":%d,\"mi\":%d,\"s\":%d,"
                "\"siu\":%d,\"siv\":%d,\"lat\":%.06f,\"lon\":%.06f,\"alt\":%.02f,\"speed\":%f},"
                "\"ori\":{\"head\":%.01f, \"tilt\":%.01f },"
-               "\"env\":{\"tempesp\":%.01f,\"temp\":%.01f,\"humi\":%.01f, \"press\":%.01f }"
+               "\"env\":{\"tempesp\":%.01f,\"temp\":%.01f,\"humi\":%.01f, \"press\":%.01f, \"light\":%d }"
                "}\r\n",
                gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour + TIME_ZONE, gpsdata.tim.minute, gpsdata.tim.second,
                gpsdata.sats_in_use, gpsdata.sats_in_view, gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed,
                heading, tilt,
-               temperatureEsp, temperature, humidity, pressure);
+               temperatureEsp, temperature, humidity, pressure, light);
       ws_sendall((uint8_t *)buff, strlen(buff));
       last_millis[TimerEntry_REPORTWEB] = time_millis;
     }

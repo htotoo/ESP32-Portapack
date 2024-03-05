@@ -45,28 +45,38 @@
 #include <stdio.h>
 #include <freertos/FreeRTOS.h>
 #include <esp_log.h>
-#include <esp_idf_lib_helpers.h>
+#include "esp_idf_lib_helpers.h"
 #include "bh1750.h"
 
-
-#define OPCODE_HIGH  0x0
+#define OPCODE_HIGH 0x0
 #define OPCODE_HIGH2 0x1
-#define OPCODE_LOW   0x3
+#define OPCODE_LOW 0x3
 
 #define OPCODE_CONT 0x10
-#define OPCODE_OT   0x20
+#define OPCODE_OT 0x20
 
 #define OPCODE_POWER_DOWN 0x00
-#define OPCODE_POWER_ON   0x01
-#define OPCODE_MT_HI      0x40
-#define OPCODE_MT_LO      0x60
+#define OPCODE_POWER_ON 0x01
+#define OPCODE_MT_HI 0x40
+#define OPCODE_MT_LO 0x60
 
 #define I2C_FREQ_HZ 400000
 
 static const char *TAG = "bh1750";
 
-#define CHECK(x) do { esp_err_t __; if ((__ = x) != ESP_OK) return __; } while (0)
-#define CHECK_ARG(VAL) do { if (!(VAL)) return ESP_ERR_INVALID_ARG; } while (0)
+#define CHECK(x)                \
+    do                          \
+    {                           \
+        esp_err_t __;           \
+        if ((__ = x) != ESP_OK) \
+            return __;          \
+    } while (0)
+#define CHECK_ARG(VAL)                  \
+    do                                  \
+    {                                   \
+        if (!(VAL))                     \
+            return ESP_ERR_INVALID_ARG; \
+    } while (0)
 
 inline static esp_err_t send_command_nolock(i2c_dev_t *dev, uint8_t cmd)
 {
@@ -130,9 +140,15 @@ esp_err_t bh1750_setup(i2c_dev_t *dev, bh1750_mode_t mode, bh1750_resolution_t r
     uint8_t opcode = mode == BH1750_MODE_CONTINUOUS ? OPCODE_CONT : OPCODE_OT;
     switch (resolution)
     {
-        case BH1750_RES_LOW:  opcode |= OPCODE_LOW;   break;
-        case BH1750_RES_HIGH: opcode |= OPCODE_HIGH;  break;
-        default:              opcode |= OPCODE_HIGH2; break;
+    case BH1750_RES_LOW:
+        opcode |= OPCODE_LOW;
+        break;
+    case BH1750_RES_HIGH:
+        opcode |= OPCODE_HIGH;
+        break;
+    default:
+        opcode |= OPCODE_HIGH2;
+        break;
     }
 
     CHECK(send_command(dev, opcode));
