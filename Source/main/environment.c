@@ -5,6 +5,7 @@
 
 bmp280_t dev_bmp280;
 i2c_dev_t bh1750;
+sht3x_t sht3x;
 
 EnvironmentSensors environment_inited = Environment_none;
 EnvironmentLightSensors environment_light_inited = Environment_light_none;
@@ -13,7 +14,10 @@ void init_environment()
 {
     // init extras
     init_environment_light();
+
     // init temp hum pressure
+
+    environment_inited = Environment_none;
 
     // BMP280
     bmp280_params_t params_bmp280;
@@ -31,13 +35,23 @@ void init_environment()
         {
             ESP_LOGI("Environment", "bmp280 OK");
         }
-        environment_inited = (dev_bmp280.id == BME280_CHIP_ID) ? Environment_bme280 : Environment_bmp280;
+        environment_inited = environment_inited | ((dev_bmp280.id == BME280_CHIP_ID) ? Environment_bme280 : Environment_bmp280);
         return;
     }
     else
     {
         // deinit
         bmp280_free_desc(&dev_bmp280);
+    }
+
+    // sht3x
+    memset(&sht3x, 0, sizeof(sht3x_t));
+    sht3x_init_desc(&sht3x, SHT3X_I2C_ADDR_GND, 0, 5, 4);
+    if (sht3x_init(&sht3x) == ESP_OK)
+    {
+        sht3x_start_measurement(&sht3x, SHT3X_PERIODIC_1MPS, SHT3X_HIGH);
+        environment_inited = environment_inited | Environment_sht3x;
+        ESP_LOGI("Environment", "sht3x OK");
     }
 
     // end of list
@@ -49,19 +63,23 @@ void init_environment()
 
 void get_environment_meas(float *temperature, float *pressure, float *humidity)
 {
-    if (environment_inited == Environment_bme280 || environment_inited == Environment_bmp280)
+    // put worst sensors front, then proceed to better ones.
+    // reason: bmp has pressure, but sht30 don't. so we read all data from it, and override others from a more precise sensor.
+    if (((environment_inited & Environment_bme280) == Environment_bme280) || ((environment_inited & Environment_bmp280) == Environment_bmp280))
     {
         bmp280_read_float(&dev_bmp280, temperature, pressure, humidity);
-        return;
+    }
+    if ((environment_inited & Environment_sht3x) == Environment_sht3x)
+    {
+        sht3x_get_results(&sht3x, temperature, humidity);
     }
 }
 
 void get_environment_light(uint16_t *light)
 {
-    if (environment_light_inited == Environment_light_bh1750)
+    if ((environment_light_inited & Environment_light_bh1750) == Environment_light_bh1750)
     {
         bh1750_read(&bh1750, light);
-        return;
     }
 }
 
@@ -77,8 +95,7 @@ void init_environment_light()
     {
         bh1750_power_on(&bh1750);
         ESP_LOGI("EnvironmentLight", "bh1750 OK");
-        environment_light_inited = Environment_light_bh1750;
-        return;
+        environment_light_inited = environment_light_inited | Environment_light_bh1750;
     }
     else
     {

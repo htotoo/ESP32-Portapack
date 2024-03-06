@@ -5,8 +5,10 @@
 // - HMC5883L  - 0x1E  - PARTLY
 // - ADXL345 - 0x53  //https://github.com/craigpeacock/ESP32_Node/blob/master/main/adxl345.h
 // - MPU925X ( 0x68 ) + 280  ( 0x76 )
+// todo probe multiple i2c addr per device?
+// todo set brightness from web setup
 
-// rgb led: GPIO48 on ESP S3. set to -1 to disable //todo set it up from web
+// rgb led: GPIO48 on ESP S3. set to -1 to disable
 #define RGB_LED_PIN 48
 
 // no need to change, just connect to the AP, and change in the settings.

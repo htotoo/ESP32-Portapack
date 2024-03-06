@@ -8,12 +8,14 @@
 
 #include "drivers/bmp280.h"
 #include "drivers/bh1750.h"
+#include "drivers/sht3x.h"
 
 typedef enum EnvironmentSensors
 {
     Environment_none = 0,
     Environment_bmp280 = 1,
-    Environment_bme280 = 2
+    Environment_bme280 = 2,
+    Environment_sht3x = 4,
 } EnvironmentSensors;
 
 typedef enum EnvironmentLightSensors

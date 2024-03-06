@@ -1,1 +1,1 @@
-idf_component_register(SRCS "orientation.c" "environment.c" "drivers/i2cdev.c" "drivers/hmc5883l.c"  "drivers/bh1750.c"  "drivers/bmp280.c" "nmea_parser.c" "main.c"  INCLUDE_DIRS "."  EMBED_FILES ../data/index.html ../data/ota.html ../data/setup.html)
+idf_component_register(SRCS "orientation.c" "environment.c" "drivers/i2cdev.c" "drivers/hmc5883l.c" "drivers/sht3x.c"  "drivers/bh1750.c"  "drivers/bmp280.c" "nmea_parser.c" "main.c"  INCLUDE_DIRS "."  EMBED_FILES ../data/index.html ../data/ota.html ../data/setup.html)
