@@ -6,8 +6,8 @@
 // include supported modules
 #include "drivers/i2cdev.h"
 
-#include "drivers/hmc5883l.h" //only 2d
-// LSM303D --check, accelo and 3d!
+#include "drivers/hmc5883l.h" //only 2d and maybe the ADXL345 for 3d
+// MPU925X --check, accelo and 3d!
 
 #define M_PI 3.14159265358979323846
 

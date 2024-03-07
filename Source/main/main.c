@@ -48,13 +48,14 @@ typedef enum TimerEntry
   TimerEntry_SENSORGET,
   TimerEntry_REPORTPPGPS,
   TimerEntry_REPORTPPORI,
+  TimerEntry_REPORTPPENVI,
   TimerEntry_REPORTWEB,
   TimerEntry_REPORTRGB,
   TimerEntry_MAX
 } TimerEntry;
 
 uint32_t last_millis[TimerEntry_MAX] = {0};
-uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 2000, 2000, 1000};
+uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 2000, 2000, 2000, 1000};
 
 float heading = 0.0;
 float tilt = 0.0;
@@ -252,6 +253,20 @@ void app_main(void)
           write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
           last_millis[TimerEntry_REPORTPPORI] = time_millis;
           ESP_LOGI(TAG, "gotorientation sent");
+        }
+      }
+    }
+    if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPENVI] > timer_millis[TimerEntry_REPORTPPENVI]))
+    {
+      if (heading < 400) // got heading data
+      {
+        snprintf(gotusb, 290, "gotenv %.02f %.01f %.02f %d\r\n", temperature, humidity, pressure, light);
+        ESP_LOGI(TAG, "%s", gotusb);
+        if (wait_till_usb_sending(1))
+        {
+          write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
+          last_millis[TimerEntry_REPORTPPENVI] = time_millis;
+          ESP_LOGI(TAG, "gotenv sent");
         }
       }
     }

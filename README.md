@@ -52,6 +52,16 @@ An addon module for portapack to add extra sensors to it for more fun.
 
 ![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords.png?raw=true)  ![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords_with_orientation.png?raw=true)
 
+**ExtSensor app**
+![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ExtSensorTester.png?raw=true)
+
+
+### Flash:
+If you want to flash the provided binary files, you can use this command:
+esptool.py -p COM5 -b 460800 --before default_reset --after hard_reset --chip esp32s3 write_flash --flash_mode dio --flash_freq 80m --flash_size detect 0x0 bootloader.bin 0x10000 ESP32PP.bin 0x8000 partition-table.bin 0xd000 ota_data_initial.bin 
+
+If you want to flash from GUI, you can use the Flash Download Tool from ESP with these settings:
+![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/flash.png?raw=true)
 
 ### Support
 - Links are affiliate links! If you don't want to use them, feel free to just search for the modules yourself. Using the affiliate links gives me some credits, so I can buy and integrate more modules to this (or other) projects.
