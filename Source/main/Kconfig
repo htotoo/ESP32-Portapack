@@ -1,0 +1,24 @@
+menu "ESP32PP"
+
+    config GPSTXPIN
+        int "PIN where you connect the GPS TX part (ESP RX)"
+        range  0 40
+        default 6
+        help
+            PIN where you connect the GPS TX part (ESP RX)
+
+    config IC2SCLPIN
+        int "I2C SCL PIN on ESP"
+        range 0 40
+        default 4
+        help
+            I2C SCL PIN on ESP
+
+    config IC2SDAPIN
+        int "I2C SDA PIN on ESP"
+        range 1 255
+        default 5
+        help
+            I2C SDA PIN on ESP
+
+endmenu

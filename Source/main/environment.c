@@ -23,7 +23,7 @@ void init_environment()
     bmp280_params_t params_bmp280;
     bmp280_init_default_params(&params_bmp280);
     memset(&dev_bmp280, 0, sizeof(bmp280_t));
-    bmp280_init_desc(&dev_bmp280, BMP280_I2C_ADDRESS_0, 0, 5, 4);
+    bmp280_init_desc(&dev_bmp280, BMP280_I2C_ADDRESS_0, 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
 
     if (bmp280_init(&dev_bmp280, &params_bmp280) == ESP_OK)
     {
@@ -46,7 +46,7 @@ void init_environment()
 
     // sht3x
     memset(&sht3x, 0, sizeof(sht3x_t));
-    sht3x_init_desc(&sht3x, SHT3X_I2C_ADDR_GND, 0, 5, 4);
+    sht3x_init_desc(&sht3x, SHT3X_I2C_ADDR_GND, 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
     if (sht3x_init(&sht3x) == ESP_OK)
     {
         sht3x_start_measurement(&sht3x, SHT3X_PERIODIC_1MPS, SHT3X_HIGH);
@@ -89,7 +89,7 @@ void init_environment_light()
 
     // bh1750
     memset(&bh1750, 0, sizeof(i2c_dev_t));
-    bh1750_init_desc(&bh1750, 0x23, 0, 5, 4);
+    bh1750_init_desc(&bh1750, 0x23, 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
 
     if (bh1750_setup(&bh1750, BH1750_MODE_CONTINUOUS, BH1750_RES_HIGH) == ESP_OK)
     {

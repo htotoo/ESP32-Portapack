@@ -71,7 +71,7 @@ void init_orientation()
 {
     // HCM5883l
     memset(&dev_hmc5883l, 0, sizeof(hmc5883l_dev_t));
-    hmc5883l_init_desc(&dev_hmc5883l, 0, 5, 4);
+    hmc5883l_init_desc(&dev_hmc5883l, 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
 
     if (hmc5883l_init(&dev_hmc5883l) == ESP_OK)
     {
