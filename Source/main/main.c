@@ -49,13 +49,15 @@ typedef enum TimerEntry
   TimerEntry_REPORTPPGPS,
   TimerEntry_REPORTPPORI,
   TimerEntry_REPORTPPENVI,
+  TimerEntry_REPORTPPTIME,
   TimerEntry_REPORTWEB,
   TimerEntry_REPORTRGB,
   TimerEntry_MAX
 } TimerEntry;
 
 uint32_t last_millis[TimerEntry_MAX] = {0};
-uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 2000, 2000, 2000, 1000};
+//                                       SEN    GPS  ORI    ENV   TIME        WEB   RGB
+uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 2000, 2000, 60000 * 10, 2000, 1000};
 
 float heading = 0.0;
 float tilt = 0.0;
@@ -65,6 +67,7 @@ float humidity = 0.0;
 float pressure = 0.0;
 uint16_t light = 0;
 gps_t gpsdata;
+uint16_t lastReportedMxS = 0; // gps last reported time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
 
 #include "led.h"
 
@@ -270,6 +273,23 @@ void app_main(void)
         }
       }
     }
+    if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPTIME] > timer_millis[TimerEntry_REPORTPPTIME]))
+    {
+      uint16_t cmxs = gpsdata.tim.minute * gpsdata.tim.second + gpsdata.tim.second + gpsdata.tim.hour;
+      if (gpsdata.date.year < 2044 && gpsdata.date.year > 2023 && lastReportedMxS != cmxs) // got a valid time, and ti is not the last
+      {
+        snprintf(gotusb, 290, "rtcset %d %d %d %d %d %d\r\n", gpsdata.date.year, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second);
+        ESP_LOGI(TAG, "%s", gotusb);
+        if (wait_till_usb_sending(1))
+        {
+          write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
+          last_millis[TimerEntry_REPORTPPTIME] = time_millis;
+          ESP_LOGI(TAG, "settime sent");
+          lastReportedMxS = cmxs;
+        }
+      }
+    }
+
     if (time_millis - last_millis[TimerEntry_REPORTRGB] > timer_millis[TimerEntry_REPORTRGB])
     {
       rgb_set_by_status();
