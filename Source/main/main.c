@@ -7,6 +7,7 @@
 // - MPU925X ( 0x68 ) + 280  ( 0x76 )
 // todo probe multiple i2c addr per device?
 // todo set brightness from web setup
+// todo add an option to disable rtc set (bc utc only) //todo add +- time
 
 // rgb led: GPIO48 on ESP S3. set to -1 to disable
 #define RGB_LED_PIN 48
