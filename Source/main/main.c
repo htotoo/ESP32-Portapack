@@ -236,7 +236,7 @@ void app_main(void)
     {
       if (gpsdata.latitude != 0 || gpsdata.longitude != 0)
       {
-        snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed);
+        snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f %d\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed, gpsdata.sats_in_use);
         ESP_LOGI(TAG, "%s", gotusb);
         if (wait_till_usb_sending(1))
         {
