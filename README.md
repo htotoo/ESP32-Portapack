@@ -56,6 +56,11 @@ An addon module for portapack to add extra sensors to it for more fun.
 
 ![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ExtSensorTester.png?raw=true)
 
+
+**Fox hunt app**
+
+![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/foxhunt.png?raw=true)
+
 ### How to build:
 You can check the pinout here: https://github.com/htotoo/ESP32-Portapack/blob/main/BuildIt/README.md
 
