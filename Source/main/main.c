@@ -1,10 +1,6 @@
 // TODO CHECK NMEA PARSER. DATE BAD WHEN NO FIX
 // todo save hmc calibration, and load and use, and recalibrate on the fly
-// SENSORS:
-// - BH1750  - 0x23
-// - HMC5883L  - 0x1E  - PARTLY
-// - ADXL345 - 0x53  //https://github.com/craigpeacock/ESP32_Node/blob/master/main/adxl345.h
-// - MPU925X ( 0x68 ) + 280  ( 0x76 )
+
 // todo probe multiple i2c addr per device?
 // todo set brightness from web setup
 // todo add an option to disable rtc set (bc utc only) //todo add +- time
@@ -30,6 +26,8 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
+
+#include "sensordb.h"
 
 #include <driver/temperature_sensor.h>
 
@@ -58,7 +56,7 @@ typedef enum TimerEntry
 
 uint32_t last_millis[TimerEntry_MAX] = {0};
 //                                       SEN    GPS  ORI    ENV   TIME        WEB   RGB
-uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 2000, 2000, 60000 * 10, 2000, 1000};
+uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000};
 
 float heading = 0.0;
 float tilt = 0.0;
@@ -68,7 +66,7 @@ float humidity = 0.0;
 float pressure = 0.0;
 uint16_t light = 0;
 gps_t gpsdata;
-uint16_t lastReportedMxS = 0; // gps last reported time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
+uint16_t lastReportedMxS = 0; // gps last reported gps time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
 
 #include "led.h"
 
@@ -87,6 +85,7 @@ static void i2c_scan()
     if (res == 0)
     {
       printf("Found device at: 0x%2x\n", i);
+      foundI2CDev(i);
     }
   }
 }

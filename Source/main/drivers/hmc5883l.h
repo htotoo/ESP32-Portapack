@@ -154,9 +154,10 @@ extern "C"
      * @param port I2C port number
      * @param sda_gpio GPIO pin number for SDA
      * @param scl_gpio GPIO pin number for SCL
+     * @param addr addres of device
      * @return `ESP_OK` on success
      */
-    esp_err_t hmc5883l_init_desc(hmc5883l_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
+    esp_err_t hmc5883l_init_desc(hmc5883l_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio, uint8_t addr);
 
     /**
      * @brief Free device descriptor

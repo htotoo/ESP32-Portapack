@@ -7,7 +7,7 @@ An addon module for portapack to add extra sensors to it for more fun.
 
 - **Web**
   - Can be Wifi AP or can connect to a Wifi router (or phone share).
-  - Built in web server to remote control the Portapack.
+  - Built in mini web server to remote control the Portapack.
   - Configure ESP from the Wifi AP. (If you use AP mode, the STA mode will stop, till you disconnect from AP)
   - Default url in AP mode: http://192.168.4.1/ (in AP mode, you should turn off mobile data, to be able to connect to it). Default AP SSID: ESP32PP, Pass: 12345678
   - OTA update the ESP32S3 (from settings / ota)
@@ -17,7 +17,8 @@ An addon module for portapack to add extra sensors to it for more fun.
 - **GPS**
   - See yourself in the maps, to know the relative positions. Great while hunting weather balloons.
   - Mark the location of the signals you saw.
-  - Help with the Foxhunt (for the Foxhunt app, that is under development)
+  - Help with the Foxhunt.
+  - Set time in Portapack based on GPS time (UTC)
 
 - **Temperature + humidity + pressure + light**
   - Depending on the environmental conditions, it can be useful for adapting the game strategy or adding complexity to the foxhunt.
@@ -38,12 +39,15 @@ An addon module for portapack to add extra sensors to it for more fun.
   - To see where the signal comes from while using a directional antenna. (eg for Foxhunt)
   - Helps find satellites.
 
+- **LoRa**
+  - Some kind of LoRa support, needs to determinde function (based on availeable FW space, and computing power). Not soon!
+
 
 ### Compatible modules:
 - ESP32S3 (recommended: https://s.click.aliexpress.com/e/_DeaSKvJ - select the S3, not the C3!)
 - USB cable that fits your needs. (to wire with PP, and supply enough power to it!)
-- GPS, any NMEA over UART. For example the NEO 7M: https://s.click.aliexpress.com/e/_DkDZHaV . Select NEO 7M or 8M for much better precision, 6M is GPS only!
-- Compass, HMC5883L supported for now (can suggest better in the Issues)
+- GPS: any NMEA over UART. For example the NEO 7M: https://s.click.aliexpress.com/e/_DkDZHaV . Select NEO 7M or 8M for much better precision, 6M is GPS only!
+- Compass: HMC5883L or MPU925X (can suggest better in the Issues)
 - Temperature+humidity: SHT30 I2C. https://s.click.aliexpress.com/e/_DFU9Ra9 or BME280 I2C(or BMP280 I2C) https://s.click.aliexpress.com/e/_DCRJ0ZT
 - Light sensor: BH1750 https://s.click.aliexpress.com/e/_DDFf7vr
 

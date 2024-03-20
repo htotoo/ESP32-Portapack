@@ -90,12 +90,12 @@ static const float gain_values[] = {
       return ESP_ERR_INVALID_ARG; \
   } while (0)
 
-esp_err_t hmc5883l_init_desc(hmc5883l_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
+esp_err_t hmc5883l_init_desc(hmc5883l_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio, uint8_t addr)
 {
   CHECK_ARG(dev);
 
   dev->i2c_dev.port = port;
-  dev->i2c_dev.addr = HMC5883L_ADDR;
+  dev->i2c_dev.addr = addr;
   dev->i2c_dev.cfg.sda_io_num = sda_gpio;
   dev->i2c_dev.cfg.scl_io_num = scl_gpio;
 #if HELPER_TARGET_IS_ESP32
