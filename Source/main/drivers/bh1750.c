@@ -122,7 +122,6 @@ esp_err_t bh1750_free_desc(i2c_dev_t *dev)
 esp_err_t bh1750_power_down(i2c_dev_t *dev)
 {
     CHECK_ARG(dev);
-
     return send_command(dev, OPCODE_POWER_DOWN);
 }
 

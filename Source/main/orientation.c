@@ -7,8 +7,14 @@
 float declinationAngle = 0; // todo setup to web interface http://www.magnetic-declination.com/
 
 hmc5883l_dev_t dev_hmc5883l;
+i2c_dev_t dev_adxl345;
 
 OrientationSensors orientation_inited = Orientation_none;
+GyroSensors gyro_inited = Gyro_none;
+
+float gyro_x = 0;
+float gyro_y = 0;
+float gyro_z = 0;
 
 int16_t orientationXMin = INT16_MAX;
 int16_t orientationYMin = INT16_MAX;
@@ -68,6 +74,23 @@ void save_calibration()
     }
 }
 
+void init_gyro()
+{
+    gyro_inited = Gyro_none;
+
+    memset(&dev_adxl345, 0, sizeof(dev_adxl345));
+    adxl345_init_desc(&dev_adxl345, getDevAddr(ADXL345), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
+    if (adxl345_init(&dev_adxl345) == ESP_OK)
+    {
+        gyro_inited |= Gyro_ADXL345;
+        ESP_LOGI("Gyro", "adxl345 OK");
+    }
+    else
+    {
+        adxl345_free_desc(&dev_adxl345);
+    }
+}
+
 void init_orientation()
 {
     // HCM5883l
@@ -95,6 +118,7 @@ void init_orientation()
         return;
     }
 
+    init_gyro();
     // load calibration data
     load_calibration();
 }
@@ -109,18 +133,54 @@ float fix_heading(float heading)
     return (heading + declinationAngle);
 }
 
+void update_gyro_data()
+{
+    if (gyro_inited == Gyro_none)
+        return;
+    if ((gyro_inited && Gyro_ADXL345) == Gyro_ADXL345)
+    {
+        adxl345_read_x(&dev_adxl345, &gyro_x);
+        adxl345_read_y(&dev_adxl345, &gyro_y);
+        adxl345_read_z(&dev_adxl345, &gyro_z);
+        // debug todo del
+        ESP_LOGI("gyro", "gyro data: %f %f %f", gyro_x, gyro_y, gyro_z);
+    }
+}
+
 float get_heading()
 {
     if (orientation_inited == Orientation_none)
         return 0;
+
+    update_gyro_data(); // update only if orientation needs it.
     if (orientation_inited == Orientation_hmc5883l)
     {
         hmc5883l_data_t data;
         if (hmc5883l_get_data(&dev_hmc5883l, &data) == ESP_OK)
         {
-            // printf("Magnetic data: X:%.2f mG, Y:%.2f mG, Z:%.2f mG\n", data.x, data.y, data.z);
             // todo use calibration
-            return atan2(data.y, data.x);
+            if (orientation_inited == Orientation_none)
+                return atan2(data.y, data.x);
+            // if got gyro data
+            float cosRoll = cos(gyro_x);
+            float sinRoll = sin(gyro_x);
+            float cosPitch = cos(gyro_y);
+            float sinPitch = sin(gyro_y);
+            float magX, magY;
+            magX = gyro_x * cosPitch * gyro_z * sinPitch;
+            magY = gyro_x * sinRoll * sinPitch + gyro_y * cosRoll - gyro_z * sinRoll * cosPitch;
+
+            float norm = sqrt(magX * magX + magY * magY);
+            float magHeadingX = magX / norm;
+            float magHeadingY = -magY / norm;
+            float magHeadingAbsolute = atan2(magHeadingY, magHeadingX);
+            magHeadingAbsolute -= declinationAngle;
+            if (magHeadingAbsolute < 0)
+                magHeadingAbsolute += 2 * M_PI;
+            if (magHeadingAbsolute > 2 * M_PI)
+                magHeadingAbsolute -= 2 * M_PI;
+            // float headingDegrees = magHeadingAbsolute * 180 / M_PI;
+            return magHeadingAbsolute;
         }
     }
     return 0;

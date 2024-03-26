@@ -72,6 +72,7 @@ uint16_t lastReportedMxS = 0; // gps last reported gps time mix to see if it is 
 
 static void i2c_scan()
 {
+  vTaskDelay(50 / portTICK_PERIOD_MS); // wait till devs wake up
   esp_err_t res;
   printf("i2c scan: \n");
   i2c_dev_t dev = {0};
