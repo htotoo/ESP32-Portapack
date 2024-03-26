@@ -19,11 +19,11 @@ typedef enum OrientationSensors
     Orientation_hmc5883l = 1
 } OrientationSensors;
 
-typedef enum GyroSensors
+typedef enum AcceloSensors
 {
-    Gyro_none = 0,
-    Gyro_ADXL345 = 1
-} GyroSensors;
+    Accelo_none = 0,
+    Accelo_ADXL345 = 1
+} AcceloSensors;
 
 void init_orientation();
 

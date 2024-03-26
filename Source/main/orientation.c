@@ -10,11 +10,11 @@ hmc5883l_dev_t dev_hmc5883l;
 i2c_dev_t dev_adxl345;
 
 OrientationSensors orientation_inited = Orientation_none;
-GyroSensors gyro_inited = Gyro_none;
+AcceloSensors accelo_inited = Accelo_none;
 
-float gyro_x = 0;
-float gyro_y = 0;
-float gyro_z = 0;
+float accelo_x = 0;
+float accelo_y = 0;
+float accelo_z = 0;
 
 int16_t orientationXMin = INT16_MAX;
 int16_t orientationYMin = INT16_MAX;
@@ -76,13 +76,13 @@ void save_calibration()
 
 void init_gyro()
 {
-    gyro_inited = Gyro_none;
+    accelo_inited = Accelo_none;
 
     memset(&dev_adxl345, 0, sizeof(dev_adxl345));
     adxl345_init_desc(&dev_adxl345, getDevAddr(ADXL345), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
     if (adxl345_init(&dev_adxl345) == ESP_OK)
     {
-        gyro_inited |= Gyro_ADXL345;
+        accelo_inited |= Accelo_ADXL345;
         ESP_LOGI("Gyro", "adxl345 OK");
     }
     else
@@ -135,15 +135,14 @@ float fix_heading(float heading)
 
 void update_gyro_data()
 {
-    if (gyro_inited == Gyro_none)
+    if (accelo_inited == Accelo_none)
         return;
-    if ((gyro_inited && Gyro_ADXL345) == Gyro_ADXL345)
+    if ((accelo_inited && Accelo_ADXL345) == Accelo_ADXL345)
     {
-        adxl345_read_x(&dev_adxl345, &gyro_x);
-        adxl345_read_y(&dev_adxl345, &gyro_y);
-        adxl345_read_z(&dev_adxl345, &gyro_z);
-        // debug todo del
-        ESP_LOGI("gyro", "gyro data: %f %f %f", gyro_x, gyro_y, gyro_z);
+        adxl345_read_x(&dev_adxl345, &accelo_x);
+        adxl345_read_y(&dev_adxl345, &accelo_y);
+        adxl345_read_z(&dev_adxl345, &accelo_z);
+        // ESP_LOGI("accel", "accel data: %f %f %f", gyro_x, gyro_y, gyro_z);
     }
 }
 
@@ -161,8 +160,8 @@ float get_heading()
             if (orientation_inited == Orientation_none)
                 return atan2(data.y, data.x);
             // if got gyro data
-            float accXnorm = gyro_x / sqrt(gyro_x * gyro_x + gyro_y * gyro_y + gyro_z * gyro_z);
-            float accYnorm = gyro_y / sqrt(gyro_x * gyro_x + gyro_y * gyro_y + gyro_z * gyro_z);
+            float accXnorm = accelo_x / sqrt(accelo_x * accelo_x + accelo_y * accelo_y + accelo_z * accelo_z);
+            float accYnorm = accelo_y / sqrt(accelo_x * accelo_x + accelo_y * accelo_y + accelo_z * accelo_z);
             float pitch = asin(-accXnorm);
             float roll = asin(accYnorm / cos(pitch));
 
