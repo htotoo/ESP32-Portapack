@@ -158,29 +158,23 @@ float get_heading()
         hmc5883l_data_t data;
         if (hmc5883l_get_data(&dev_hmc5883l, &data) == ESP_OK)
         {
-            // todo use calibration
             if (orientation_inited == Orientation_none)
                 return atan2(data.y, data.x);
             // if got gyro data
-            float cosRoll = cos(gyro_x);
-            float sinRoll = sin(gyro_x);
-            float cosPitch = cos(gyro_y);
-            float sinPitch = sin(gyro_y);
-            float magX, magY;
-            magX = gyro_x * cosPitch * gyro_z * sinPitch;
-            magY = gyro_x * sinRoll * sinPitch + gyro_y * cosRoll - gyro_z * sinRoll * cosPitch;
+            float accXnorm = gyro_x / sqrt(gyro_x * gyro_x + gyro_y * gyro_y + gyro_z * gyro_z);
+            float accYnorm = gyro_y / sqrt(gyro_x * gyro_x + gyro_y * gyro_y + gyro_z * gyro_z);
+            float pitch = asin(-accXnorm);
+            float roll = asin(accYnorm / cos(pitch));
 
-            float norm = sqrt(magX * magX + magY * magY);
-            float magHeadingX = magX / norm;
-            float magHeadingY = -magY / norm;
-            float magHeadingAbsolute = atan2(magHeadingY, magHeadingX);
-            magHeadingAbsolute -= declinationAngle;
-            if (magHeadingAbsolute < 0)
-                magHeadingAbsolute += 2 * M_PI;
-            if (magHeadingAbsolute > 2 * M_PI)
-                magHeadingAbsolute -= 2 * M_PI;
-            // float headingDegrees = magHeadingAbsolute * 180 / M_PI;
-            return magHeadingAbsolute;
+            // todo use calibration
+            float magXcomp = data.x; // (magX - calibration[0]) / (calibration[1] - calibration[0]) * 2 - 1;
+            float magYcomp = data.y; //(magY - calibration[2]) / (calibration[3] - calibration[2]) * 2 - 1;
+            float magZcomp = data.z; //(magZ - calibration[4]) / (calibration[5] - calibration[4]) * 2 - 1;
+
+            float magXheading = magXcomp * cos(pitch) + magZcomp * sin(pitch);
+            float magYheading = magXcomp * sin(roll) * sin(pitch) + magYcomp * cos(roll) - magZcomp * sin(roll) * cos(pitch);
+
+            return atan2(magYheading, magXheading);
         }
     }
     return 0;
@@ -190,7 +184,10 @@ float get_heading_degrees()
 {
     if (orientation_inited == Orientation_none)
         return 400;
-    return get_heading() * 180 / M_PI + declinationAngle;
+    float heading = get_heading() * 180 / M_PI + declinationAngle;
+    if (heading < 0)
+        heading += 360;
+    return heading;
 }
 
 void calibrate_orientation(uint8_t sec)
