@@ -130,7 +130,9 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
     strcpy(wifiStaPASS, tmp);
   if (find_post_value("rgb_brightness=", buf, tmp) > 0)
   {
-    rgb_brightness = atoi(tmp);
+    rgb_brightness = (uint8_t)atoi(tmp);
+    if (rgb_brightness > 100)
+      rgb_brightness = 100;
     changeMask |= 2;
   }
   if (find_post_value("declinationAngle=", buf, tmp) > 0)

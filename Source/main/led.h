@@ -30,14 +30,64 @@ void rgb_set_by_status()
     bool wifiAp = getWifiApClientNum() > 0;
     bool gps = gpsdata.latitude != 0 && gpsdata.longitude != 0 && gpsdata.sats_in_use > 2;
     uint8_t r = 0;
-    uint8_t g = usb ? 255 : 0;
-    uint8_t b = gps ? 127 : 0;
+    uint8_t g = 0;
+    uint8_t b = 0;
+    uint8_t tmp = 0;
+    const int max_options = 16;
+
     if (wifiSta)
-        r += 127;
+        tmp |= 1;
     if (wifiAp)
+        tmp |= 2;
+    if (usb)
+        tmp |= 4;
+    if (gps)
+        tmp |= 8;
+
+    // calc the color
+    int hue = ((int)tmp * 360) / max_options;
+    if (hue >= 0 && hue < 60)
     {
-        r += 127;
-        b += 127;
+        r = 255;
+        g = hue * 255 / 60;
+        b = 0;
+    }
+    else if (hue >= 60 && hue < 120)
+    {
+        r = 255 - (hue - 60) * 255 / 60;
+        g = 255;
+        b = 0;
+    }
+    else if (hue >= 120 && hue < 180)
+    {
+        r = 0;
+        g = 255;
+        b = (hue - 120) * 255 / 60;
+    }
+    else if (hue >= 180 && hue < 240)
+    {
+        r = 0;
+        g = 255 - (hue - 180) * 255 / 60;
+        b = 255;
+    }
+    else if (hue >= 240 && hue < 300)
+    {
+        r = (hue - 240) * 255 / 60;
+        g = 0;
+        b = 255;
+    }
+    else
+    {
+        r = 255;
+        g = 0;
+        b = 255 - (hue - 300) * 255 / 60;
+    }
+
+    if (tmp == max_options - 1)
+    {
+        r = 255;
+        g = 255;
+        b = 255;
     }
     rgb_set(r, g, b);
 }
