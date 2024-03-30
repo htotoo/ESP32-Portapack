@@ -40,9 +40,17 @@
             SSID: <input type="text" maxlength="60" name="wifiStaSSID" value="%s" /><br />
             Pass: <input type="text" maxlength="60" name="wifiStaPASS" value="%s" />
         </p>
+        <p>Misc<br />
+            RGB Brightness: <input type="number" min="0" max="255" step="1" name="rgb_brightness" value="%d" /><br />
+            Mag declination angle: <input type="number" min="0" max="365" step="0.1" name="declinationAngle"
+                value="%0.1f" /><br />
+            <i>Find Declination angle for your location here: <a href="https://www.magnetic-declination.com/"
+                    target="_blank">magnetic-declination.com</a></i>
+        </p>
         <input type="submit" name="submit" value="Save" />&nbsp; &nbsp; <a href="/">Cancel</a>
     </form>
-    <a href="/ota.html">OTA update ESP</a>
+    <br /><i>Wifi changes needs rebooting ESP to apply</i><br /><br />
+    <a href="/ota.html" style="font-size:large">OTA update ESP</a>
 </body>
 
 </html>

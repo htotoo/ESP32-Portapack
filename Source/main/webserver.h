@@ -50,7 +50,7 @@ static esp_err_t get_req_handler(httpd_req_t *req)
 /// setup.html get handler
 static esp_err_t get_req_handler_setup(httpd_req_t *req)
 {
-  snprintf(setup_html_out, sizeof(setup_html_out), setup_start, wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS);
+  snprintf(setup_html_out, sizeof(setup_html_out), setup_start, wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS, rgb_brightness, declinationAngle);
   int response = httpd_resp_send(req, setup_html_out, HTTPD_RESP_USE_STRLEN);
   return response;
 }
@@ -116,19 +116,35 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
 
   // parse rets
   char tmp[65] = {0};
+  uint8_t changeMask = 1; // wifi
 
-  find_post_value("wifiHostName=", buf, tmp);
-  strcpy(wifiHostName, tmp);
-  find_post_value("wifiAPSSID=", buf, tmp);
-  strcpy(wifiAPSSID, tmp);
-  find_post_value("wifiAPPASS=", buf, tmp);
-  strcpy(wifiAPPASS, tmp);
-  find_post_value("wifiStaSSID=", buf, tmp);
-  strcpy(wifiStaSSID, tmp);
-  find_post_value("wifiStaPASS=", buf, tmp);
-  strcpy(wifiStaPASS, tmp);
+  if (find_post_value("wifiHostName=", buf, tmp) > 0)
+    strcpy(wifiHostName, tmp);
+  if (find_post_value("wifiAPSSID=", buf, tmp) > 0)
+    strcpy(wifiAPSSID, tmp);
+  if (find_post_value("wifiAPPASS=", buf, tmp) > 0)
+    strcpy(wifiAPPASS, tmp);
+  if (find_post_value("wifiStaSSID=", buf, tmp) > 0)
+    strcpy(wifiStaSSID, tmp);
+  if (find_post_value("wifiStaPASS=", buf, tmp) > 0)
+    strcpy(wifiStaPASS, tmp);
+  if (find_post_value("rgb_brightness=", buf, tmp) > 0)
+  {
+    rgb_brightness = atoi(tmp);
+    changeMask |= 2;
+  }
+  if (find_post_value("declinationAngle=", buf, tmp) > 0)
+  {
+    declinationAngle = atof(tmp);
+    changeMask |= 4;
+  }
 
-  save_config_wifi();
+  if (changeMask && 1 == 1)
+    save_config_wifi();
+  if (changeMask && 2 == 2)
+    save_config_misc();
+  if (changeMask && 4 == 4)
+    save_config_orientation();
 
   free(buf);
   /* Redirect onto root  */
