@@ -2,6 +2,8 @@
 #define ORIENTATION_H
 
 #include <math.h>
+#include "configuration.h"
+
 #include "esp_log.h"
 // include supported modules
 #include "drivers/i2cdev.h"
@@ -29,8 +31,6 @@ void init_orientation();
 
 float get_heading();
 float get_heading_degrees();
-
-void reset_orientation_calibration();
 
 void calibrate_orientation(uint8_t sec);
 

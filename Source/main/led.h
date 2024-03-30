@@ -47,19 +47,6 @@ void init_rgb()
     if (RGB_LED_PIN < 0)
         return;
 
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("misc", NVS_READWRITE, &nvs_handle); // https://github.com/espressif/esp-idf/blob/v5.1.2/examples/storage/nvs_rw_value/main/nvs_value_example_main.c
-    if (err != ESP_OK)
-    {
-        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
-        rgb_brightness = 50;
-    }
-    else
-    {
-        nvs_get_u8(nvs_handle, "rgb_brightness", &rgb_brightness);
-        nvs_close(nvs_handle);
-    }
-
     led_strip_config_t strip_config = {
         .strip_gpio_num = RGB_LED_PIN,            // The GPIO that connected to the LED strip's data line
         .max_leds = 1,                            // The number of LEDs in the strip,

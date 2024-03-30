@@ -114,26 +114,22 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
   }
   buf[off] = '\0';
 
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("wifi", NVS_READWRITE, &nvs_handle);
-  if (err == ESP_OK)
-  {
-    // parse rets
-    char tmp[65] = {0};
+  // parse rets
+  char tmp[65] = {0};
 
-    find_post_value("wifiHostName=", buf, tmp);
-    nvs_set_str(nvs_handle, "wifiHostName", (const char *)tmp);
-    find_post_value("wifiAPSSID=", buf, tmp);
-    nvs_set_str(nvs_handle, "wifiAPSSID", (const char *)tmp);
-    find_post_value("wifiAPPASS=", buf, tmp);
-    nvs_set_str(nvs_handle, "wifiAPPASS", (const char *)tmp);
-    find_post_value("wifiStaSSID=", buf, tmp);
-    nvs_set_str(nvs_handle, "wifiStaSSID", (const char *)tmp);
-    find_post_value("wifiStaPASS=", buf, tmp);
-    nvs_set_str(nvs_handle, "wifiStaPASS", (const char *)tmp);
+  find_post_value("wifiHostName=", buf, tmp);
+  strcpy(wifiHostName, tmp);
+  find_post_value("wifiAPSSID=", buf, tmp);
+  strcpy(wifiAPSSID, tmp);
+  find_post_value("wifiAPPASS=", buf, tmp);
+  strcpy(wifiAPPASS, tmp);
+  find_post_value("wifiStaSSID=", buf, tmp);
+  strcpy(wifiStaSSID, tmp);
+  find_post_value("wifiStaPASS=", buf, tmp);
+  strcpy(wifiStaPASS, tmp);
 
-    nvs_close(nvs_handle);
-  }
+  save_config_wifi();
+
   free(buf);
   /* Redirect onto root  */
   // todo should reboot, to apply new settings? pp would crash then, so keep it manual
