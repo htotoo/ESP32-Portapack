@@ -45,7 +45,7 @@ An addon module for portapack to add extra sensors to it for more fun.
 
 ### Compatible modules:
 - ESP32S3 (recommended: https://s.click.aliexpress.com/e/_DeaSKvJ - select the S3, not the C3!)
-- USB cable that fits your needs. (to wire with PP, and supply enough power to it!)
+- USB cable that fits your needs. (to wire with PP, and supply enough power to it!) USB OTG cables can be good, then PP will power the ESP: https://s.click.aliexpress.com/e/_Dnmwhhf
 - GPS: any NMEA over UART. For example the NEO 7M: https://s.click.aliexpress.com/e/_DkDZHaV . Select NEO 7M or 8M for much better precision, 6M is GPS only!
 - Compass: HMC5883L or MPU925X (can suggest better in the Issues)
 - Temperature+humidity: SHT30 I2C. https://s.click.aliexpress.com/e/_DFU9Ra9 or BME280 I2C(or BMP280 I2C) https://s.click.aliexpress.com/e/_DCRJ0ZT
