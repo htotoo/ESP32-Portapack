@@ -61,6 +61,7 @@ float pressure = 0.0;
 uint16_t light = 0;
 gps_t gpsdata;
 uint16_t lastReportedMxS = 0; // gps last reported gps time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
+uint32_t gps_baud = 9600;
 
 #include "led.h"
 
@@ -134,7 +135,7 @@ void app_main(void)
   wifi_apsta();
   init_httpd();
   nmea_parser_config_t nmeaconfig = NMEA_PARSER_CONFIG_DEFAULT();
-  nmeaconfig.uart.baud_rate = 9600; // todo modify by config
+  nmeaconfig.uart.baud_rate = gps_baud; // todo modify by config
   nmea_parser_handle_t nmea_hdl = nmea_parser_init(&nmeaconfig);
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
   esp_task_wdt_deinit();
@@ -148,7 +149,7 @@ void app_main(void)
   init_rgb();
   rgb_set(255, 255, 255);
 
-  init_orientation();
+  init_orientation(); // it loads orientation data too
   init_environment();
 
   uint32_t time_millis = 0;
@@ -163,7 +164,7 @@ void app_main(void)
       // GPS IS AUTO
       ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp)); // TEMPINT
       heading = get_heading_degrees();                                               // ORIENTATION
-      tilt = 400;                                                                    // TILT //TODO
+      tilt = get_tilt();                                                             // TILT
       get_environment_meas(&temperature, &pressure, &humidity);                      // env data
       get_environment_light(&light);                                                 // light (lux) data
       last_millis[TimerEntry_SENSORGET] = time_millis;

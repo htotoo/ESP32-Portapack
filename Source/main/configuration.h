@@ -3,6 +3,7 @@
 
 #include "nvs_flash.h"
 #include "string.h"
+#include "esp_log.h"
 
 // no need to change, just connect to the AP, and change in the settings.
 #define DEFAULT_WIFI_HOSTNAME "ESP32PP"
@@ -32,6 +33,7 @@ extern float declinationAngle;
 
 // misc
 extern uint8_t rgb_brightness;
+extern uint32_t gps_baud;
 
 void load_config_wifi();
 void save_config_wifi();

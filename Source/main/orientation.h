@@ -37,4 +37,6 @@ void calibrate_orientation(uint8_t sec);
 void set_declination(float declination);
 float get_declination();
 
+float get_tilt();
+
 #endif

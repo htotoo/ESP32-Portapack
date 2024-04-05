@@ -2,6 +2,7 @@
 
 void load_config_wifi()
 {
+    ESP_LOGI("CONFIG", "load_config_wifi");
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("wifi", NVS_READWRITE, &nvs_handle); // https://github.com/espressif/esp-idf/blob/v5.1.2/examples/storage/nvs_rw_value/main/nvs_value_example_main.c
     if (err != ESP_OK)
@@ -40,11 +41,13 @@ void load_config_wifi()
         }
         nvs_commit(nvs_handle);
         nvs_close(nvs_handle);
+        ESP_LOGI("CONFIG", "load_config_wifi ok");
     }
 }
 
 void save_config_wifi()
 {
+    ESP_LOGI("CONFIG", "save_config_wifi");
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("wifi", NVS_READWRITE, &nvs_handle);
     if (err == ESP_OK)
@@ -55,14 +58,16 @@ void save_config_wifi()
         nvs_set_str(nvs_handle, "wifiStaSSID", (const char *)wifiStaSSID);
         nvs_set_str(nvs_handle, "wifiStaPASS", (const char *)wifiStaPASS);
         nvs_close(nvs_handle);
+        ESP_LOGI("CONFIG", "save_config_wifi ok");
     }
 }
 
 void load_config_orientation()
 {
+    ESP_LOGI("CONFIG", "load_config_orientation");
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("orient", NVS_READWRITE, &nvs_handle);
-    if (err != ESP_OK)
+    if (err == ESP_OK)
     {
         nvs_get_i16(nvs_handle, "orientationXMin", &orientationXMin);
         nvs_get_i16(nvs_handle, "orientationYMin", &orientationYMin);
@@ -74,6 +79,7 @@ void load_config_orientation()
         nvs_get_i16(nvs_handle, "declination", &tmp);
         declinationAngle = tmp / 100; // 2 decimal precision
         nvs_close(nvs_handle);
+        ESP_LOGI("CONFIG", "load_config_orientation ok");
     }
     else
     {
@@ -83,9 +89,10 @@ void load_config_orientation()
 
 void save_config_orientation()
 {
+    ESP_LOGI("CONFIG", "save_config_orientation");
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("orient", NVS_READWRITE, &nvs_handle);
-    if (err != ESP_OK)
+    if (err == ESP_OK)
     {
         nvs_set_i16(nvs_handle, "orientationXMin", orientationXMin);
         nvs_set_i16(nvs_handle, "orientationYMin", orientationYMin);
@@ -96,6 +103,7 @@ void save_config_orientation()
         nvs_set_i16(nvs_handle, "declination", (int16_t)(declinationAngle * 100));
         nvs_commit(nvs_handle);
         nvs_close(nvs_handle);
+        ESP_LOGI("CONFIG", "save_config_orientation ok");
     }
 }
 
@@ -111,27 +119,39 @@ void reset_orientation_calibration()
 
 void load_config_misc()
 {
+    ESP_LOGI("CONFIG", "load_config_misc");
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("misc", NVS_READWRITE, &nvs_handle); // https://github.com/espressif/esp-idf/blob/v5.1.2/examples/storage/nvs_rw_value/main/nvs_value_example_main.c
+    rgb_brightness = 50;
+    gps_baud = 9600;
     if (err != ESP_OK)
     {
         printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
-        rgb_brightness = 50;
     }
     else
     {
         nvs_get_u8(nvs_handle, "rgb_brightness", &rgb_brightness);
+        nvs_get_u32(nvs_handle, "gps_baud", &gps_baud);
         nvs_close(nvs_handle);
+        ESP_LOGI("CONFIG", "load_config_misc ok");
     }
 }
+
 void save_config_misc()
 {
+    ESP_LOGI("CONFIG", "save_config_misc");
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("misc", NVS_READWRITE, &nvs_handle);
-    if (err != ESP_OK)
+    if (err == ESP_OK)
     {
         nvs_set_u8(nvs_handle, "rgb_brightness", rgb_brightness);
+        nvs_set_u32(nvs_handle, "gps_baud", gps_baud);
         nvs_commit(nvs_handle);
         nvs_close(nvs_handle);
+        ESP_LOGI("CONFIG", "save_config_misc ok");
+    }
+    else
+    {
+        ESP_LOGI("CONFIG", "save_config_misc err: %d", err);
     }
 }

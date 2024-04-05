@@ -4,7 +4,7 @@
 #include <string.h>
 #include "sensordb.h"
 
-float declinationAngle = 0; // todo setup to web interface http://www.magnetic-declination.com/
+float declinationAngle = 0; // todo setup to web interface https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml
 
 hmc5883l_dev_t dev_hmc5883l;
 i2c_dev_t dev_adxl345;
@@ -15,6 +15,8 @@ AcceloSensors accelo_inited = Accelo_none;
 float accelo_x = 0;
 float accelo_y = 0;
 float accelo_z = 0;
+
+float m_tilt = 400.0;
 
 int16_t orientationXMin = INT16_MAX;
 int16_t orientationYMin = INT16_MAX;
@@ -42,6 +44,8 @@ void init_gyro()
 
 void init_orientation()
 {
+    // load calibration data
+    load_config_orientation();
     // HCM5883l
     memset(&dev_hmc5883l, 0, sizeof(hmc5883l_dev_t));
     hmc5883l_init_desc(&dev_hmc5883l, 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN, getDevAddr(HMC5883L));
@@ -68,8 +72,6 @@ void init_orientation()
     }
 
     init_gyro();
-    // load calibration data
-    load_config_orientation();
 }
 
 float fix_heading(float heading)
@@ -113,7 +115,7 @@ float get_heading()
             float accYnorm = accelo_y / sqrt(accelo_x * accelo_x + accelo_y * accelo_y + accelo_z * accelo_z);
             float pitch = asin(-accXnorm);
             float roll = asin(accYnorm / cos(pitch));
-
+            m_tilt = roll * 2 * M_PI;
             // todo use calibration
             float magXcomp = data.x; // (magX - calibration[0]) / (calibration[1] - calibration[0]) * 2 - 1;
             float magYcomp = data.y; //(magY - calibration[2]) / (calibration[3] - calibration[2]) * 2 - 1;
@@ -151,3 +153,5 @@ void set_declination(float declination)
     save_config_orientation();
 }
 float get_declination() { return declinationAngle; }
+
+float get_tilt() { return m_tilt; }

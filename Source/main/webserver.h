@@ -50,7 +50,7 @@ static esp_err_t get_req_handler(httpd_req_t *req)
 /// setup.html get handler
 static esp_err_t get_req_handler_setup(httpd_req_t *req)
 {
-  snprintf(setup_html_out, sizeof(setup_html_out), setup_start, wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS, rgb_brightness, declinationAngle);
+  snprintf(setup_html_out, sizeof(setup_html_out), setup_start, wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS, rgb_brightness, declinationAngle, gps_baud);
   int response = httpd_resp_send(req, setup_html_out, HTTPD_RESP_USE_STRLEN);
   return response;
 }
@@ -128,6 +128,7 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
     strcpy(wifiStaSSID, tmp);
   if (find_post_value("wifiStaPASS=", buf, tmp) > 0)
     strcpy(wifiStaPASS, tmp);
+
   if (find_post_value("rgb_brightness=", buf, tmp) > 0)
   {
     rgb_brightness = (uint8_t)atoi(tmp);
@@ -135,17 +136,35 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
       rgb_brightness = 100;
     changeMask |= 2;
   }
+  if (find_post_value("gps_baud=", buf, tmp) > 0)
+  {
+    uint32_t gps_tmp = (uint32_t)atoi(tmp); // todo make it a select in html, with default selected. would take too much space
+    if (gps_tmp == 2400 || gps_tmp == 4800 || gps_tmp == 9600 || gps_tmp == 14400 || gps_tmp == 19200 || gps_tmp == 38400 || gps_tmp == 57600 || gps_tmp == 115200)
+    {
+      gps_baud = gps_tmp;
+      changeMask |= 2;
+    }
+  }
   if (find_post_value("declinationAngle=", buf, tmp) > 0)
   {
+    for (int i = 0; tmp[i] != '\0'; i++) // replace international stuff
+    {
+      if (i > 64)
+        break;
+      if (tmp[i] == ',')
+      {
+        tmp[i] = '.';
+      }
+    }
     declinationAngle = atof(tmp);
     changeMask |= 4;
   }
 
-  if (changeMask && 1 == 1)
+  if ((changeMask & 1) == 1)
     save_config_wifi();
-  if (changeMask && 2 == 2)
+  if ((changeMask & 2) == 2)
     save_config_misc();
-  if (changeMask && 4 == 4)
+  if ((changeMask & 4) == 4)
     save_config_orientation();
 
   free(buf);
