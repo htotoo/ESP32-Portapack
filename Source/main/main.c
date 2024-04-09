@@ -152,6 +152,8 @@ void app_main(void)
   init_orientation(); // it loads orientation data too
   init_environment();
 
+  i2c_scan();
+
   uint32_t time_millis = 0;
 
   while (true)
