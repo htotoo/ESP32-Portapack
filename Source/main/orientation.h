@@ -10,9 +10,8 @@
 
 #include "drivers/hmc5883l.h" //only 2d and maybe the ADXL345 for 3d
 #include "drivers/adxl345.h"  //gyro for hmc5883l
-#include "drivers/mpu925x.h"
-
-// MPU925X --check, accelo and 3d!
+#include "drivers/mpu925x.h"  //maybe faulty!
+#include "drivers/lsm303.h"
 
 #define M_PI 3.14159265358979323846
 
@@ -20,14 +19,16 @@ typedef enum OrientationSensors
 {
     Orientation_none = 0,
     Orientation_hmc5883l = 1,
-    Orientation_mpu925x = 2
+    Orientation_mpu925x = 2,
+    Orientation_lsm303 = 4,
 } OrientationSensors;
 
 typedef enum AcceloSensors
 {
     Accelo_none = 0,
     Accelo_ADXL345 = 1,
-    Accelo_MPU925x = 2
+    Accelo_MPU925x = 2,
+    Accelo_LSM303 = 4
 } AcceloSensors;
 
 void init_orientation();

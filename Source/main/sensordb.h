@@ -7,7 +7,7 @@
 // - HMC5883L  - 0x1E  - PARTLY
 // - ADXL345 - 0x53  //https://github.com/craigpeacock/ESP32_Node/blob/master/main/adxl345.h
 // - MPU925X ( 0x68 ) + 280  ( 0x76 )
-
+// - LSM303  -  0x18 0x1e?!
 #include <inttypes.h>
 
 typedef enum
@@ -17,7 +17,9 @@ typedef enum
     ADXL345,
     MPU925X,
     BMx280,
-    SHT3x
+    SHT3x,
+    LSM303_ACCEL,
+    LSM303_MAG
 } SENSORS;
 
 void foundI2CDev(uint8_t addr);
