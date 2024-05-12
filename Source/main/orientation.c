@@ -262,7 +262,7 @@ float get_heading()
             ESP_LOGI("Orientation_lsm", "Orientation_lsm ERROR");
         }
     }
-
+    ESP_LOGI("Orientation", "%f", ret);
     return ret;
 }
 
@@ -273,6 +273,7 @@ float get_heading_degrees()
     float heading = get_heading() * 180 / M_PI + declinationAngle;
     if (heading < 0)
         heading += 360;
+    ESP_LOGI("heading", "%f", heading);
     return heading;
 }
 
