@@ -2,6 +2,8 @@
 An addon module for portapack to add GPS and extra sensors to it for more fun.
 
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
+## How to build one for yourself, or other questions? Check WIKI!
+
 
 ### Features:
 
