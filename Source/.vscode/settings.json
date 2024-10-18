@@ -1,0 +1,8 @@
+{
+    "idf.adapterTargetName": "esp32s3",
+    "files.associations": {
+        "led.h": "c",
+        "nvs_flash.h": "c",
+        "led_strip.h": "c"
+    }
+}

@@ -1,5 +1,4 @@
-#include "nvs_flash.h"
-
+#include <nvs_flash.h>
 #include <led_strip.h>
 
 led_strip_handle_t led_strip;
