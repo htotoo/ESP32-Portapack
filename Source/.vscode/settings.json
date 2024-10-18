@@ -3,6 +3,10 @@
     "files.associations": {
         "led.h": "c",
         "nvs_flash.h": "c",
-        "led_strip.h": "c"
+        "led_strip.h": "c",
+        "temperature_sensor.h": "c",
+        "configuration.h": "c",
+        "sensordb.h": "c",
+        "i2c_slave_driver.h": "c"
     }
 }

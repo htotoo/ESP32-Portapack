@@ -21,4 +21,18 @@ menu "ESP32PP"
         help
             I2C SDA PIN on ESP
 
+    config I2C_SLAVE_SCL_IO
+        int "I2C SLAVE SCL PIN on ESP"
+        range 1 255
+        default 7
+        help
+            I2C SLAVE SCL PIN on ESP
+    config I2C_SLAVE_SDA_IO
+        int "I2C SLAVE SDA PIN on ESP"
+        range 1 255
+        default 8
+        help
+            I2C SLAVE SDA PIN on ESP
+                   
+
 endmenu
