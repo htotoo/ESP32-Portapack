@@ -35,6 +35,11 @@ extern float declinationAngle;
 extern uint8_t rgb_brightness;
 extern uint32_t gps_baud;
 
+#if __cplusplus
+extern "C"
+{
+#endif
+
 void load_config_wifi();
 void save_config_wifi();
 void load_config_orientation();
@@ -42,5 +47,9 @@ void save_config_orientation();
 void reset_orientation_calibration();
 void load_config_misc(); // led brightness
 void save_config_misc();
+
+#if __cplusplus
+}
+#endif
 
 #endif

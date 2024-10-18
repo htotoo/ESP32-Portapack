@@ -2,9 +2,13 @@
 #define ORIENTATION_H
 
 #include <math.h>
-#include "configuration.h"
 
+#include "configuration.h"
 #include "esp_log.h"
+
+
+
+
 // include supported modules
 #include "drivers/i2cdev.h"
 
@@ -31,6 +35,11 @@ typedef enum AcceloSensors
     Accelo_LSM303 = 4
 } AcceloSensors;
 
+#if __cplusplus
+extern "C"
+{
+#endif
+
 void init_orientation();
 
 float get_heading();
@@ -42,5 +51,9 @@ void set_declination(float declination);
 float get_declination();
 
 float get_tilt();
+
+#if __cplusplus
+}
+#endif
 
 #endif

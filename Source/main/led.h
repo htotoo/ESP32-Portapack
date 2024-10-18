@@ -101,13 +101,14 @@ void init_rgb()
         .max_leds = 1,                            // The number of LEDs in the strip,
         .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
         .led_model = LED_MODEL_WS2812,            // LED strip model
-        .flags.invert_out = false,                // whether to invert the output signal (useful when your hardware has a level inverter)
+        .flags{false}//.invert_out = false,                // whether to invert the output signal (useful when your hardware has a level inverter)
     };
 
     led_strip_rmt_config_t rmt_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,    // different clock source can lead to different power consumption
         .resolution_hz = 10 * 1000 * 1000, // 10MHz
-        .flags.with_dma = false,           // whether to enable the DMA feature
+        .mem_block_symbols = 0,
+        .flags{false},           // whether to enable the DMA feature
     };
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
 }

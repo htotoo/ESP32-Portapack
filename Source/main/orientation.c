@@ -4,6 +4,7 @@
 #include <string.h>
 #include "sensordb.h"
 
+
 float declinationAngle = 0; // todo setup to web interface https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml
 
 hmc5883l_dev_t dev_hmc5883l;

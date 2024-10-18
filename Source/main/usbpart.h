@@ -41,7 +41,7 @@ bool getUsbConnected()
   return cdc_dev != NULL;
 }
 
-char *PROMPT = "ch> ";
+char *PROMPT = (char*)"ch> ";
 char searchPrompt[5] = {0};
 
 static void searchPromptAdd(uint8_t ch)
@@ -133,9 +133,9 @@ static void tryconnectUsb(void *arg)
       .connection_timeout_ms = 1000,
       .out_buffer_size = 512,
       .in_buffer_size = 512,
-      .user_arg = NULL,
       .event_cb = handle_event,
-      .data_cb = handle_rx};
+      .data_cb = handle_rx,
+      .user_arg = NULL,};
   while (true)
   {
     // ESP_LOGI(TAG, "Opening CDC ACM device 0x%04X:0x%04X...", USB_DEVICE_VID,
@@ -219,6 +219,7 @@ void usb_init()
   usb_host_config_t host_config = {
       .skip_phy_setup = false,
       .intr_flags = ESP_INTR_FLAG_LEVEL1,
+      .enum_filter_cb = NULL,
   };
   ESP_ERROR_CHECK(usb_host_install(&host_config));
 

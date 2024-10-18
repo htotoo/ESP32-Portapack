@@ -22,6 +22,18 @@ typedef enum
     LSM303_MAG
 } SENSORS;
 
+
+#if __cplusplus
+extern "C"
+{
+#endif
+
 void foundI2CDev(uint8_t addr);
 uint8_t getDevAddr(SENSORS sensor);
+
+
+#if __cplusplus
+}
+#endif
+
 #endif

@@ -25,6 +25,9 @@ int ap_client_num = 0;
 uint32_t last_wifi_conntry = 0;
 bool wifi_sta_ok = false;
 
+extern "C"
+{
+
 bool getWifiStaStatus()
 {
   return wifi_sta_ok;
@@ -108,7 +111,7 @@ static void initialise_wifi(void)
 
 static bool wifi_apsta()
 {
-  wifi_config_t ap_config = {0};
+  wifi_config_t ap_config = {};
   strcpy((char *)ap_config.ap.ssid, wifiAPSSID);
   strcpy((char *)ap_config.ap.password, wifiAPPASS);
   ap_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
@@ -121,14 +124,14 @@ static bool wifi_apsta()
     ap_config.ap.authmode = WIFI_AUTH_OPEN;
   }
 
-  wifi_config_t sta_config = {0};
+  wifi_config_t sta_config = {};
   strcpy((char *)sta_config.sta.ssid, wifiStaSSID);
   strcpy((char *)sta_config.sta.password, wifiStaPASS);
   sta_config.sta.failure_retry_cnt = 0;
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
-  ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
-  ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &sta_config));
+  ESP_ERROR_CHECK(esp_wifi_set_config((wifi_interface_t)ESP_IF_WIFI_AP, &ap_config));
+  ESP_ERROR_CHECK(esp_wifi_set_config((wifi_interface_t)ESP_IF_WIFI_STA, &sta_config));
   ESP_ERROR_CHECK(esp_wifi_start());
   ESP_LOGI(TAG, "WIFI_MODE_AP started. SSID:%s password:%s", wifiAPSSID, wifiAPPASS);
 
@@ -147,4 +150,5 @@ void wifi_loop(uint32_t millis)
     esp_wifi_connect();
     last_wifi_conntry = millis;
   }
+}
 }

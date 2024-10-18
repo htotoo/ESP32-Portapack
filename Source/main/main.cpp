@@ -70,7 +70,7 @@ static void i2c_scan()
   vTaskDelay(50 / portTICK_PERIOD_MS); // wait till devs wake up
   esp_err_t res;
   printf("i2c scan: \n");
-  i2c_dev_t dev = {0};
+  i2c_dev_t dev = {};
   dev.cfg.sda_io_num = 5;
   dev.cfg.scl_io_num = 4;
   dev.cfg.master.clk_speed = 400000;
@@ -110,6 +110,10 @@ static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_ba
   }
 }
 
+#if __cplusplus
+extern "C"
+{
+#endif
 void app_main(void)
 {
   esp_err_t err = nvs_flash_init();
@@ -262,3 +266,7 @@ void app_main(void)
     vTaskDelay(50 / portTICK_PERIOD_MS);
   }
 }
+
+#if __cplusplus
+}
+#endif
