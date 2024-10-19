@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <vector>
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -110,6 +111,179 @@ static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_ba
   }
 }
 
+/* 
+
+I2C slave device
+
+*/
+
+#define ESP_SLAVE_ADDR 0x51
+typedef struct
+{
+    uint32_t api_version;
+    uint32_t module_version;
+    char module_name[20];
+    uint32_t application_count;
+} device_info;
+
+enum app_location_t : uint32_t
+{
+    UTILITIES = 0,
+    RX,
+    TX,
+    DEBUG,
+    HOME
+};
+
+typedef struct
+{
+    uint32_t header_version;
+    uint8_t app_name[16];
+    uint8_t bitmap_data[32];
+    uint32_t icon_color;
+    app_location_t menu_location;
+    uint32_t binary_size;
+} standalone_app_info;
+
+#define USER_COMMANDS_START 0x7F01
+
+enum class Command : uint16_t
+{
+    COMMAND_NONE = 0,
+
+    // will respond with device_info
+    COMMAND_INFO = 0x18F0,
+
+    // will respond with info of application
+    COMMAND_APP_INFO = 0xA90B,
+
+    // will respond with application data
+    COMMAND_APP_TRANSFER = 0x4183,
+
+    // UART specific commands
+    COMMAND_UART_REQUESTDATA_SHORT = USER_COMMANDS_START,
+    COMMAND_UART_REQUESTDATA_LONG,
+    COMMAND_UART_BAUDRATE_INC,
+    COMMAND_UART_BAUDRATE_DEC,
+    COMMAND_UART_BAUDRATE_GET
+};
+
+volatile Command command_state = Command::COMMAND_NONE;
+volatile uint16_t app_counter = 0;
+volatile uint16_t app_transfer_block = 0;
+#include "ppi2c/i2c_slave_driver.h"
+
+QueueHandle_t slave_queue;
+
+void on_command_ISR(Command command, std::vector<uint8_t> additional_data)
+{
+    command_state = command;
+
+    switch (command)
+    {
+    case Command::COMMAND_APP_INFO:
+        if (additional_data.size() == 2)
+            app_counter = *(uint16_t *)additional_data.data();
+        break;
+
+    case Command::COMMAND_APP_TRANSFER:
+        if (additional_data.size() == 4)
+        {
+            app_counter = *(uint16_t *)additional_data.data();
+            app_transfer_block = *(uint16_t *)(additional_data.data() + 2);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    BaseType_t high_task_wakeup = pdFALSE;
+    xQueueSendFromISR(slave_queue, &command, &high_task_wakeup);
+}
+
+std::vector<uint8_t> on_send_ISR()
+{
+    switch (command_state)
+    {
+    case Command::COMMAND_INFO:
+    {
+        device_info info = {
+            /* api_version = */ 2,
+            /* module_version = */ 1,
+            /* module_name = */ "ESP32PP",
+            /* application_count = */ 0};
+
+        return std::vector<uint8_t>((uint8_t *)&info, (uint8_t *)&info + sizeof(info));
+    }
+
+    case Command::COMMAND_APP_INFO:
+    {
+        break;
+    }
+
+    case Command::COMMAND_APP_TRANSFER:
+    {
+        break;
+    }
+
+
+    default:
+        break;
+    }
+
+    return {0xFF};
+}
+
+bool i2c_slave_callback_ISR(struct i2c_slave_device_t *dev, I2CSlaveCallbackReason reason)
+{
+    switch (reason)
+    {
+    case I2C_CALLBACK_REPEAT_START:
+        break;
+
+    case I2C_CALLBACK_SEND_DATA:
+        if (dev->state == I2C_STATE_SEND)
+        {
+            auto data = on_send_ISR();
+            if (data.size() > 0)
+                i2c_slave_send_data(dev, data.data(), data.size());
+        }
+        break;
+
+    case I2C_CALLBACK_DONE:
+        if (dev->state == I2C_STATE_RECV)
+        {
+            uint16_t command = *(uint16_t *)&dev->buffer[dev->bufstart];
+            std::vector<uint8_t> additional_data(dev->buffer + dev->bufstart + 2, dev->buffer + dev->bufend);
+
+            on_command_ISR((Command)command, additional_data);
+        }
+        break;
+
+    default:
+        return false;
+    }
+
+    return true;
+}
+
+i2c_slave_config_t i2c_slave_config = {
+    i2c_slave_callback_ISR,
+    ESP_SLAVE_ADDR,
+    (gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO,
+    (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO,
+    I2C_NUM_1};
+
+i2c_slave_device_t *slave_device;
+
+void initialize_fixed_i2c()
+{
+    slave_queue = xQueueCreate(1, sizeof(uint16_t));
+
+    ESP_ERROR_CHECK(i2c_slave_new(&i2c_slave_config, &slave_device));
+}
+
 #if __cplusplus
 extern "C"
 {
@@ -157,6 +331,7 @@ void app_main(void)
   init_environment();
 
   i2c_scan();
+  initialize_fixed_i2c();
 
   uint32_t time_millis = 0;
 
