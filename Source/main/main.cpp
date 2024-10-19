@@ -155,6 +155,7 @@ enum class Command : uint16_t
   COMMAND_UART_BAUDRATE_INC,
   COMMAND_UART_BAUDRATE_DEC,
   COMMAND_UART_BAUDRATE_GET,
+  // Sensor specific commands
   COMMAND_GETFEATURE_MASK,
   COMMAND_GETFEAT_DATA_GPS,
 };
@@ -188,6 +189,7 @@ static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_ba
   switch (event_id)
   {
   case GPS_UPDATE:
+    gotAnyGps = true;
     gps = (gps_t *)event_data;
     gpsdata.altitude = gps->altitude;
     gpsdata.date = gps->date;
