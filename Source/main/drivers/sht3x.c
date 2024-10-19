@@ -238,7 +238,7 @@ esp_err_t sht3x_init(sht3x_t *dev)
 {
     CHECK_ARG(dev);
 
-    dev->mode = SHT3X_SINGLE_SHOT;
+    dev->mode = SHT3X_PERIODIC_1MPS;
     dev->meas_start_time = 0;
     dev->meas_started = false;
     dev->meas_first = false;

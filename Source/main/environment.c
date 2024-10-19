@@ -49,6 +49,7 @@ void init_environment()
     sht3x_init_desc(&sht3x, getDevAddr(SHT3x), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
     if (sht3x_init(&sht3x) == ESP_OK)
     {
+        vTaskDelay(50 / portTICK_PERIOD_MS);
         sht3x_start_measurement(&sht3x, SHT3X_PERIODIC_1MPS, SHT3X_HIGH);
         environment_inited = environment_inited | Environment_sht3x;
         ESP_LOGI("Environment", "sht3x OK");
