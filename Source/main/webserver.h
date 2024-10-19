@@ -94,7 +94,7 @@ static int find_post_value(char *key, char *parameter, char *value)
 // setup.html post handler. saves the config
 static esp_err_t post_req_handler_setup(httpd_req_t *req)
 {
-  char * buf = (char *)malloc(req->content_len + 1);
+  char *buf = (char *)malloc(req->content_len + 1);
   size_t off = 0;
   while (off < req->content_len)
   {
@@ -118,25 +118,25 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
   char tmp[65] = {0};
   uint8_t changeMask = 1; // wifi
 
-  if (find_post_value((char*)"wifiHostName=", buf, tmp) > 0)
+  if (find_post_value((char *)"wifiHostName=", buf, tmp) > 0)
     strcpy(wifiHostName, tmp);
-  if (find_post_value((char*)"wifiAPSSID=", buf, tmp) > 0)
+  if (find_post_value((char *)"wifiAPSSID=", buf, tmp) > 0)
     strcpy(wifiAPSSID, tmp);
-  if (find_post_value((char*)"wifiAPPASS=", buf, tmp) > 0)
+  if (find_post_value((char *)"wifiAPPASS=", buf, tmp) > 0)
     strcpy(wifiAPPASS, tmp);
-  if (find_post_value((char*)"wifiStaSSID=", buf, tmp) > 0)
+  if (find_post_value((char *)"wifiStaSSID=", buf, tmp) > 0)
     strcpy(wifiStaSSID, tmp);
-  if (find_post_value((char*)"wifiStaPASS=", buf, tmp) > 0)
+  if (find_post_value((char *)"wifiStaPASS=", buf, tmp) > 0)
     strcpy(wifiStaPASS, tmp);
 
-  if (find_post_value((char*)"rgb_brightness=", buf, tmp) > 0)
+  if (find_post_value((char *)"rgb_brightness=", buf, tmp) > 0)
   {
     rgb_brightness = (uint8_t)atoi(tmp);
     if (rgb_brightness > 100)
       rgb_brightness = 100;
     changeMask |= 2;
   }
-  if (find_post_value((char*)"gps_baud=", buf, tmp) > 0)
+  if (find_post_value((char *)"gps_baud=", buf, tmp) > 0)
   {
     uint32_t gps_tmp = (uint32_t)atoi(tmp); // todo make it a select in html, with default selected. would take too much space
     if (gps_tmp == 2400 || gps_tmp == 4800 || gps_tmp == 9600 || gps_tmp == 14400 || gps_tmp == 19200 || gps_tmp == 38400 || gps_tmp == 57600 || gps_tmp == 115200)
@@ -145,7 +145,7 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
       changeMask |= 2;
     }
   }
-  if (find_post_value((char*)"declinationAngle=", buf, tmp) > 0)
+  if (find_post_value((char *)"declinationAngle=", buf, tmp) > 0)
   {
     for (int i = 0; tmp[i] != '\0'; i++) // replace international stuff
     {
@@ -263,14 +263,14 @@ esp_err_t update_post_handler(httpd_req_t *req)
 void ws_notify_dc()
 {
   usbConnected = false;
-  char *data = (char*)"#$##$$#USB_DC\r\n";
+  char *data = (char *)"#$##$$#USB_DC\r\n";
   ws_sendall((uint8_t *)data, 15);
 }
 // send to ws clients, the pp connected
 void ws_notify_cc()
 {
   usbConnected = true;
-  char *data = (char*)"#$##$$#USB_CC\r\n";
+  char *data = (char *)"#$##$$#USB_CC\r\n";
   ws_sendall((uint8_t *)data, 15);
 }
 
@@ -295,7 +295,7 @@ static esp_err_t handle_ws_req(httpd_req_t *req)
 
   if (ws_pkt.len)
   {
-    buf = (uint8_t*)calloc(1, ws_pkt.len + 1);
+    buf = (uint8_t *)calloc(1, ws_pkt.len + 1);
     if (buf == NULL)
     {
       ESP_LOGE(TAG, "Failed to calloc memory for buf");
@@ -332,23 +332,38 @@ static httpd_handle_t setup_websocket_server(void)
   httpd_uri_t uri_get = {.uri = "/",
                          .method = HTTP_GET,
                          .handler = get_req_handler,
-                         .user_ctx = NULL};
+                         .user_ctx = NULL,
+                         .is_websocket = false,
+                         .handle_ws_control_frames = false,
+                         .supported_subprotocol = NULL};
   httpd_uri_t uri_postsetup = {.uri = "/setup.html",
                                .method = HTTP_POST,
                                .handler = post_req_handler_setup,
-                               .user_ctx = NULL};
+                               .user_ctx = NULL,
+                               .is_websocket = false,
+                               .handle_ws_control_frames = false,
+                               .supported_subprotocol = NULL};
   httpd_uri_t uri_getsetup = {.uri = "/setup.html",
                               .method = HTTP_GET,
                               .handler = get_req_handler_setup,
-                              .user_ctx = NULL};
+                              .user_ctx = NULL,
+                              .is_websocket = false,
+                              .handle_ws_control_frames = false,
+                              .supported_subprotocol = NULL};
   httpd_uri_t uri_getota = {.uri = "/ota.html",
                             .method = HTTP_GET,
                             .handler = get_req_handler_ota,
-                            .user_ctx = NULL};
+                            .user_ctx = NULL,
+                            .is_websocket = false,
+                            .handle_ws_control_frames = false,
+                            .supported_subprotocol = NULL};
   httpd_uri_t update_post = {.uri = "/update",
                              .method = HTTP_POST,
                              .handler = update_post_handler,
-                             .user_ctx = NULL};
+                             .user_ctx = NULL,
+                             .is_websocket = false,
+                             .handle_ws_control_frames = false,
+                             .supported_subprotocol = NULL};
   httpd_uri_t ws = {.uri = "/ws",
                     .method = HTTP_GET,
                     .handler = handle_ws_req,
