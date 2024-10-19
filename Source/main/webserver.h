@@ -368,7 +368,9 @@ static httpd_handle_t setup_websocket_server(void)
                     .method = HTTP_GET,
                     .handler = handle_ws_req,
                     .user_ctx = NULL,
-                    .is_websocket = true};
+                    .is_websocket = true,
+                    .handle_ws_control_frames = false,
+                    .supported_subprotocol = NULL};
 
   if (httpd_start(&server, &config) == ESP_OK)
   {
