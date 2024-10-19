@@ -49,6 +49,18 @@ typedef enum TimerEntry
   TimerEntry_MAX
 } TimerEntry;
 
+typedef struct
+{
+  float latitude;       /*!< Latitude (degrees) */
+  float longitude;      /*!< Longitude (degrees) */
+  float altitude;       /*!< Altitude (meters) */
+  uint8_t sats_in_use;  /*!< Number of satellites in use */
+  uint8_t sats_in_view; /*!< Number of satellites in view */
+  float speed;          /*!< Ground speed, unit: m/s */
+  gps_date_t date;      /*!< Fix date */
+  gps_time_t tim;       /*!< time in UTC */
+} gpssmall_t;
+
 uint32_t last_millis[TimerEntry_MAX] = {0};
 //                                       SEN    GPS  ORI    ENV   TIME        WEB   RGB
 uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000};
@@ -60,7 +72,8 @@ float temperature = 0.0;
 float humidity = 0.0;
 float pressure = 0.0;
 uint16_t light = 0;
-gps_t gpsdata;
+gpssmall_t gpsdata;
+bool gotAnyGps = false;
 uint16_t lastReportedMxS = 0; // gps last reported gps time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
 uint32_t gps_baud = 9600;
 
@@ -84,30 +97,6 @@ static void i2c_scan()
       printf("Found device at: 0x%2x\n", i);
       foundI2CDev(i);
     }
-  }
-}
-
-static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
-{
-  gps_t *gps = NULL;
-  switch (event_id)
-  {
-  case GPS_UPDATE:
-    gps = (gps_t *)event_data;
-    gpsdata.altitude = gps->altitude;
-    gpsdata.date = gps->date;
-    gpsdata.latitude = gps->latitude;
-    gpsdata.longitude = gps->longitude;
-    gpsdata.speed = gps->speed;
-    gpsdata.sats_in_use = gps->sats_in_use;
-    gpsdata.sats_in_view = gps->sats_in_view;
-
-    break;
-  case GPS_UNKNOWN:
-    // ESP_LOGW(TAG, "Unknown statement:%s", (char*)event_data);
-    break;
-  default:
-    break;
   }
 }
 
@@ -166,12 +155,58 @@ enum class Command : uint16_t
   COMMAND_UART_BAUDRATE_INC,
   COMMAND_UART_BAUDRATE_DEC,
   COMMAND_UART_BAUDRATE_GET,
-  COMMAND_GETMEASURE_MASK,
+  COMMAND_GETFEATURE_MASK,
+  COMMAND_GETFEAT_DATA_GPS,
 };
 
 volatile Command command_state = Command::COMMAND_NONE;
 volatile uint16_t app_counter = 0;
 volatile uint16_t app_transfer_block = 0;
+
+#include "features.hpp"
+ChipFeatures chipFeatures{};
+void update_features()
+{
+  chipFeatures.reset();
+  if (is_environment_light_sensor_present())
+    chipFeatures.enableFeature(SupportedFeatures::FEAT_LIGHT);
+  if (is_environment_sensor_present())
+    chipFeatures.enableFeature(SupportedFeatures::FEAT_ENVIRONMENT);
+  if (is_orientation_sensor_present())
+    chipFeatures.enableFeature(SupportedFeatures::FEAT_ORIENTATION);
+  if (gotAnyGps)
+    chipFeatures.enableFeature(SupportedFeatures::FEAT_GPS);
+  if (app_counter > 0)
+    chipFeatures.enableFeature(SupportedFeatures::FEAT_EXT_APP);
+  // uart is not present
+  // display is not present
+}
+
+static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+  gps_t *gps = NULL;
+  switch (event_id)
+  {
+  case GPS_UPDATE:
+    gps = (gps_t *)event_data;
+    gpsdata.altitude = gps->altitude;
+    gpsdata.date = gps->date;
+    gpsdata.tim = gps->tim;
+    gpsdata.latitude = gps->latitude;
+    gpsdata.longitude = gps->longitude;
+    gpsdata.speed = gps->speed;
+    gpsdata.sats_in_use = gps->sats_in_use;
+    gpsdata.sats_in_view = gps->sats_in_view;
+
+    break;
+  case GPS_UNKNOWN:
+    // ESP_LOGW(TAG, "Unknown statement:%s", (char*)event_data);
+    break;
+  default:
+    break;
+  }
+}
+
 #include "ppi2c/i2c_slave_driver.h"
 
 QueueHandle_t slave_queue;
@@ -195,8 +230,8 @@ void on_command_ISR(Command command, std::vector<uint8_t> additional_data)
     }
     break;
 
-  case Command::COMMAND_GETMEASURE_MASK:
-    // todo
+  case Command::COMMAND_GETFEATURE_MASK:
+    update_features();
     break;
   default:
     break;
@@ -229,6 +264,17 @@ std::vector<uint8_t> on_send_ISR()
   case Command::COMMAND_APP_TRANSFER:
   {
     break;
+  }
+
+  case Command::COMMAND_GETFEATURE_MASK:
+  {
+    uint64_t features = chipFeatures.getFeatures();
+    return std::vector<uint8_t>((uint8_t *)&features, (uint8_t *)&features + sizeof(features));
+  }
+
+  case Command::COMMAND_GETFEAT_DATA_GPS:
+  {
+    return std::vector<uint8_t>((uint8_t *)&gpsdata, (uint8_t *)&gpsdata + sizeof(gpsdata));
   }
 
   default:

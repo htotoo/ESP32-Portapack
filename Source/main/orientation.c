@@ -4,7 +4,6 @@
 #include <string.h>
 #include "sensordb.h"
 
-
 float declinationAngle = 0; // todo setup to web interface https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml
 
 hmc5883l_dev_t dev_hmc5883l;
@@ -293,3 +292,8 @@ void set_declination(float declination)
 float get_declination() { return declinationAngle; }
 
 float get_tilt() { return m_tilt; }
+
+bool is_orientation_sensor_present()
+{
+    return orientation_inited != Orientation_none;
+}

@@ -6,9 +6,6 @@
 #include "configuration.h"
 #include "esp_log.h"
 
-
-
-
 // include supported modules
 #include "drivers/i2cdev.h"
 
@@ -40,17 +37,19 @@ extern "C"
 {
 #endif
 
-void init_orientation();
+    void init_orientation();
 
-float get_heading();
-float get_heading_degrees();
+    float get_heading();
+    float get_heading_degrees();
 
-void calibrate_orientation(uint8_t sec);
+    void calibrate_orientation(uint8_t sec);
 
-void set_declination(float declination);
-float get_declination();
+    void set_declination(float declination);
+    float get_declination();
 
-float get_tilt();
+    float get_tilt();
+
+    bool is_orientation_sensor_present();
 
 #if __cplusplus
 }

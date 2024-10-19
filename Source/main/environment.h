@@ -24,17 +24,19 @@ typedef enum EnvironmentLightSensors
     Environment_light_bh1750 = 1
 } EnvironmentLightSensors;
 
-
 #if __cplusplus
 extern "C"
 {
 #endif
 
-void init_environment();
-void init_environment_light();
+    void init_environment();
+    void init_environment_light();
 
-void get_environment_meas(float *temperature, float *pressure, float *humidity);
-void get_environment_light(uint16_t *light);
+    void get_environment_meas(float *temperature, float *pressure, float *humidity);
+    void get_environment_light(uint16_t *light);
+
+    bool is_environment_sensor_present();
+    bool is_environment_light_sensor_present();
 
 #if __cplusplus
 }

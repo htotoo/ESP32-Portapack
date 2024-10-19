@@ -102,3 +102,13 @@ void init_environment_light()
         bh1750_free_desc(&bh1750);
     }
 }
+
+bool is_environment_sensor_present()
+{
+    return environment_inited != Environment_none;
+}
+
+bool is_environment_light_sensor_present()
+{
+    return environment_light_inited != Environment_light_none;
+}
