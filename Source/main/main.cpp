@@ -61,6 +61,19 @@ typedef struct
   gps_time_t tim;       /*!< time in UTC */
 } gpssmall_t;
 
+typedef struct
+{
+  float angle;
+  float tilt;
+} orientation_t;
+
+typedef struct
+{
+  float temperature;
+  float humidity;
+  float pressure;
+} environment_t;
+
 uint32_t last_millis[TimerEntry_MAX] = {0};
 //                                       SEN    GPS  ORI    ENV   TIME        WEB   RGB
 uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000};
@@ -158,6 +171,9 @@ enum class Command : uint16_t
   // Sensor specific commands
   COMMAND_GETFEATURE_MASK,
   COMMAND_GETFEAT_DATA_GPS,
+  COMMAND_GETFEAT_DATA_ORIENTATION,
+  COMMAND_GETFEAT_DATA_ENVIRONMENT,
+  COMMAND_GETFEAT_DATA_LIGHT,
 };
 
 volatile Command command_state = Command::COMMAND_NONE;
@@ -277,6 +293,28 @@ std::vector<uint8_t> on_send_ISR()
   case Command::COMMAND_GETFEAT_DATA_GPS:
   {
     return std::vector<uint8_t>((uint8_t *)&gpsdata, (uint8_t *)&gpsdata + sizeof(gpsdata));
+  }
+
+  case Command::COMMAND_GETFEAT_DATA_ORIENTATION:
+  {
+    orientation_t ori = {
+        /* angle = */ heading,
+        /* tilt = */ tilt};
+    return std::vector<uint8_t>((uint8_t *)&ori, (uint8_t *)&ori + sizeof(ori));
+  }
+
+  case Command::COMMAND_GETFEAT_DATA_ENVIRONMENT:
+  {
+    environment_t env = {
+        /* temperature = */ temperature,
+        /* humidity = */ humidity,
+        /* pressure = */ pressure};
+    return std::vector<uint8_t>((uint8_t *)&env, (uint8_t *)&env + sizeof(env));
+  }
+
+  case Command::COMMAND_GETFEAT_DATA_LIGHT:
+  {
+    return std::vector<uint8_t>((uint8_t *)&light, (uint8_t *)&light + sizeof(light));
   }
 
   default:
