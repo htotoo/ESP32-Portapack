@@ -71,8 +71,8 @@ static void i2c_scan()
   esp_err_t res;
   printf("i2c scan: \n");
   i2c_dev_t dev = {};
-  dev.cfg.sda_io_num = 5;
-  dev.cfg.scl_io_num = 4;
+  dev.cfg.sda_io_num = CONFIG_IC2SDAPIN;
+  dev.cfg.scl_io_num = CONFIG_IC2SCLPIN;
   dev.cfg.master.clk_speed = 400000;
   for (uint8_t i = 1; i < 127; i++)
   {
