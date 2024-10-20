@@ -8,7 +8,10 @@
         "configuration.h": "c",
         "sensordb.h": "c",
         "i2c_slave_driver.h": "c",
-        "i2cdev.h": "c"
+        "i2cdev.h": "c",
+        "compare": "cpp",
+        "cstdint": "cpp",
+        "string": "cpp"
     },
     "idf.portWin": "COM5",
     "idf.flashType": "UART"
