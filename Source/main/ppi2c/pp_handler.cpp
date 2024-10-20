@@ -250,7 +250,7 @@ std::vector<uint8_t> PPHandler::on_send_ISR()
 
 bool PPHandler::add_app(uint8_t *binary, uint32_t size)
 {
-    if (size % 32 != 0)
+    if (size % 32 != 0 || size < sizeof(standalone_app_info))
     {
         esp_rom_printf("FAILED ADDING APP, BAD SIZE\n");
         return false;
