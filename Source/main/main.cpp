@@ -90,7 +90,6 @@ static void i2c_scan()
   }
 }
 
-#include "features.hpp"
 ChipFeatures chipFeatures{};
 void update_features()
 {

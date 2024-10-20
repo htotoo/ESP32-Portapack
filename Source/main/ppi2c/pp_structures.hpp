@@ -6,6 +6,18 @@
 #define PP_API_VERSION 1
 #define ESP_SLAVE_ADDR 0x51
 
+enum class SupportedFeatures : uint64_t
+{
+    FEAT_NONE = 0,
+    FEAT_EXT_APP = 1 << 0,
+    FEAT_UART = 1 << 1,
+    FEAT_GPS = 1 << 2,
+    FEAT_ORIENTATION = 1 << 3,
+    FEAT_ENVIRONMENT = 1 << 4,
+    FEAT_LIGHT = 1 << 5,
+    FEAT_DISPLAY = 1 << 6
+};
+
 typedef struct
 {
     uint8_t hour;      /*!< Hour */
@@ -107,5 +119,11 @@ typedef void (*get_gps_data_CB)(ppgpssmall_t &gpsdata);
 typedef void (*get_orientation_data_CB)(orientation_t &gpsdata);
 typedef void (*get_environment_data_CB)(environment_t &envdata);
 typedef void (*get_light_data_CB)(uint16_t &light);
+
+typedef struct
+{
+    uint8_t *binary;
+    uint32_t size;
+} app_list_element_t;
 
 #endif

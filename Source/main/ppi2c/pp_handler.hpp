@@ -13,14 +13,17 @@ class PPHandler
 {
 public:
     static void init(gpio_num_t scl, gpio_num_t sda, uint8_t addr_);
-    static void set_get_features_CB(get_features_CB cb);
-    static void set_module_version(uint32_t version);
-    static void set_module_name(std::string name);
-    static void set_get_gps_data_CB(get_gps_data_CB cb);
-    static void set_get_orientation_data_CB(get_orientation_data_CB cb);
-    static void set_get_environment_data_CB(get_environment_data_CB cb);
-    static void set_get_light_data_CB(get_light_data_CB cb);
-    static uint16_t get_appCount();
+    static void set_module_name(std::string name);    // this will set the module name
+    static void set_module_version(uint32_t version); // this will set the module version
+
+    static void set_get_features_CB(get_features_CB cb);                 // this will be called to get the features of the module see SupportedFeatures
+    static void set_get_gps_data_CB(get_gps_data_CB cb);                 // this will be called when the module asked for gps data
+    static void set_get_orientation_data_CB(get_orientation_data_CB cb); // this will be called when the module asked for orientation data
+    static void set_get_environment_data_CB(get_environment_data_CB cb); // this will be called when the module asked for environment data
+    static void set_get_light_data_CB(get_light_data_CB cb);             // this will be called when the module asked for light data
+
+    static uint32_t get_appCount();                      // this will return the app count
+    static bool add_app(uint8_t *binary, uint32_t size); // this will add an app to the module.app size must be %32 == 0
 
 private:
     // base working code
@@ -37,12 +40,54 @@ private:
     static volatile uint16_t app_counter;  // for transfer
     static volatile uint16_t app_transfer_block;
 
-    static uint16_t appCount; // all apps count i have.
-
+    static std::vector<app_list_element_t> app_list;
     // callbacks
     static get_features_CB features_cb;
     static get_gps_data_CB gps_data_cb;
     static get_orientation_data_CB orientation_data_cb;
     static get_environment_data_CB environment_data_cb;
     static get_light_data_CB light_data_cb;
+};
+
+class ChipFeatures
+{
+private:
+    uint64_t features; // Store the features as bitmask
+
+public:
+    ChipFeatures() : features(static_cast<uint64_t>(SupportedFeatures::FEAT_NONE)) {}
+
+    void reset()
+    {
+        features = static_cast<uint64_t>(SupportedFeatures::FEAT_NONE);
+    }
+
+    // Enable a feature
+    void enableFeature(SupportedFeatures feature)
+    {
+        features |= static_cast<uint64_t>(feature);
+    }
+
+    // Disable a feature
+    void disableFeature(SupportedFeatures feature)
+    {
+        features &= ~static_cast<uint64_t>(feature);
+    }
+
+    // Check if a feature is enabled
+    bool hasFeature(SupportedFeatures feature) const
+    {
+        return (features & static_cast<uint64_t>(feature)) != 0;
+    }
+
+    // Toggle a feature on/off
+    void toggleFeature(SupportedFeatures feature)
+    {
+        features ^= static_cast<uint64_t>(feature);
+    }
+
+    uint64_t getFeatures() const
+    {
+        return features;
+    }
 };

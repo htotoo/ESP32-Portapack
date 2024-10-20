@@ -13,7 +13,7 @@ get_gps_data_CB PPHandler::gps_data_cb = nullptr;
 get_orientation_data_CB PPHandler::orientation_data_cb = nullptr;
 get_environment_data_CB PPHandler::environment_data_cb = nullptr;
 get_light_data_CB PPHandler::light_data_cb = nullptr;
-uint16_t PPHandler::appCount = 0;
+std::vector<app_list_element_t> PPHandler::app_list;
 uint32_t PPHandler::module_version = 1;
 char PPHandler::module_name[20] = "ESP32MODULE";
 
@@ -32,9 +32,9 @@ void PPHandler::init(gpio_num_t scl, gpio_num_t sda, uint8_t addr_)
     ESP_ERROR_CHECK(i2c_slave_new(&i2c_slave_config, &slave_device));
 }
 
-uint16_t PPHandler::get_appCount()
+uint32_t PPHandler::get_appCount()
 {
-    return appCount;
+    return (uint32_t)app_list.size();
 }
 
 void PPHandler::set_get_gps_data_CB(get_gps_data_CB cb)
@@ -138,18 +138,32 @@ std::vector<uint8_t> PPHandler::on_send_ISR()
             /* api_version = */ PP_API_VERSION,
             /* module_version = */ module_version,
             /* module_name = */ "",
-            /* application_count = */ appCount};
+            /* application_count = */ app_list.size()};
         strncpy(info.module_name, module_name, 20);
         return std::vector<uint8_t>((uint8_t *)&info, (uint8_t *)&info + sizeof(info));
     }
 
     case Command::COMMAND_APP_INFO:
     {
+        if (app_counter <= app_list.size() - 1)
+        {
+            standalone_app_info app_info;
+            std::memset(&app_info, 0, sizeof(app_info));
+            std::memcpy(&app_info, app_list[app_counter].binary, sizeof(app_info) - 4);
+            app_info.binary_size = app_list[app_counter].size;
+            app_counter = app_counter + 1;
+            return std::vector<uint8_t>((uint8_t *)&app_info, (uint8_t *)&app_info + sizeof(app_info));
+        }
+
         break;
     }
 
     case Command::COMMAND_APP_TRANSFER:
     {
+        if (app_counter <= app_list.size() - 1 && app_transfer_block < app_list[app_counter].size / 128)
+        {
+            return std::vector<uint8_t>(app_list[app_counter].binary + app_transfer_block * 128, app_list[app_counter].binary + app_transfer_block * 128 + 128);
+        }
         break;
     }
 
@@ -158,6 +172,8 @@ std::vector<uint8_t> PPHandler::on_send_ISR()
         uint64_t features = 0;
         if (features_cb)
             features_cb(features);
+        else
+            features = app_list.size() > 0 ? (uint64_t)SupportedFeatures::FEAT_EXT_APP : (uint64_t)SupportedFeatures::FEAT_NONE; // default, only check if ext app added or not
         return std::vector<uint8_t>((uint8_t *)&features, (uint8_t *)&features + sizeof(features));
     }
 
@@ -198,4 +214,13 @@ std::vector<uint8_t> PPHandler::on_send_ISR()
     }
 
     return {0xFF};
+}
+
+bool PPHandler::add_app(uint8_t *binary, uint32_t size)
+{
+    if (size % 32 != 0)
+        return false;
+
+    app_list.push_back({binary, size});
+    return true;
 }
