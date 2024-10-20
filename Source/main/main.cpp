@@ -186,6 +186,25 @@ extern "C"
 
     i2c_scan();
     PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
+    PPHandler::set_module_name("ESP32PP");
+    PPHandler::set_module_version(1);
+    PPHandler::set_get_features_CB([](uint64_t &feat)
+                                   {
+                                    update_features();
+                                    feat = chipFeatures.getFeatures(); });
+    PPHandler::set_get_gps_data_CB([](ppgpssmall_t &gpsdata)
+                                   { gpsdata = gpsdata; });
+    PPHandler::set_get_orientation_data_CB([](orientation_t &ori)
+                                           {
+                                            ori.angle = heading;
+                                            ori.tilt = tilt; });
+    PPHandler::set_get_environment_data_CB([](environment_t &env)
+                                           {
+      env.temperature = temperature;
+      env.humidity = humidity;
+      env.pressure = pressure; });
+    PPHandler::set_get_light_data_CB([](uint16_t &light)
+                                     { light = light; });
 
     uint32_t time_millis = 0;
 

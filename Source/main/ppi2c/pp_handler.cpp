@@ -37,6 +37,11 @@ uint32_t PPHandler::get_appCount()
     return (uint32_t)app_list.size();
 }
 
+void PPHandler::set_get_features_CB(get_features_CB cb)
+{
+    features_cb = cb;
+}
+
 void PPHandler::set_get_gps_data_CB(get_gps_data_CB cb)
 {
     gps_data_cb = cb;
