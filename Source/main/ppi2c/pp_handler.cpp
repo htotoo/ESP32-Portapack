@@ -259,3 +259,12 @@ bool PPHandler::add_app(uint8_t *binary, uint32_t size)
     app_list.push_back({binary, size});
     return true;
 }
+
+void PPHandler::add_custom_command(uint16_t command, pp_i2c_command got_command, pp_i2c_command send_command)
+{
+    pp_custom_command_list_element_t element;
+    element.command = command;
+    element.got_command = got_command;
+    element.send_command = send_command;
+    custom_command_list.push_back(element);
+}

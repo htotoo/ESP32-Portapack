@@ -9,6 +9,9 @@
 #include <algorithm>
 #include "driver/i2c.h"
 
+/*
+    All callbasck are from IRQ, so a lot of things won't work from it. Also the code needs to be as fast as possible.
+*/
 class PPHandler
 {
 public:
@@ -16,16 +19,16 @@ public:
     static void set_module_name(std::string name);    // this will set the module name
     static void set_module_version(uint32_t version); // this will set the module version
 
-    static void set_get_features_CB(get_features_CB cb);                 // this will be called to get the features of the module see SupportedFeatures
-    static void set_get_gps_data_CB(get_gps_data_CB cb);                 // this will be called when the module asked for gps data
-    static void set_get_orientation_data_CB(get_orientation_data_CB cb); // this will be called when the module asked for orientation data
-    static void set_get_environment_data_CB(get_environment_data_CB cb); // this will be called when the module asked for environment data
-    static void set_get_light_data_CB(get_light_data_CB cb);             // this will be called when the module asked for light data
+    static void set_get_features_CB(get_features_CB cb);                 // IRQ CALLBACK! this will be called to get the features of the module see SupportedFeatures
+    static void set_get_gps_data_CB(get_gps_data_CB cb);                 // IRQ CALLBACK!  this will be called when the module asked for gps data
+    static void set_get_orientation_data_CB(get_orientation_data_CB cb); // IRQ CALLBACK!  this will be called when the module asked for orientation data
+    static void set_get_environment_data_CB(get_environment_data_CB cb); // IRQ CALLBACK!  this will be called when the module asked for environment data
+    static void set_get_light_data_CB(get_light_data_CB cb);             // IRQ CALLBACK!  this will be called when the module asked for light data
 
     static uint32_t get_appCount();                      // this will return the app count
     static bool add_app(uint8_t *binary, uint32_t size); // this will add an app to the module.app size must be %32 == 0
 
-    static void add_cutsom_command(pp_custom_command_list_element_t element); // this will add a custom command to the module, see pp_custom_command_list_element_t!
+    static void add_custom_command(uint16_t command, pp_i2c_command got_command, pp_i2c_command send_command); // Callbacks are from IRQ! This will add a custom command to the module, see pp_custom_command_list_element_t!
 
 private:
     // base working code

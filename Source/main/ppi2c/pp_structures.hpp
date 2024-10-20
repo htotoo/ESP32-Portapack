@@ -86,8 +86,6 @@ typedef struct
     uint32_t binary_size;
 } standalone_app_info;
 
-#define USER_COMMANDS_START 0x7F01
-
 enum class Command : uint16_t
 {
     COMMAND_NONE = 0,
@@ -106,12 +104,6 @@ enum class Command : uint16_t
     COMMAND_GETFEAT_DATA_ORIENTATION,
     COMMAND_GETFEAT_DATA_ENVIRONMENT,
     COMMAND_GETFEAT_DATA_LIGHT,
-    // UART specific commands
-    COMMAND_UART_REQUESTDATA_SHORT = USER_COMMANDS_START,
-    COMMAND_UART_REQUESTDATA_LONG,
-    COMMAND_UART_BAUDRATE_INC,
-    COMMAND_UART_BAUDRATE_DEC,
-    COMMAND_UART_BAUDRATE_GET,
 
 };
 
@@ -132,14 +124,13 @@ typedef struct
     std::vector<uint8_t> *data;
 } pp_command_data_t;
 
-typedef void (*pp_got_command)(pp_command_data_t data);
-typedef void (*pp_send_command)(pp_command_data_t data);
+typedef void (*pp_i2c_command)(pp_command_data_t data);
 
 typedef struct
 {
     uint16_t command;
-    pp_got_command got_command;
-    pp_send_command send_command;
+    pp_i2c_command got_command;
+    pp_i2c_command send_command;
 } pp_custom_command_list_element_t;
 
 #endif
