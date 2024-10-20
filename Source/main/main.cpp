@@ -185,9 +185,10 @@ extern "C"
     init_environment();
 
     i2c_scan();
-    PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
+
     PPHandler::set_module_name("ESP32PP");
     PPHandler::set_module_version(1);
+    PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
     PPHandler::set_get_features_CB([](uint64_t &feat)
                                    {
                                     update_features();

@@ -25,6 +25,8 @@ public:
     static uint32_t get_appCount();                      // this will return the app count
     static bool add_app(uint8_t *binary, uint32_t size); // this will add an app to the module.app size must be %32 == 0
 
+    static void add_cutsom_command(pp_custom_command_list_element_t element); // this will add a custom command to the module, see pp_custom_command_list_element_t!
+
 private:
     // base working code
     static bool i2c_slave_callback_ISR(struct i2c_slave_device_t *dev, I2CSlaveCallbackReason reason);
@@ -41,6 +43,9 @@ private:
     static volatile uint16_t app_transfer_block;
 
     static std::vector<app_list_element_t> app_list;
+
+    static std::vector<pp_custom_command_list_element_t> custom_command_list;
+
     // callbacks
     static get_features_CB features_cb;
     static get_gps_data_CB gps_data_cb;

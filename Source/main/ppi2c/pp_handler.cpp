@@ -14,6 +14,7 @@ get_orientation_data_CB PPHandler::orientation_data_cb = nullptr;
 get_environment_data_CB PPHandler::environment_data_cb = nullptr;
 get_light_data_CB PPHandler::light_data_cb = nullptr;
 std::vector<app_list_element_t> PPHandler::app_list;
+std::vector<pp_custom_command_list_element_t> PPHandler::custom_command_list;
 uint32_t PPHandler::module_version = 1;
 char PPHandler::module_name[20] = "ESP32MODULE";
 
@@ -95,6 +96,18 @@ void PPHandler::on_command_ISR(Command command, std::vector<uint8_t> additional_
     case Command::COMMAND_GETFEATURE_MASK:
         break;
     default:
+        for (auto element : custom_command_list)
+        {
+            if (element.command == (uint16_t)command)
+            {
+                if (element.got_command)
+                {
+                    pp_command_data_t data = {&additional_data};
+                    element.got_command(data);
+                }
+                break;
+            }
+        }
         break;
     }
 
@@ -215,6 +228,20 @@ std::vector<uint8_t> PPHandler::on_send_ISR()
     }
 
     default:
+        for (auto element : custom_command_list)
+        {
+            if (element.command == (uint16_t)command_state)
+            {
+                if (element.send_command)
+                {
+                    std::vector<uint8_t> tmp;
+                    pp_command_data_t data = {&tmp};
+                    element.send_command(data);
+                    return tmp;
+                }
+                break;
+            }
+        }
         break;
     }
 
@@ -224,7 +251,10 @@ std::vector<uint8_t> PPHandler::on_send_ISR()
 bool PPHandler::add_app(uint8_t *binary, uint32_t size)
 {
     if (size % 32 != 0)
+    {
+        esp_rom_printf("FAILED ADDING APP, BAD SIZE\n");
         return false;
+    }
 
     app_list.push_back({binary, size});
     return true;

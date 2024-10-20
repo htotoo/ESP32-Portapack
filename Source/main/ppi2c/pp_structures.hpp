@@ -2,6 +2,7 @@
 #define PP_STRUCTURES_HPP
 
 #include <cstdint>
+#include <vector>
 
 #define PP_API_VERSION 1
 #define ESP_SLAVE_ADDR 0x51
@@ -125,5 +126,20 @@ typedef struct
     uint8_t *binary;
     uint32_t size;
 } app_list_element_t;
+
+typedef struct
+{
+    std::vector<uint8_t> *data;
+} pp_command_data_t;
+
+typedef void (*pp_got_command)(pp_command_data_t data);
+typedef void (*pp_send_command)(pp_command_data_t data);
+
+typedef struct
+{
+    uint16_t command;
+    pp_got_command got_command;
+    pp_send_command send_command;
+} pp_custom_command_list_element_t;
 
 #endif
