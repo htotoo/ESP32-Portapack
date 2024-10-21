@@ -39,21 +39,26 @@ static const char *TAG = "ESP32PP";
 
 #include "ppi2c/pp_handler.hpp"
 
+#include "sgp4/Sgp4.h"
+
+Sgp4 sat;
+
 typedef enum TimerEntry
 {
-  TimerEntry_SENSORGET,
-  TimerEntry_REPORTPPGPS,
-  TimerEntry_REPORTPPORI,
-  TimerEntry_REPORTPPENVI,
-  TimerEntry_REPORTPPTIME,
-  TimerEntry_REPORTWEB,
-  TimerEntry_REPORTRGB,
-  TimerEntry_MAX
+    TimerEntry_SENSORGET,
+    TimerEntry_REPORTPPGPS,
+    TimerEntry_REPORTPPORI,
+    TimerEntry_REPORTPPENVI,
+    TimerEntry_REPORTPPTIME,
+    TimerEntry_REPORTWEB,
+    TimerEntry_REPORTRGB,
+    TimerEntry_SATTRACK,
+    TimerEntry_MAX
 } TimerEntry;
 
 uint32_t last_millis[TimerEntry_MAX] = {0};
-//                                       SEN    GPS  ORI    ENV   TIME        WEB   RGB
-uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000};
+// ______________________________________SEN    GPS  ORI    ENV   TIME        WEB   RGB   SAT
+uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000, 2000};
 
 float heading = 0.0;
 float tilt = 0.0;
@@ -71,250 +76,271 @@ uint32_t gps_baud = 9600;
 
 static void i2c_scan()
 {
-  vTaskDelay(50 / portTICK_PERIOD_MS); // wait till devs wake up
-  esp_err_t res;
-  printf("i2c scan: \n");
-  i2c_dev_t dev = {};
-  dev.cfg.sda_io_num = CONFIG_IC2SDAPIN;
-  dev.cfg.scl_io_num = CONFIG_IC2SCLPIN;
-  dev.cfg.master.clk_speed = 400000;
-  for (uint8_t i = 1; i < 127; i++)
-  {
-    dev.addr = i;
-    res = i2c_dev_probe(&dev, I2C_DEV_WRITE);
-    if (res == 0)
+    vTaskDelay(50 / portTICK_PERIOD_MS); // wait till devs wake up
+    esp_err_t res;
+    printf("i2c scan: \n");
+    i2c_dev_t dev = {};
+    dev.cfg.sda_io_num = CONFIG_IC2SDAPIN;
+    dev.cfg.scl_io_num = CONFIG_IC2SCLPIN;
+    dev.cfg.master.clk_speed = 400000;
+    for (uint8_t i = 1; i < 127; i++)
     {
-      printf("Found device at: 0x%2x\n", i);
-      foundI2CDev(i);
+        dev.addr = i;
+        res = i2c_dev_probe(&dev, I2C_DEV_WRITE);
+        if (res == 0)
+        {
+            printf("Found device at: 0x%2x\n", i);
+            foundI2CDev(i);
+        }
     }
-  }
 }
 
 ChipFeatures chipFeatures{};
 void update_features()
 {
-  chipFeatures.reset();
-  if (is_environment_light_sensor_present())
-    chipFeatures.enableFeature(SupportedFeatures::FEAT_LIGHT);
-  if (is_environment_sensor_present())
-    chipFeatures.enableFeature(SupportedFeatures::FEAT_ENVIRONMENT);
-  if (is_orientation_sensor_present())
-    chipFeatures.enableFeature(SupportedFeatures::FEAT_ORIENTATION);
-  if (gotAnyGps)
-    chipFeatures.enableFeature(SupportedFeatures::FEAT_GPS);
-  if (PPHandler::get_appCount() > 0)
-    chipFeatures.enableFeature(SupportedFeatures::FEAT_EXT_APP);
-  // uart is not present
-  // display is not present
+    chipFeatures.reset();
+    if (is_environment_light_sensor_present())
+        chipFeatures.enableFeature(SupportedFeatures::FEAT_LIGHT);
+    if (is_environment_sensor_present())
+        chipFeatures.enableFeature(SupportedFeatures::FEAT_ENVIRONMENT);
+    if (is_orientation_sensor_present())
+        chipFeatures.enableFeature(SupportedFeatures::FEAT_ORIENTATION);
+    if (gotAnyGps)
+        chipFeatures.enableFeature(SupportedFeatures::FEAT_GPS);
+    if (PPHandler::get_appCount() > 0)
+        chipFeatures.enableFeature(SupportedFeatures::FEAT_EXT_APP);
+    // uart is not present
+    // display is not present
 }
 
 static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-  gps_t *gps = NULL;
-  switch (event_id)
-  {
-  case GPS_UPDATE:
-    gotAnyGps = true;
-    gps = (gps_t *)event_data;
-    gpsdata.altitude = gps->altitude;
-    gpsdata.date.day = gps->date.day;
-    gpsdata.date.month = gps->date.month;
-    gpsdata.date.year = gps->date.year;
-    gpsdata.tim.hour = gps->tim.hour;
-    gpsdata.tim.minute = gps->tim.minute;
-    gpsdata.tim.second = gps->tim.second;
-    gpsdata.latitude = gps->latitude;
-    gpsdata.longitude = gps->longitude;
-    gpsdata.speed = gps->speed;
-    gpsdata.sats_in_use = gps->sats_in_use;
-    gpsdata.sats_in_view = gps->sats_in_view;
+    gps_t *gps = NULL;
+    switch (event_id)
+    {
+    case GPS_UPDATE:
+        gotAnyGps = true;
+        gps = (gps_t *)event_data;
+        gpsdata.altitude = gps->altitude;
+        gpsdata.date.day = gps->date.day;
+        gpsdata.date.month = gps->date.month;
+        gpsdata.date.year = gps->date.year;
+        gpsdata.tim.hour = gps->tim.hour;
+        gpsdata.tim.minute = gps->tim.minute;
+        gpsdata.tim.second = gps->tim.second;
+        gpsdata.latitude = gps->latitude;
+        gpsdata.longitude = gps->longitude;
+        gpsdata.speed = gps->speed;
+        gpsdata.sats_in_use = gps->sats_in_use;
+        gpsdata.sats_in_view = gps->sats_in_view;
 
-    break;
-  case GPS_UNKNOWN:
-    // ESP_LOGW(TAG, "Unknown statement:%s", (char*)event_data);
-    break;
-  default:
-    break;
-  }
+        break;
+    case GPS_UNKNOWN:
+        // ESP_LOGW(TAG, "Unknown statement:%s", (char*)event_data);
+        break;
+    default:
+        break;
+    }
 }
 
 #if __cplusplus
 extern "C"
 {
 #endif
-  void app_main(void)
-  {
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    void app_main(void)
     {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
-    // load prev settings
-    load_config_wifi();
-    load_config_misc();
+        sat.site(47.459224, 19.099645, 34);
+        char satname[] = "NOAA 15";
+        char tle_line1[] = "1 25338U 98030A   24295.12553556  .00000454  00000-0  20533-3 0  9994"; // Line one from the TLE data
+        char tle_line2[] = "2 25338  98.5599 319.5848 0009500 321.6051  38.4453 14.26757352375394"; // Line two from the TLE data
+        sat.init(satname, tle_line1, tle_line2);
 
-    // end config load
-    i2cdev_init();
-    //  i2c scanner
-    i2c_scan();
+        esp_err_t err = nvs_flash_init();
+        if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+        {
+            ESP_ERROR_CHECK(nvs_flash_erase());
+            err = nvs_flash_init();
+        }
+        ESP_ERROR_CHECK(err);
+        // load prev settings
+        load_config_wifi();
+        load_config_misc();
 
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    usb_init();
+        // end config load
+        i2cdev_init();
+        // i2c scanner
+        i2c_scan();
 
-    initialise_wifi();
-    wifi_apsta();
-    init_httpd();
-    nmea_parser_config_t nmeaconfig = NMEA_PARSER_CONFIG_DEFAULT();
-    nmeaconfig.uart.baud_rate = gps_baud; // todo modify by config
-    nmea_parser_handle_t nmea_hdl = nmea_parser_init(&nmeaconfig);
-    nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
-    esp_task_wdt_deinit();
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
+        usb_init();
 
-    temperature_sensor_handle_t temp_sensor = NULL;
-    temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(-10, 80);
-    ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_sensor));
-    ESP_LOGI(TAG, "Enable temperature sensor");
-    ESP_ERROR_CHECK(temperature_sensor_enable(temp_sensor));
+        initialise_wifi();
+        wifi_apsta();
+        init_httpd();
+        nmea_parser_config_t nmeaconfig = NMEA_PARSER_CONFIG_DEFAULT();
+        nmeaconfig.uart.baud_rate = gps_baud; // todo modify by config
+        nmea_parser_handle_t nmea_hdl = nmea_parser_init(&nmeaconfig);
+        nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+        esp_task_wdt_deinit();
 
-    init_rgb();
-    rgb_set(255, 255, 255);
+        temperature_sensor_handle_t temp_sensor = NULL;
+        temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(-10, 80);
+        ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_sensor));
+        ESP_LOGI(TAG, "Enable temperature sensor");
+        ESP_ERROR_CHECK(temperature_sensor_enable(temp_sensor));
 
-    init_orientation(); // it loads orientation data too
-    init_environment();
+        init_rgb();
+        rgb_set(255, 255, 255);
 
-    i2c_scan();
+        init_orientation(); // it loads orientation data too
+        init_environment();
 
-    PPHandler::set_module_name("ESP32PP");
-    PPHandler::set_module_version(1);
-    PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
-    PPHandler::set_get_features_CB([](uint64_t &feat)
-                                   {
+        i2c_scan();
+
+        PPHandler::set_module_name("ESP32PP");
+        PPHandler::set_module_version(1);
+        PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
+        PPHandler::set_get_features_CB([](uint64_t &feat)
+                                       {
                                     update_features();
                                     feat = chipFeatures.getFeatures(); });
-    PPHandler::set_get_gps_data_CB([](ppgpssmall_t &gpsdata)
-                                   { gpsdata = gpsdata; });
-    PPHandler::set_get_orientation_data_CB([](orientation_t &ori)
-                                           {
+        PPHandler::set_get_gps_data_CB([](ppgpssmall_t &gpsdata)
+                                       { gpsdata = gpsdata; });
+        PPHandler::set_get_orientation_data_CB([](orientation_t &ori)
+                                               {
                                             ori.angle = heading;
                                             ori.tilt = tilt; });
-    PPHandler::set_get_environment_data_CB([](environment_t &env)
-                                           {
+        PPHandler::set_get_environment_data_CB([](environment_t &env)
+                                               {
       env.temperature = temperature;
       env.humidity = humidity;
       env.pressure = pressure; });
-    PPHandler::set_get_light_data_CB([](uint16_t &light)
-                                     { light = light; });
+        PPHandler::set_get_light_data_CB([](uint16_t &light)
+                                         { light = light; });
 
-    uint32_t time_millis = 0;
+        uint32_t time_millis = 0;
 
-    while (true)
-    {
-      time_millis = esp_timer_get_time() / 1000;
-
-      // GET ALL SENSOR DATA
-      if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET])
-      {
-        // GPS IS AUTO
-        ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp)); // TEMPINT
-        heading = get_heading_degrees();                                               // ORIENTATION
-        tilt = get_tilt();                                                             // TILT
-        get_environment_meas(&temperature, &pressure, &humidity);                      // env data
-        get_environment_light(&light);                                                 // light (lux) data
-        last_millis[TimerEntry_SENSORGET] = time_millis;
-      }
-
-      // REPORT ALL SENSOR DATA TO WEB
-      if (!getInCommand() && (time_millis - last_millis[TimerEntry_REPORTWEB] > timer_millis[TimerEntry_REPORTWEB]))
-      {
-        char buff[300] = {0};
-        snprintf(buff, 300,
-                 "#$##$$#GOTSENS"
-                 "{\"gps\":{\"y\":%d,\"m\":%d,\"d\":%d,\"h\":%d,\"mi\":%d,\"s\":%d,"
-                 "\"siu\":%d,\"siv\":%d,\"lat\":%.06f,\"lon\":%.06f,\"alt\":%.02f,\"speed\":%f},"
-                 "\"ori\":{\"head\":%.01f, \"tilt\":%.01f },"
-                 "\"env\":{\"tempesp\":%.01f,\"temp\":%.01f,\"humi\":%.01f, \"press\":%.01f, \"light\":%d }"
-                 "}\r\n",
-                 gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour + TIME_ZONE, gpsdata.tim.minute, gpsdata.tim.second,
-                 gpsdata.sats_in_use, gpsdata.sats_in_view, gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed,
-                 heading, tilt,
-                 temperatureEsp, temperature, humidity, pressure, light);
-        ws_sendall((uint8_t *)buff, strlen(buff));
-        last_millis[TimerEntry_REPORTWEB] = time_millis;
-      }
-
-      // REPORT SENSOR DATA TO PP. EACH HAS OWN TIMER!
-      char gotusb[300];
-      if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS]))
-      {
-        if (gpsdata.latitude != 0 || gpsdata.longitude != 0)
+        while (true)
         {
-          snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f %d\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed, gpsdata.sats_in_use);
-          ESP_LOGI(TAG, "%s", gotusb);
-          if (wait_till_usb_sending(1))
-          {
-            write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
-            last_millis[TimerEntry_REPORTPPGPS] = time_millis;
-            ESP_LOGI(TAG, "gotgps sent");
-          }
-        }
-      }
-      if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI]))
-      {
-        if (heading < 400) // got heading data
-        {
-          snprintf(gotusb, 290, "gotorientation %.01f %.01f\r\n", heading, tilt);
-          ESP_LOGI(TAG, "%s", gotusb);
-          if (wait_till_usb_sending(1))
-          {
-            write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
-            last_millis[TimerEntry_REPORTPPORI] = time_millis;
-            ESP_LOGI(TAG, "gotorientation sent");
-          }
-        }
-      }
-      if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPENVI] > timer_millis[TimerEntry_REPORTPPENVI]))
-      {
-        if (heading < 400) // got heading data
-        {
-          snprintf(gotusb, 290, "gotenv %.02f %.01f %.02f %d\r\n", temperature, humidity, pressure, light);
-          ESP_LOGI(TAG, "%s", gotusb);
-          if (wait_till_usb_sending(1))
-          {
-            write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
-            last_millis[TimerEntry_REPORTPPENVI] = time_millis;
-            ESP_LOGI(TAG, "gotenv sent");
-          }
-        }
-      }
-      if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPTIME] > timer_millis[TimerEntry_REPORTPPTIME]))
-      {
-        uint16_t cmxs = gpsdata.tim.minute * gpsdata.tim.second + gpsdata.tim.second + gpsdata.tim.hour;
-        if (gpsdata.date.year < 2044 && gpsdata.date.year > 2023 && lastReportedMxS != cmxs) // got a valid time, and ti is not the last
-        {
-          snprintf(gotusb, 290, "rtcset %d %d %d %d %d %d\r\n", gpsdata.date.year, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second);
-          ESP_LOGI(TAG, "%s", gotusb);
-          if (wait_till_usb_sending(1))
-          {
-            write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
-            last_millis[TimerEntry_REPORTPPTIME] = time_millis;
-            ESP_LOGI(TAG, "settime sent");
-            lastReportedMxS = cmxs;
-          }
-        }
-      }
+            time_millis = esp_timer_get_time() / 1000;
 
-      if (time_millis - last_millis[TimerEntry_REPORTRGB] > timer_millis[TimerEntry_REPORTRGB])
-      {
-        rgb_set_by_status();
-        last_millis[TimerEntry_REPORTRGB] = time_millis;
-      }
-      // try wifi client connect
-      wifi_loop(time_millis);
-      vTaskDelay(50 / portTICK_PERIOD_MS);
+            // GET ALL SENSOR DATA
+            if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET])
+            {
+                // GPS IS AUTO
+                ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp)); // TEMPINT
+                heading = get_heading_degrees();                                               // ORIENTATION
+                tilt = get_tilt();                                                             // TILT
+                get_environment_meas(&temperature, &pressure, &humidity);                      // env data
+                get_environment_light(&light);                                                 // light (lux) data
+                last_millis[TimerEntry_SENSORGET] = time_millis;
+            }
+
+            // REPORT ALL SENSOR DATA TO WEB
+            if (!getInCommand() && (time_millis - last_millis[TimerEntry_REPORTWEB] > timer_millis[TimerEntry_REPORTWEB]))
+            {
+                char buff[300] = {0};
+                snprintf(buff, 300,
+                         "#$##$$#GOTSENS"
+                         "{\"gps\":{\"y\":%d,\"m\":%d,\"d\":%d,\"h\":%d,\"mi\":%d,\"s\":%d,"
+                         "\"siu\":%d,\"siv\":%d,\"lat\":%.06f,\"lon\":%.06f,\"alt\":%.02f,\"speed\":%f},"
+                         "\"ori\":{\"head\":%.01f, \"tilt\":%.01f },"
+                         "\"env\":{\"tempesp\":%.01f,\"temp\":%.01f,\"humi\":%.01f, \"press\":%.01f, \"light\":%d }"
+                         "}\r\n",
+                         gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour + TIME_ZONE, gpsdata.tim.minute, gpsdata.tim.second,
+                         gpsdata.sats_in_use, gpsdata.sats_in_view, gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed,
+                         heading, tilt,
+                         temperatureEsp, temperature, humidity, pressure, light);
+                ws_sendall((uint8_t *)buff, strlen(buff));
+                last_millis[TimerEntry_REPORTWEB] = time_millis;
+            }
+
+            // REPORT SENSOR DATA TO PP. EACH HAS OWN TIMER!
+            char gotusb[300];
+            if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS]))
+            {
+                if (gpsdata.latitude != 0 || gpsdata.longitude != 0)
+                {
+                    snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f %d\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed, gpsdata.sats_in_use);
+                    ESP_LOGI(TAG, "%s", gotusb);
+                    if (wait_till_usb_sending(1))
+                    {
+                        write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
+                        last_millis[TimerEntry_REPORTPPGPS] = time_millis;
+                        ESP_LOGI(TAG, "gotgps sent");
+                    }
+                }
+            }
+            if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI]))
+            {
+                if (heading < 400) // got heading data
+                {
+                    snprintf(gotusb, 290, "gotorientation %.01f %.01f\r\n", heading, tilt);
+                    ESP_LOGI(TAG, "%s", gotusb);
+                    if (wait_till_usb_sending(1))
+                    {
+                        write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
+                        last_millis[TimerEntry_REPORTPPORI] = time_millis;
+                        ESP_LOGI(TAG, "gotorientation sent");
+                    }
+                }
+            }
+            if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPENVI] > timer_millis[TimerEntry_REPORTPPENVI]))
+            {
+                if (heading < 400) // got heading data
+                {
+                    snprintf(gotusb, 290, "gotenv %.02f %.01f %.02f %d\r\n", temperature, humidity, pressure, light);
+                    ESP_LOGI(TAG, "%s", gotusb);
+                    if (wait_till_usb_sending(1))
+                    {
+                        write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
+                        last_millis[TimerEntry_REPORTPPENVI] = time_millis;
+                        ESP_LOGI(TAG, "gotenv sent");
+                    }
+                }
+            }
+            if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPTIME] > timer_millis[TimerEntry_REPORTPPTIME]))
+            {
+                uint16_t cmxs = gpsdata.tim.minute * gpsdata.tim.second + gpsdata.tim.second + gpsdata.tim.hour;
+                if (gpsdata.date.year < 2044 && gpsdata.date.year > 2023 && lastReportedMxS != cmxs) // got a valid time, and ti is not the last
+                {
+                    snprintf(gotusb, 290, "rtcset %d %d %d %d %d %d\r\n", gpsdata.date.year, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second);
+                    ESP_LOGI(TAG, "%s", gotusb);
+                    if (wait_till_usb_sending(1))
+                    {
+                        write_usb_blocking((uint8_t *)gotusb, strnlen(gotusb, 290), true, false);
+                        last_millis[TimerEntry_REPORTPPTIME] = time_millis;
+                        ESP_LOGI(TAG, "settime sent");
+                        lastReportedMxS = cmxs;
+                    }
+                }
+            }
+
+            if (time_millis - last_millis[TimerEntry_REPORTRGB] > timer_millis[TimerEntry_REPORTRGB])
+            {
+                rgb_set_by_status();
+                last_millis[TimerEntry_REPORTRGB] = time_millis;
+            }
+            if (time_millis - last_millis[TimerEntry_SATTRACK] > timer_millis[TimerEntry_SATTRACK])
+            {
+                if (gpsdata.latitude != 0 && gpsdata.longitude != 0)
+                {
+                    sat.site(gpsdata.latitude, gpsdata.longitude, gpsdata.altitude);
+                    double jd = 0;
+                    jday(gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second, 0, false, jd);
+                    sat.findsat(jd);
+                    ESP_LOGI(TAG, "year =%d ", gpsdata.date.year + YEAR_BASE);
+                    ESP_LOGI(TAG, "azimuth =%f ", sat.satAz);
+                    ESP_LOGI(TAG, "elevation =%f ", sat.satEl);
+                    last_millis[TimerEntry_SATTRACK] = time_millis;
+                }
+            }
+
+            // try wifi client connect
+            wifi_loop(time_millis);
+            vTaskDelay(50 / portTICK_PERIOD_MS);
+        }
     }
-  }
 
 #if __cplusplus
 }
