@@ -43,6 +43,7 @@ static const char *TAG = "ESP32PP";
 
 #include "ppi2c/pp_handler.hpp"
 #define PPCMD_SATTRACK_DATA 0xa000
+#define PPCMD_SATTRACK_SETSAT 0xa001
 
 #include "sgp4/Sgp4.h"
 
@@ -89,6 +90,10 @@ typedef struct
     uint8_t hour;
     uint8_t minute;
     uint8_t second;
+    uint8_t sat_day; // sat last data
+    uint8_t sat_month;
+    uint16_t sat_year;
+    uint8_t sat_hour;
 } sattrackdata_t;
 sattrackdata_t sattrackdata;
 uint8_t sattrack_task = 0; // this will set to the main thread what is the current task. 0 = none, 1 = update db, 2 = change sat. each task needs to reset it.
@@ -286,6 +291,14 @@ esp_err_t load_satellite_tle(const std::string &sat_to_track)
                 ESP_LOGI(TAG, "TLE Line 1: %s", l1.c_str());
                 ESP_LOGI(TAG, "TLE Line 2: %s", l2.c_str());
                 sat.init(sat_to_track.c_str(), (char *)l1.c_str(), (char *)l2.c_str());
+                double satjs = sat.satJd;
+                int y, m, d, h, mi;
+                double s;
+                invjday(satjs, 0, false, y, m, d, h, mi, s);
+                sattrackdata.sat_day = d;
+                sattrackdata.sat_month = m;
+                sattrackdata.sat_year = y;
+                sattrackdata.sat_hour = h;
                 satellite_found = true;
             }
             else
@@ -458,6 +471,17 @@ extern "C"
                                       {
                                         data.data->resize(sizeof(sattrackdata_t));                                   
                                         *(sattrackdata_t *)(*data.data).data() = sattrackdata; });
+
+        PPHandler::add_custom_command(PPCMD_SATTRACK_SETSAT, [](pp_command_data_t data)
+                                      {
+            const void* null_pos = std::memchr((*data.data).data(), 0, (*data.data).size());
+            std::string str;
+            if (null_pos) {
+                str = std::string(reinterpret_cast<const char*>((*data.data).data()), static_cast<const uint8_t*>(null_pos) - (*data.data).data());
+            } else {
+                str = std::string((*data.data).begin(), (*data.data).end());
+            } 
+            sat_to_track = str; }, nullptr);
 
         uint32_t time_millis = 0;
 
