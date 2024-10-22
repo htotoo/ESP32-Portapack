@@ -42,8 +42,10 @@ static const char* TAG = "ESP32PP";
 #include "environment.h"
 
 #include "ppi2c/pp_handler.hpp"
+
 #define PPCMD_SATTRACK_DATA 0xa000
 #define PPCMD_SATTRACK_SETSAT 0xa001
+#define PPCMD_SATTRACK_SETMGPS 0xa002
 
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
@@ -82,6 +84,12 @@ uint32_t gps_baud = 9600;
 
 typedef struct
 {
+    float lat;
+    float lon;
+} sat_mgps_t;
+
+typedef struct
+{
     float azimuth;
     float elevation;
     uint8_t day;    // data time for setting when the data last updated, and to let user check if it is ok or not
@@ -101,6 +109,7 @@ sattrackdata_t sattrackdata;
 uint8_t sattrack_task = 0;  // this will set to the main thread what is the current task. 0 = none, 1 = update db, 2 = change sat. each task needs to reset it.
 uint8_t sattrack_task_last_error = 0;
 std::string sat_to_track = "NOAA 15";
+std::string sat_to_track_new = "";
 
 #include "led.h"
 
@@ -423,6 +432,15 @@ void app_main(void) {
                                         data.data->resize(sizeof(sattrackdata_t));                                   
                                         *(sattrackdata_t *)(*data.data).data() = sattrackdata; });
 
+    PPHandler::add_custom_command(PPCMD_SATTRACK_SETMGPS, [](pp_command_data_t data) {
+                                        if (data.data->size() != sizeof(sat_mgps_t)) {
+                                            return;
+                                        }
+                                        sat_mgps_t tmp;
+                                        memcpy(&tmp, data.data->data(), sizeof(sat_mgps_t));
+                                        sattrackdata.lat = tmp.lat;
+                                        sattrackdata.lon = tmp.lon; }, nullptr);
+
     PPHandler::add_custom_command(PPCMD_SATTRACK_SETSAT, [](pp_command_data_t data) {
             const void* null_pos = std::memchr((*data.data).data(), 0, (*data.data).size());
             std::string str;
@@ -431,14 +449,19 @@ void app_main(void) {
             } else {
                 str = std::string((*data.data).begin(), (*data.data).end());
             } 
-            sat_to_track = str; }, nullptr);
+            sat_to_track_new = "GOES 18"; }, nullptr);
     PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
 
     uint32_t time_millis = 0;
 
     while (true) {
         time_millis = esp_timer_get_time() / 1000;
-
+        if (sat_to_track_new != "") {
+            ESP_LOGI(TAG, "NEWSATGOT");
+            sat_to_track = sat_to_track_new;
+            load_satellite_tle(sat_to_track);
+            sat_to_track_new = "";
+        }
         // GET ALL SENSOR DATA
         if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET]) {
             // GPS IS AUTO
@@ -525,7 +548,14 @@ void app_main(void) {
             last_millis[TimerEntry_REPORTRGB] = time_millis;
         }
         if (time_millis - last_millis[TimerEntry_SATTRACK] > timer_millis[TimerEntry_SATTRACK]) {
+            // check for new gps data
+            ESP_LOGI(TAG, "qgps: %f  %f", sattrackdata.lat, sattrackdata.lon);
             if (gpsdata.latitude != 0 && gpsdata.longitude != 0) {
+                sattrackdata.lat = gpsdata.latitude;
+                sattrackdata.lon = gpsdata.longitude;
+            }
+            // if only old, or etc use that nvm
+            if (sattrackdata.lat != 0 && sattrackdata.lon != 0) {
                 sat.site(gpsdata.latitude, gpsdata.longitude, gpsdata.altitude);
                 double jd = 0;
                 jday(gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second, 0, false, jd);
@@ -540,10 +570,8 @@ void app_main(void) {
                 sattrackdata.hour = gpsdata.tim.hour;
                 sattrackdata.minute = gpsdata.tim.minute;
                 sattrackdata.second = gpsdata.tim.second;
-                sattrackdata.lat = gpsdata.latitude;
-                sattrackdata.lon = gpsdata.longitude;
-                last_millis[TimerEntry_SATTRACK] = time_millis;
             }
+            last_millis[TimerEntry_SATTRACK] = time_millis;
         }
 
         if (time_millis - last_millis[TimerEntry_SATDOWN] > timer_millis[TimerEntry_SATDOWN]) {
