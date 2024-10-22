@@ -25,6 +25,7 @@
 #include "configuration.h"
 #include "esp_spiffs.h"
 #include "esp_http_client.h"
+#include "esp_sntp.h"
 
 #include "sensordb.h"
 
@@ -406,6 +407,11 @@ static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_ba
     }
 }
 
+void time_sync_notification_cb(struct timeval *tv)
+{
+    ESP_LOGI(TAG, "Time synchronized from SNTP server");
+}
+
 #if __cplusplus
 extern "C"
 {
@@ -437,6 +443,11 @@ extern "C"
 
         initialise_wifi();
         wifi_apsta();
+        sntp_setoperatingmode(SNTP_OPMODE_POLL);
+        sntp_setservername(0, "pool.ntp.org");
+        sntp_init();
+        sntp_set_time_sync_notification_cb(time_sync_notification_cb);
+
         init_httpd();
         nmea_parser_config_t nmeaconfig = NMEA_PARSER_CONFIG_DEFAULT();
         nmeaconfig.uart.baud_rate = gps_baud; // todo modify by config
