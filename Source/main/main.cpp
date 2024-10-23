@@ -47,6 +47,7 @@ static const char *TAG = "ESP32PP";
 #define PPCMD_SATTRACK_DATA 0xa000
 #define PPCMD_SATTRACK_SETSAT 0xa001
 #define PPCMD_SATTRACK_SETMGPS 0xa002
+uint8_t time_method = 0; // 0 = no valid, 1 = gps, 2 = ntp
 
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
@@ -410,6 +411,8 @@ static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_ba
 void time_sync_notification_cb(struct timeval *tv)
 {
     ESP_LOGI(TAG, "Time synchronized from SNTP server");
+    if (time_method == 0)
+        time_method = 2;
 }
 
 #if __cplusplus
@@ -638,7 +641,30 @@ extern "C"
                 {
                     sat.site(gpsdata.latitude, gpsdata.longitude, gpsdata.altitude);
                     double jd = 0;
-                    jday(gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second, 0, false, jd);
+                    if (gpsdata.date.year < 44 && gpsdata.date.year >= 23) // has valid gps time
+                    {
+                        jday(gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second, 0, false, jd);
+                    }
+                    else
+                    {
+                        time_t now;
+                        struct tm timeinfo;
+                        time(&now);
+                        localtime_r(&now, &timeinfo);
+                        uint16_t year;
+                        uint8_t month;
+                        uint8_t day;
+                        uint8_t hour;
+                        uint8_t minute;
+                        uint8_t second;
+                        year = timeinfo.tm_year + 1900; // Az év 1900-tól számítva
+                        month = timeinfo.tm_mon + 1;    // A hónap 0-11, ezért +1
+                        day = timeinfo.tm_mday;
+                        hour = timeinfo.tm_hour;
+                        minute = timeinfo.tm_min;
+                        second = timeinfo.tm_sec;
+                        jday(year + YEAR_BASE, month, day, hour, minute, second, 0, false, jd);
+                    }
                     sat.findsat(jd);
                     ESP_LOGI(TAG, "azimuth =%f ", sat.satAz);
                     ESP_LOGI(TAG, "elevation =%f ", sat.satEl);
