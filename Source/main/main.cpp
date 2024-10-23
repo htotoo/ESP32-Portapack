@@ -533,6 +533,7 @@ extern "C"
                 load_satellite_tle(sat_to_track);
                 sattrackdata.elevation = 0;
                 sattrackdata.azimuth = 0;
+                last_millis[TimerEntry_SATTRACK] = 10; // force update
                 sat_to_track_new = "";
             }
             // GET ALL SENSOR DATA
