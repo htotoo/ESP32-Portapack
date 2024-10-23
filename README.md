@@ -11,6 +11,7 @@ An addon module for portapack to add GPS and extra sensors to it for more fun.
 - **GPS**
 - **Compass**
 - **Temperature + humidity + pressure + light**
+- Portapack H4 I2C interface support! Can run unique apps, while plugged in!
 
 For detailed info check Wiki
 
@@ -23,10 +24,16 @@ For detailed info check Wiki
   - May not fit in the firmware, so it's not determined yet.
 
 - **IR blaster**
-  - To add IR remote functions to PP.
+  - To add IR remote functions to PP. May be available only for H4 + I2C
 
 - **LoRa**
   - Some kind of LoRa support, needs to determinde function (based on availeable FW space, and computing power). Not soon!
+
+### Standalone apps
+If you connect this module to H4 via I2c, the module sends the following apps:
+- Utilities / SatTrack.  With this, you can select one satellite, and check it's Elevation / Azimuth. For this, ESP needs internet connection, to sync the time, and download the latest TLE data.
+
+More coming. Suggest in Issues if you get any ides.
 
 
 ### Screenshots:
