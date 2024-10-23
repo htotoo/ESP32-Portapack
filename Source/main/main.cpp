@@ -614,7 +614,7 @@ extern "C"
             if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPTIME] > timer_millis[TimerEntry_REPORTPPTIME]))
             {
                 uint16_t cmxs = gpsdata.tim.minute * gpsdata.tim.second + gpsdata.tim.second + gpsdata.tim.hour;
-                if (gpsdata.date.year < 2044 && gpsdata.date.year > 2023 && lastReportedMxS != cmxs) // got a valid time, and ti is not the last
+                if (gpsdata.date.year < 44 && gpsdata.date.year >= 23 && lastReportedMxS != cmxs) // got a valid time, and ti is not the last
                 {
                     snprintf(gotusb, 290, "rtcset %d %d %d %d %d %d\r\n", gpsdata.date.year, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second);
                     ESP_LOGI(TAG, "%s", gotusb);
@@ -636,7 +636,7 @@ extern "C"
             if (time_millis - last_millis[TimerEntry_SATTRACK] > timer_millis[TimerEntry_SATTRACK])
             {
                 // check for new gps data
-                ESP_LOGI(TAG, "qgps: %f  %f", sattrackdata.lat, sattrackdata.lon);
+                // ESP_LOGI(TAG, "qgps: %f  %f", sattrackdata.lat, sattrackdata.lon);
                 if (gpsdata.latitude != 0 || gpsdata.longitude != 0)
                 {
                     sattrackdata.lat = gpsdata.latitude;
@@ -665,13 +665,9 @@ extern "C"
                         int hour = timeinfo.tm_hour;
                         int minute = timeinfo.tm_min;
                         int second = timeinfo.tm_sec;
-                        ESP_LOGI(TAG, "Current Date and Time: %d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
                         jday(year, month, day, hour, minute, second, 0, false, jd);
                     }
                     sat.findsat(jd);
-                    ESP_LOGI(TAG, "Julian Date (jd) = %f", jd);
-                    ESP_LOGI(TAG, "azimuth =%f ", sat.satAz);
-                    ESP_LOGI(TAG, "elevation =%f ", sat.satEl);
                     if (time_method == 0)
                     {
                         sattrackdata.azimuth = 0;
