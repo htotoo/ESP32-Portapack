@@ -1,4 +1,4 @@
-# ESP32-Portapack
+# ESP32-Portapack (ESP32PP)
 An addon module for portapack to add GPS and extra sensors to it for more fun.
 
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
@@ -30,10 +30,9 @@ For detailed info check Wiki
   - Some kind of LoRa support, needs to determinde function (based on availeable FW space, and computing power). Not soon!
 
 ### Standalone apps
-If you connect this module to H4 via I2c, the module sends the following apps:
-- Utilities / SatTrack.  With this, you can select one satellite, and check it's Elevation / Azimuth. For this, ESP needs internet connection, to sync the time, and download the latest TLE data.
+If you connect this module to H4 via I2c, the module will supply additional apps for H4. Check the list in the [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/I2C-apps-for-H4)
 
-More coming. Suggest in Issues if you get any ides.
+Suggest in Issues if you get any ideas.
 
 
 ### Screenshots:
