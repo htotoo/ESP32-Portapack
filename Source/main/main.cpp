@@ -114,6 +114,7 @@ uint8_t sattrack_task = 0; // this will set to the main thread what is the curre
 uint8_t sattrack_task_last_error = 0;
 std::string sat_to_track = "NOAA 15";
 std::string sat_to_track_new = "";
+bool sat_data_loaded = false;
 
 #include "led.h"
 
@@ -366,7 +367,7 @@ esp_err_t download_file_to_spiffs(void)
     {
         ESP_LOGI(TAG, "HTTP GET request completed");
         downloadedTLE = true;
-        load_satellite_tle(sat_to_track);
+        sat_to_track_new = sat_to_track;
     }
     else
     {
@@ -435,7 +436,7 @@ extern "C"
 
         init_spiffs();
         sat.site(0, 0, 34);
-        load_satellite_tle(sat_to_track);
+        sat_data_loaded = (load_satellite_tle(sat_to_track) == ESP_OK);
 
         // end config load
         i2cdev_init();
@@ -530,7 +531,7 @@ extern "C"
             if (sat_to_track_new != "")
             {
                 sat_to_track = sat_to_track_new;
-                load_satellite_tle(sat_to_track);
+                sat_data_loaded = (load_satellite_tle(sat_to_track) == ESP_OK);
                 sattrackdata.elevation = 0;
                 sattrackdata.azimuth = 0;
                 last_millis[TimerEntry_SATTRACK] = 10; // force update
@@ -633,72 +634,86 @@ extern "C"
                 rgb_set_by_status();
                 last_millis[TimerEntry_REPORTRGB] = time_millis;
             }
+
             if (time_millis - last_millis[TimerEntry_SATTRACK] > timer_millis[TimerEntry_SATTRACK])
             {
                 // check for new gps data
                 // ESP_LOGI(TAG, "qgps: %f  %f", sattrackdata.lat, sattrackdata.lon);
-                if (gpsdata.latitude != 0 || gpsdata.longitude != 0)
+                if (sat_data_loaded)
                 {
-                    sattrackdata.lat = gpsdata.latitude;
-                    sattrackdata.lon = gpsdata.longitude;
-                }
-                // if only old, or etc use that nvm
-                if (sattrackdata.lat != 0 || sattrackdata.lon != 0)
-                {
-                    struct tm timeinfo;
-                    sat.site(gpsdata.latitude, gpsdata.longitude, gpsdata.altitude);
-                    double jd = 0;
-                    if (gpsdata.date.year < 44 && gpsdata.date.year >= 23) // has valid gps time
+                    if (gpsdata.latitude != 0 || gpsdata.longitude != 0)
                     {
-                        time_method = 1;
-                        jday(gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second, 0, false, jd);
+                        sattrackdata.lat = gpsdata.latitude;
+                        sattrackdata.lon = gpsdata.longitude;
                     }
-                    else
+                    // if only old, or etc use that nvm
+                    if (sattrackdata.lat != 0 || sattrackdata.lon != 0)
                     {
-                        time_t now;
-                        time(&now);
-                        localtime_r(&now, &timeinfo);
-                        int year = timeinfo.tm_year + 1900; // Az év 1900-tól számítva
-                        int month = timeinfo.tm_mon + 1;    // A hónap 0-11, ezért +1
-                        int day = timeinfo.tm_mday;
+                        struct tm timeinfo;
+                        sat.site(gpsdata.latitude, gpsdata.longitude, gpsdata.altitude);
+                        double jd = 0;
+                        if (gpsdata.date.year < 44 && gpsdata.date.year >= 23) // has valid gps time
+                        {
+                            time_method = 1;
+                            jday(gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second, 0, false, jd);
+                        }
+                        else
+                        {
+                            time_t now;
+                            time(&now);
+                            localtime_r(&now, &timeinfo);
+                            int year = timeinfo.tm_year + 1900; // Az év 1900-tól számítva
+                            int month = timeinfo.tm_mon + 1;    // A hónap 0-11, ezért +1
+                            int day = timeinfo.tm_mday;
 
-                        int hour = timeinfo.tm_hour;
-                        int minute = timeinfo.tm_min;
-                        int second = timeinfo.tm_sec;
-                        jday(year, month, day, hour, minute, second, 0, false, jd);
+                            int hour = timeinfo.tm_hour;
+                            int minute = timeinfo.tm_min;
+                            int second = timeinfo.tm_sec;
+                            jday(year, month, day, hour, minute, second, 0, false, jd);
+                        }
+                        sat.findsat(jd);
+                        if (time_method == 0)
+                        {
+                            sattrackdata.azimuth = 0;
+                            sattrackdata.elevation = 0;
+                        }
+                        else
+                        {
+                            sattrackdata.azimuth = sat.satAz;
+                            sattrackdata.elevation = sat.satEl;
+                        }
+                        if (time_method == 1)
+                        {
+                            sattrackdata.day = gpsdata.date.day;
+                            sattrackdata.month = gpsdata.date.month;
+                            sattrackdata.year = gpsdata.date.year;
+                            sattrackdata.hour = gpsdata.tim.hour;
+                            sattrackdata.minute = gpsdata.tim.minute;
+                            sattrackdata.second = gpsdata.tim.second;
+                        }
+                        else
+                        {
+                            sattrackdata.day = timeinfo.tm_mday;
+                            sattrackdata.month = timeinfo.tm_mon + 1;
+                            sattrackdata.year = timeinfo.tm_year + 1900;
+                            sattrackdata.hour = timeinfo.tm_hour;
+                            sattrackdata.minute = timeinfo.tm_min;
+                            sattrackdata.second = timeinfo.tm_sec;
+                        }
+                        sattrackdata.time_method = time_method;
                     }
-                    sat.findsat(jd);
-                    if (time_method == 0)
-                    {
-                        sattrackdata.azimuth = 0;
-                        sattrackdata.elevation = 0;
-                    }
-                    else
-                    {
-                        sattrackdata.azimuth = sat.satAz;
-                        sattrackdata.elevation = sat.satEl;
-                    }
-                    if (time_method == 1)
-                    {
-                        sattrackdata.day = gpsdata.date.day;
-                        sattrackdata.month = gpsdata.date.month;
-                        sattrackdata.year = gpsdata.date.year;
-                        sattrackdata.hour = gpsdata.tim.hour;
-                        sattrackdata.minute = gpsdata.tim.minute;
-                        sattrackdata.second = gpsdata.tim.second;
-                    }
-                    else
-                    {
-                        sattrackdata.day = timeinfo.tm_mday;
-                        sattrackdata.month = timeinfo.tm_mon + 1;
-                        sattrackdata.year = timeinfo.tm_year + 1900;
-                        sattrackdata.hour = timeinfo.tm_hour;
-                        sattrackdata.minute = timeinfo.tm_min;
-                        sattrackdata.second = timeinfo.tm_sec;
-                    }
-                    sattrackdata.time_method = time_method;
+                    last_millis[TimerEntry_SATTRACK] = time_millis;
                 }
-                last_millis[TimerEntry_SATTRACK] = time_millis;
+                else
+                {
+                    sattrackdata.sat_day = 0;
+                    sattrackdata.sat_month = 0;
+                    sattrackdata.sat_year = 0;
+                    sattrackdata.sat_hour = 0;
+                    sattrackdata.azimuth = 0;
+                    sattrackdata.elevation = 0;
+                    last_millis[TimerEntry_SATTRACK] = time_millis;
+                }
             }
 
             if (time_millis - last_millis[TimerEntry_SATDOWN] > timer_millis[TimerEntry_SATDOWN])
