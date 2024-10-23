@@ -499,12 +499,14 @@ extern "C"
                                         *(sattrackdata_t *)(*data.data).data() = sattrackdata; });
 
         PPHandler::add_custom_command(PPCMD_SATTRACK_SETMGPS, [](pp_command_data_t data)
-                                      {
+                                      { 
                                         if (data.data->size() != sizeof(sat_mgps_t)) { 
                                             return;
                                         }
                                         sat_mgps_t tmp;
                                         memcpy(&tmp, data.data->data(), sizeof(sat_mgps_t));
+                                        sattrackdata.elevation = 0;
+                                        sattrackdata.azimuth = 0;
                                         sattrackdata.lat = tmp.lat;
                                         sattrackdata.lon = tmp.lon; }, nullptr);
 
@@ -528,6 +530,8 @@ extern "C"
             {
                 sat_to_track = sat_to_track_new;
                 load_satellite_tle(sat_to_track);
+                sattrackdata.elevation = 0;
+                sattrackdata.azimuth = 0;
                 sat_to_track_new = "";
             }
             // GET ALL SENSOR DATA
