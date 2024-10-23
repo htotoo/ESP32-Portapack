@@ -107,6 +107,7 @@ typedef struct
     uint8_t sat_hour;
     float lat;
     float lon;
+    uint8_t time_method;
 } sattrackdata_t;
 sattrackdata_t sattrackdata;
 uint8_t sattrack_task = 0; // this will set to the main thread what is the current task. 0 = none, 1 = update db, 2 = change sat. each task needs to reset it.
@@ -446,9 +447,9 @@ extern "C"
 
         initialise_wifi();
         wifi_apsta();
-        sntp_setoperatingmode(SNTP_OPMODE_POLL);
-        sntp_setservername(0, "pool.ntp.org");
-        sntp_init();
+        esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);
+        esp_sntp_setservername(0, "pool.ntp.org");
+        esp_sntp_init();
         sntp_set_time_sync_notification_cb(time_sync_notification_cb);
 
         init_httpd();
@@ -643,43 +644,62 @@ extern "C"
                 // if only old, or etc use that nvm
                 if (sattrackdata.lat != 0 || sattrackdata.lon != 0)
                 {
+                    struct tm timeinfo;
                     sat.site(gpsdata.latitude, gpsdata.longitude, gpsdata.altitude);
                     double jd = 0;
                     if (gpsdata.date.year < 44 && gpsdata.date.year >= 23) // has valid gps time
                     {
+                        time_method = 1;
                         jday(gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second, 0, false, jd);
                     }
                     else
                     {
                         time_t now;
-                        struct tm timeinfo;
                         time(&now);
                         localtime_r(&now, &timeinfo);
-                        uint16_t year;
-                        uint8_t month;
-                        uint8_t day;
-                        uint8_t hour;
-                        uint8_t minute;
-                        uint8_t second;
-                        year = timeinfo.tm_year + 1900; // Az év 1900-tól számítva
-                        month = timeinfo.tm_mon + 1;    // A hónap 0-11, ezért +1
-                        day = timeinfo.tm_mday;
-                        hour = timeinfo.tm_hour;
-                        minute = timeinfo.tm_min;
-                        second = timeinfo.tm_sec;
-                        jday(year + YEAR_BASE, month, day, hour, minute, second, 0, false, jd);
+                        int year = timeinfo.tm_year + 1900; // Az év 1900-tól számítva
+                        int month = timeinfo.tm_mon + 1;    // A hónap 0-11, ezért +1
+                        int day = timeinfo.tm_mday;
+
+                        int hour = timeinfo.tm_hour;
+                        int minute = timeinfo.tm_min;
+                        int second = timeinfo.tm_sec;
+                        ESP_LOGI(TAG, "Current Date and Time: %d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
+                        jday(year, month, day, hour, minute, second, 0, false, jd);
                     }
                     sat.findsat(jd);
+                    ESP_LOGI(TAG, "Julian Date (jd) = %f", jd);
                     ESP_LOGI(TAG, "azimuth =%f ", sat.satAz);
                     ESP_LOGI(TAG, "elevation =%f ", sat.satEl);
-                    sattrackdata.azimuth = sat.satAz;
-                    sattrackdata.elevation = sat.satEl;
-                    sattrackdata.day = gpsdata.date.day;
-                    sattrackdata.month = gpsdata.date.month;
-                    sattrackdata.year = gpsdata.date.year;
-                    sattrackdata.hour = gpsdata.tim.hour;
-                    sattrackdata.minute = gpsdata.tim.minute;
-                    sattrackdata.second = gpsdata.tim.second;
+                    if (time_method == 0)
+                    {
+                        sattrackdata.azimuth = 0;
+                        sattrackdata.elevation = 0;
+                    }
+                    else
+                    {
+                        sattrackdata.azimuth = sat.satAz;
+                        sattrackdata.elevation = sat.satEl;
+                    }
+                    if (time_method == 1)
+                    {
+                        sattrackdata.day = gpsdata.date.day;
+                        sattrackdata.month = gpsdata.date.month;
+                        sattrackdata.year = gpsdata.date.year;
+                        sattrackdata.hour = gpsdata.tim.hour;
+                        sattrackdata.minute = gpsdata.tim.minute;
+                        sattrackdata.second = gpsdata.tim.second;
+                    }
+                    else
+                    {
+                        sattrackdata.day = timeinfo.tm_mday;
+                        sattrackdata.month = timeinfo.tm_mon + 1;
+                        sattrackdata.year = timeinfo.tm_year + 1900;
+                        sattrackdata.hour = timeinfo.tm_hour;
+                        sattrackdata.minute = timeinfo.tm_min;
+                        sattrackdata.second = timeinfo.tm_sec;
+                    }
+                    sattrackdata.time_method = time_method;
                 }
                 last_millis[TimerEntry_SATTRACK] = time_millis;
             }
