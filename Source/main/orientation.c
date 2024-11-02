@@ -48,7 +48,7 @@ void init_orientation()
     load_config_orientation();
     accelo_inited = Accelo_none;
     orientation_inited = Orientation_none;
-    /* HCM TEMP DISABLED
+
     // HCM5883l
     memset(&dev_hmc5883l, 0, sizeof(hmc5883l_dev_t));
     hmc5883l_init_desc(&dev_hmc5883l, 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN, getDevAddr(HMC5883L));
@@ -66,7 +66,7 @@ void init_orientation()
     {
         hmc5883l_free_desc(&dev_hmc5883l);
     }
-    */
+
     // MPU9250
     memset(&dev_mpu925x, 0, sizeof(dev_mpu925x));
     mpu925x_init_desc(&dev_mpu925x, getDevAddr(MPU925X), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
