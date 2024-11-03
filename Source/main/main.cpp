@@ -1,9 +1,8 @@
 // TODO CHECK NMEA PARSER. DATE BAD WHEN NO FIX
 // todo save hmc calibration, and load and use, and recalibrate on the fly
 
-// todo probe multiple i2c addr per device?
-// todo set brightness from web setup
-// todo add an option to disable rtc set (bc utc only) //todo add +- time
+// todo add an option to disable rtc set (bc utc only)
+// todo add +- time
 
 // rgb led: GPIO48 on ESP S3. set to -1 to disable
 #define RGB_LED_PIN 48
@@ -455,7 +454,7 @@ extern "C"
 
         init_httpd();
         nmea_parser_config_t nmeaconfig = NMEA_PARSER_CONFIG_DEFAULT();
-        nmeaconfig.uart.baud_rate = gps_baud; // todo modify by config
+        nmeaconfig.uart.baud_rate = gps_baud;
         nmea_parser_handle_t nmea_hdl = nmea_parser_init(&nmeaconfig);
         nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
         esp_task_wdt_deinit();

@@ -138,7 +138,7 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
   }
   if (find_post_value((char *)"gps_baud=", buf, tmp) > 0)
   {
-    uint32_t gps_tmp = (uint32_t)atoi(tmp); // todo make it a select in html, with default selected. would take too much space
+    uint32_t gps_tmp = (uint32_t)atoi(tmp);
     if (gps_tmp == 1200 || gps_tmp == 2400 || gps_tmp == 4800 || gps_tmp == 9600 || gps_tmp == 14400 || gps_tmp == 19200 || gps_tmp == 38400 || gps_tmp == 57600 || gps_tmp == 115200)
     {
       gps_baud = gps_tmp;
