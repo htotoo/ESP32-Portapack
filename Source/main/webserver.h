@@ -21,6 +21,7 @@
 #include "esp_spiffs.h"
 
 #include "spi_flash_mmap.h"
+#include "led.h"
 
 extern bool write_usb(const uint8_t *data, size_t len, bool mute, bool buffer);
 
@@ -60,7 +61,7 @@ static esp_err_t get_req_handler(httpd_req_t *req)
 /// setup.html get handler
 static esp_err_t get_req_handler_setup(httpd_req_t *req)
 {
-  snprintf(setup_html_out, sizeof(setup_html_out), setup_start, wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS, rgb_brightness, declinationAngle, gps_baud);
+  snprintf(setup_html_out, sizeof(setup_html_out), setup_start, wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS, LedFeedback::get_brightness(), declinationAngle, gps_baud);
   int response = httpd_resp_send(req, setup_html_out, HTTPD_RESP_USE_STRLEN);
   return response;
 }
@@ -141,9 +142,10 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
 
   if (find_post_value((char *)"rgb_brightness=", buf, tmp) > 0)
   {
-    rgb_brightness = (uint8_t)atoi(tmp);
+    uint8_t rgb_brightness = (uint8_t)atoi(tmp);
     if (rgb_brightness > 100)
       rgb_brightness = 100;
+    LedFeedback::set_brightness(rgb_brightness);
     changeMask |= 2;
   }
   if (find_post_value((char *)"gps_baud=", buf, tmp) > 0)

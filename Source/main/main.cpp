@@ -478,8 +478,8 @@ extern "C"
         ESP_LOGI(TAG, "Enable temperature sensor");
         ESP_ERROR_CHECK(temperature_sensor_enable(temp_sensor));
 
-        init_rgb();
-        rgb_set(255, 255, 255);
+        LedFeedback::init(RGB_LED_PIN);
+        LedFeedback::rgb_set(255, 255, 255);
 
         init_orientation(); // it loads orientation data too
         init_environment();
@@ -643,7 +643,7 @@ extern "C"
 
             if (time_millis - last_millis[TimerEntry_REPORTRGB] > timer_millis[TimerEntry_REPORTRGB])
             {
-                rgb_set_by_status();
+                LedFeedback::rgb_set_by_status(getUsbConnected() | i2p_pp_conn_state, getWifiStaStatus(), getWifiApClientNum() > 0, gpsdata.latitude != 0 && gpsdata.longitude != 0 && gpsdata.sats_in_use > 2);
                 last_millis[TimerEntry_REPORTRGB] = time_millis;
             }
 
