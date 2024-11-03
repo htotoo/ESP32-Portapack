@@ -127,7 +127,7 @@ extern "C"
     wifi_config_t sta_config = {};
     strcpy((char *)sta_config.sta.ssid, wifiStaSSID);
     strcpy((char *)sta_config.sta.password, wifiStaPASS);
-    sta_config.sta.failure_retry_cnt = 0;
+    sta_config.sta.failure_retry_cnt = 1;
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
     ESP_ERROR_CHECK(esp_wifi_set_config((wifi_interface_t)ESP_IF_WIFI_AP, &ap_config));
