@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2024 HTotoo
+ *
+ * This file is part of ESP32-Portapack.
+ *
+ * For additional license information, see the LICENSE file.
+ */
+
 // TODO CHECK NMEA PARSER. DATE BAD WHEN NO FIX
 // todo save hmc calibration, and load and use, and recalibrate on the fly
 

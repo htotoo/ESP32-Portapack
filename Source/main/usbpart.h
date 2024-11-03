@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2024 HTotoo
+ *
+ * This file is part of ESP32-Portapack.
+ *
+ * For additional license information, see the LICENSE file.
+ */
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -41,7 +49,7 @@ bool getUsbConnected()
   return cdc_dev != NULL;
 }
 
-char *PROMPT = (char*)"ch> ";
+char *PROMPT = (char *)"ch> ";
 char searchPrompt[5] = {0};
 
 static void searchPromptAdd(uint8_t ch)
@@ -135,7 +143,8 @@ static void tryconnectUsb(void *arg)
       .in_buffer_size = 512,
       .event_cb = handle_event,
       .data_cb = handle_rx,
-      .user_arg = NULL,};
+      .user_arg = NULL,
+  };
   while (true)
   {
     // ESP_LOGI(TAG, "Opening CDC ACM device 0x%04X:0x%04X...", USB_DEVICE_VID,

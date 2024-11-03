@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2024 HTotoo
+ *
+ * This file is part of ESP32-Portapack.
+ *
+ * For additional license information, see the LICENSE file.
+ */
+
 #ifndef ORIENTATION_H
 #define ORIENTATION_H
 

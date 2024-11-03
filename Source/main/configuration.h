@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2024 HTotoo
+ *
+ * This file is part of ESP32-Portapack.
+ *
+ * For additional license information, see the LICENSE file.
+ */
+
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
@@ -40,13 +48,13 @@ extern "C"
 {
 #endif
 
-void load_config_wifi();
-void save_config_wifi();
-void load_config_orientation();
-void save_config_orientation();
-void reset_orientation_calibration();
-void load_config_misc(); // led brightness
-void save_config_misc();
+    void load_config_wifi();
+    void save_config_wifi();
+    void load_config_orientation();
+    void save_config_orientation();
+    void reset_orientation_calibration();
+    void load_config_misc(); // led brightness
+    void save_config_misc();
 
 #if __cplusplus
 }

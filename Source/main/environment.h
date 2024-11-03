@@ -1,3 +1,12 @@
+/*
+ * Copyright (C) 2024 HTotoo
+ *
+ * This file is part of ESP32-Portapack.
+ *
+ * For additional license information, see the LICENSE file.
+ */
+
+
 #ifndef ENVIRONMENT_H
 #define ENVIRONMENT_H
 

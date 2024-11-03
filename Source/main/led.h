@@ -1,3 +1,12 @@
+/*
+ * Copyright (C) 2024 HTotoo
+ *
+ * This file is part of ESP32-Portapack.
+ *
+ * For additional license information, see the LICENSE file.
+ */
+
+
 #include <nvs_flash.h>
 #include <led_strip.h>
 

@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2024 HTotoo
+ *
+ * This file is part of ESP32-Portapack.
+ *
+ * For additional license information, see the LICENSE file.
+ */
+
 #include <string.h>
 #include "esp_event.h"
 #include "esp_log.h"

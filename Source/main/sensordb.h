@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2024 HTotoo
+ *
+ * This file is part of ESP32-Portapack.
+ *
+ * For additional license information, see the LICENSE file.
+ */
+
 #ifndef __SENSORDB_H__
 #define __SENSORDB_H__
 
@@ -22,15 +30,13 @@ typedef enum
     LSM303_MAG
 } SENSORS;
 
-
 #if __cplusplus
 extern "C"
 {
 #endif
 
-void foundI2CDev(uint8_t addr);
-uint8_t getDevAddr(SENSORS sensor);
-
+    void foundI2CDev(uint8_t addr);
+    uint8_t getDevAddr(SENSORS sensor);
 
 #if __cplusplus
 }
