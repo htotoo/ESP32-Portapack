@@ -67,6 +67,8 @@ typedef enum TimerEntry
     TimerEntry_MAX
 } TimerEntry;
 
+uint32_t time_millis = 0; // current time in millis
+
 uint32_t last_millis[TimerEntry_MAX] = {0};
 // ______________________________________SEN    GPS  ORI    ENV   TIME        WEB   RGB   SAT    DOWN
 uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000, 2000, 20000};
@@ -83,6 +85,9 @@ bool gotAnyGps = false;
 bool downloadedTLE = false;
 uint16_t lastReportedMxS = 0; // gps last reported gps time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
 uint32_t gps_baud = 9600;
+
+uint32_t i2c_pp_connected = 0;  // when is it connected last time (last query from pp)
+bool i2p_pp_conn_state = false; // to save and check if i need to send a message to web
 
 typedef struct
 {
@@ -478,19 +483,21 @@ extern "C"
         PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
         PPHandler::set_get_features_CB([](uint64_t &feat)
                                        {
+                                        i2c_pp_connected = time_millis;
                                     update_features();
                                     feat = chipFeatures.getFeatures(); });
         PPHandler::set_get_gps_data_CB([](ppgpssmall_t &gpsdata)
-                                       { gpsdata = gpsdata; });
+                                       { gpsdata = gpsdata; i2c_pp_connected = time_millis; });
         PPHandler::set_get_orientation_data_CB([](orientation_t &ori)
                                                {
-                                            ori.angle = heading;
-                                            ori.tilt = tilt; });
+                                                ori.angle = heading;
+                                                ori.tilt = tilt; i2c_pp_connected = time_millis; });
         PPHandler::set_get_environment_data_CB([](environment_t &env)
                                                { 
-      env.temperature = temperature;
-      env.humidity = humidity;
-      env.pressure = pressure; });
+                                                i2c_pp_connected = time_millis;
+                                                env.temperature = temperature;
+                                                env.humidity = humidity;
+                                                env.pressure = pressure; });
         PPHandler::set_get_light_data_CB([](uint16_t &light)
                                          { light = light; });
 
@@ -521,8 +528,6 @@ extern "C"
             }
             sat_to_track_new =str; }, nullptr);
         PPHandler::add_app((uint8_t *)sattrack, sizeof(sattrack));
-
-        uint32_t time_millis = 0;
 
         while (true)
         {
@@ -720,6 +725,22 @@ extern "C"
                 if (!downloadedTLE)
                     download_file_to_spiffs();
                 last_millis[TimerEntry_SATDOWN] = time_millis;
+            }
+
+            // check if i2c connected or dc
+            if (i2c_pp_connected != 0 && (time_millis - i2c_pp_connected > 20000)) // pp query time 5 sec, so 20 is a good timeout
+            {
+                i2c_pp_connected = 0; // reset time
+                ws_notify_dc_i2c();   // send to webpage it is dc
+                i2p_pp_conn_state = false;
+            }
+            else if (i2c_pp_connected != 0) // no dc, but communication in last 20 sec
+            {
+                if (!i2p_pp_conn_state) // if it was disconnecdet before, and now it is connected, notify
+                {
+                    ws_notify_cc_i2c();
+                    i2p_pp_conn_state = true;
+                }
             }
 
             // try wifi client connect

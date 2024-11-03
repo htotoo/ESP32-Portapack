@@ -39,6 +39,8 @@ extern const char setup_end[] asm("_binary_setup_html_end");
 extern const char ota_start[] asm("_binary_ota_html_start");
 extern const char ota_end[] asm("_binary_ota_html_end");
 
+extern uint32_t i2c_pp_connected;
+
 // root / get handler.
 static esp_err_t get_req_handler(httpd_req_t *req)
 {
@@ -273,6 +275,17 @@ void ws_notify_cc()
   char *data = (char *)"#$##$$#USB_CC\r\n";
   ws_sendall((uint8_t *)data, 15);
 }
+void ws_notify_dc_i2c()
+{
+  char *data = (char *)"#$##$$#I2C_DC\r\n";
+  ws_sendall((uint8_t *)data, 15);
+}
+// send to ws clients, the pp connected
+void ws_notify_cc_i2c()
+{
+  char *data = (char *)"#$##$$#I2C_CC\r\n";
+  ws_sendall((uint8_t *)data, 15);
+}
 
 // websocket handler
 static esp_err_t handle_ws_req(httpd_req_t *req)
@@ -313,6 +326,8 @@ static esp_err_t handle_ws_req(httpd_req_t *req)
     { // parse here, since we shouldn't sent it to pp
       if (usbConnected)
         ws_notify_cc();
+      else if (i2c_pp_connected > 0)
+        ws_notify_cc_i2c();
       else
         ws_notify_dc();
       return ESP_OK;
