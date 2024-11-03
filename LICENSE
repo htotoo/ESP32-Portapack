@@ -1,0 +1,19 @@
+# Custom License (HTL)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to use, copy, modify, and distribute copies of the Software, subject to the following conditions:
+
+1. **Attribution**  
+   Any distributed copies or substantial portions of the Software must include an acknowledgment that the base code originates from the original repository (URL here). 
+
+2. **Improvement Contributions**  
+   If you make any improvements or modifications to this Software, you are need to submit a Pull Request (PR) to contribute your improvements back to the original project.
+
+3. **No Commercial Use**  
+   You are expressly prohibited from charging for the use, sale, or any other form of commercial distribution of this Software or any of its derivatives. This includes direct or indirect fees for access, support, or customization.
+
+4. **No Warranty**  
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+By using, copying, modifying, or distributing this Software, you agree to the terms of this license.
