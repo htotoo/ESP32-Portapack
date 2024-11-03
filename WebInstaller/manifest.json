@@ -1,0 +1,13 @@
+{
+  "name": "ESP32PP",
+  "version": "0.12",
+  "home_assistant_domain": "slim_player",
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        { "path": "merged.bin", "offset": 0 }
+      ]
+    }
+  ]
+}
