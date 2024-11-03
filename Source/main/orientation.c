@@ -30,8 +30,7 @@ int16_t orientationZMax = INT16_MIN;
 void init_accelo()
 {
     memset(&dev_adxl345, 0, sizeof(dev_adxl345));
-    adxl345_init_desc(&dev_adxl345, getDevAddr(ADXL345), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
-    if (adxl345_init(&dev_adxl345) == ESP_OK)
+    if (adxl345_init_desc(&dev_adxl345, getDevAddr(ADXL345), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN) == ESP_OK && adxl345_init(&dev_adxl345) == ESP_OK)
     {
         accelo_inited |= Accelo_ADXL345;
         ESP_LOGI("Accel", "adxl345 OK");
@@ -51,9 +50,8 @@ void init_orientation()
 
     // HCM5883l
     memset(&dev_hmc5883l, 0, sizeof(hmc5883l_dev_t));
-    hmc5883l_init_desc(&dev_hmc5883l, 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN, getDevAddr(HMC5883L));
 
-    if (hmc5883l_init(&dev_hmc5883l) == ESP_OK)
+    if (hmc5883l_init_desc(&dev_hmc5883l, 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN, getDevAddr(HMC5883L)) == ESP_OK && hmc5883l_init(&dev_hmc5883l) == ESP_OK)
     {
         hmc5883l_set_opmode(&dev_hmc5883l, HMC5883L_MODE_CONTINUOUS);
         hmc5883l_set_samples_averaged(&dev_hmc5883l, HMC5883L_SAMPLES_8);
@@ -69,10 +67,9 @@ void init_orientation()
 
     // MPU9250
     memset(&dev_mpu925x, 0, sizeof(dev_mpu925x));
-    mpu925x_init_desc(&dev_mpu925x, getDevAddr(MPU925X), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
-    if (mpu925x_init(&dev_mpu925x) == ESP_OK)
+    if (mpu925x_init_desc(&dev_mpu925x, getDevAddr(MPU925X), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN) == ESP_OK && mpu925x_init(&dev_mpu925x) == ESP_OK)
     {
-        accelo_inited |= Accelo_MPU925x; // todo check if really availeable
+        accelo_inited |= Accelo_MPU925x; // todo check if really available
         orientation_inited |= Orientation_mpu925x;
         ESP_LOGI("Orient", "mpu925x OK");
     }
@@ -82,8 +79,7 @@ void init_orientation()
     }
 
     memset(&dev_lsm303, 0, sizeof(dev_lsm303));
-    lsm303_init_desc(&dev_lsm303, getDevAddr(LSM303_ACCEL), getDevAddr(LSM303_MAG), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN);
-    if (lsm303_init(&dev_lsm303) == ESP_OK)
+    if (lsm303_init_desc(&dev_lsm303, getDevAddr(LSM303_ACCEL), getDevAddr(LSM303_MAG), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN) == ESP_OK && lsm303_init(&dev_lsm303) == ESP_OK)
     {
         accelo_inited |= Accelo_LSM303;
         orientation_inited |= Orientation_lsm303;

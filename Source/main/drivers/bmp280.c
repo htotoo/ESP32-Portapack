@@ -168,7 +168,6 @@ esp_err_t bmp280_init_desc(bmp280_t *dev, uint8_t addr, i2c_port_t port, gpio_nu
 
     if (addr != BMP280_I2C_ADDRESS_0 && addr != BMP280_I2C_ADDRESS_1)
     {
-        ESP_LOGE(TAG, "Invalid I2C address");
         return ESP_ERR_INVALID_ARG;
     }
 

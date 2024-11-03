@@ -165,6 +165,15 @@ esp_err_t lsm303_init_desc(lsm303_t *dev, uint8_t acc_addr, uint8_t mag_addr, i2
 {
     CHECK_ARG(dev);
 
+    if (acc_addr != 0x18)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (mag_addr != 0x1d && mag_addr != 0x1e)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+
     dev->i2c_dev_acc.port = port;
     dev->i2c_dev_acc.addr = acc_addr;
     dev->i2c_dev_acc.cfg.sda_io_num = sda_gpio;

@@ -7,8 +7,6 @@
 
 #define I2C_FREQ_HZ 400000
 
-static const char *TAG = "adxl345";
-
 #define CHECK_ARG(VAL)                  \
     do                                  \
     {                                   \
@@ -22,7 +20,6 @@ esp_err_t adxl345_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_t port, gpio_
 
     if (addr != 0x53 && addr != 0x1D)
     {
-        ESP_LOGE(TAG, "Invalid I2C address");
         return ESP_ERR_INVALID_ARG;
     }
 

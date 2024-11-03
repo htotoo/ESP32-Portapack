@@ -98,7 +98,6 @@ esp_err_t bh1750_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_t port, gpio_n
 
     if (addr != BH1750_ADDR_LO && addr != BH1750_ADDR_HI)
     {
-        ESP_LOGE(TAG, "Invalid I2C address");
         return ESP_ERR_INVALID_ARG;
     }
 

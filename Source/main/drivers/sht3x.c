@@ -216,6 +216,10 @@ esp_err_t sht3x_init_desc(sht3x_t *dev, uint8_t addr, i2c_port_t port, gpio_num_
 {
     CHECK_ARG(dev);
 
+    if (addr != 0x44 && addr != 0x45)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
     dev->i2c_dev.port = port;
     dev->i2c_dev.addr = addr;
     dev->i2c_dev.cfg.sda_io_num = sda_gpio;

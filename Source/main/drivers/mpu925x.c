@@ -8,8 +8,6 @@
 
 #define I2C_FREQ_HZ 400000
 
-static const char *TAG = "mpu925x";
-
 #define CHECK_ARG(VAL)                  \
     do                                  \
     {                                   \
@@ -23,7 +21,6 @@ esp_err_t mpu925x_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_t port, gpio_
 
     if (addr != 0x68)
     {
-        ESP_LOGE(TAG, "Invalid I2C address");
         return ESP_ERR_INVALID_ARG;
     }
 

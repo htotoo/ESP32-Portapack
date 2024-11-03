@@ -1,14 +1,14 @@
 #include "sensordb.h"
 
 // todo set to 0, and only check write if not 0?!
-uint8_t BH1750_addr = 0x23;
-uint8_t HMC5883L_addr = 0x1E;
-uint8_t ADXL345_addr = 0x53;
-uint8_t MPU925X_addr = 0x68;
-uint8_t BMx280_addr = 0x76;
-uint8_t SHT3x_addr = 0x44;
-uint8_t LSM303_addr_mag = 0x1d;
-uint8_t LSM303_addr_acc = 0x18;
+uint8_t BH1750_addr = 0;
+uint8_t HMC5883L_addr = 0;
+uint8_t ADXL345_addr = 0;
+uint8_t MPU925X_addr = 0;
+uint8_t BMx280_addr = 0;
+uint8_t SHT3x_addr = 0;
+uint8_t LSM303_addr_mag = 0;
+uint8_t LSM303_addr_acc = 0;
 
 void foundI2CDev(uint8_t addr)
 {
