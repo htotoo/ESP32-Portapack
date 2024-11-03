@@ -21,7 +21,9 @@
 #include "esp_spiffs.h"
 
 #include "spi_flash_mmap.h"
+#include "wifim.h"
 #include "led.h"
+#include "wifim.h"
 
 extern bool write_usb(const uint8_t *data, size_t len, bool mute, bool buffer);
 
@@ -32,13 +34,6 @@ static httpd_handle_t server = NULL;
 #define INDEX_HTML_PATH "/spiffs/index.html"
 #define SETUP_HTML_PATH "/spiffs/setup.html"
 #define OTA_HTML_PATH "/spiffs/ota.html"
-
-// to show in setup.html, it is from wifim.h
-extern char wifiAPSSID[64];
-extern char wifiAPPASS[64];
-extern char wifiStaSSID[64];
-extern char wifiStaPASS[64];
-extern char wifiHostName[64];
 
 static char setup_html_out[3000];
 extern const char index_start[] asm("_binary_index_html_start");
@@ -61,7 +56,7 @@ static esp_err_t get_req_handler(httpd_req_t *req)
 /// setup.html get handler
 static esp_err_t get_req_handler_setup(httpd_req_t *req)
 {
-  snprintf(setup_html_out, sizeof(setup_html_out), setup_start, wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS, LedFeedback::get_brightness(), declinationAngle, gps_baud);
+  snprintf(setup_html_out, sizeof(setup_html_out), setup_start, WifiM::wifiHostName, WifiM::wifiAPSSID, WifiM::wifiAPPASS, WifiM::wifiStaSSID, WifiM::wifiStaPASS, LedFeedback::get_brightness(), declinationAngle, gps_baud);
   int response = httpd_resp_send(req, setup_html_out, HTTPD_RESP_USE_STRLEN);
   return response;
 }
@@ -130,15 +125,15 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
   uint8_t changeMask = 1; // wifi
 
   if (find_post_value((char *)"wifiHostName=", buf, tmp) > 0)
-    strcpy(wifiHostName, tmp);
+    strcpy(WifiM::wifiHostName, tmp);
   if (find_post_value((char *)"wifiAPSSID=", buf, tmp) > 0)
-    strcpy(wifiAPSSID, tmp);
+    strcpy(WifiM::wifiAPSSID, tmp);
   if (find_post_value((char *)"wifiAPPASS=", buf, tmp) > 0)
-    strcpy(wifiAPPASS, tmp);
+    strcpy(WifiM::wifiAPPASS, tmp);
   if (find_post_value((char *)"wifiStaSSID=", buf, tmp) > 0)
-    strcpy(wifiStaSSID, tmp);
+    strcpy(WifiM::wifiStaSSID, tmp);
   if (find_post_value((char *)"wifiStaPASS=", buf, tmp) > 0)
-    strcpy(wifiStaPASS, tmp);
+    strcpy(WifiM::wifiStaPASS, tmp);
 
   if (find_post_value((char *)"rgb_brightness=", buf, tmp) > 0)
   {
@@ -173,7 +168,7 @@ static esp_err_t post_req_handler_setup(httpd_req_t *req)
   }
 
   if ((changeMask & 1) == 1)
-    save_config_wifi();
+    WifiM::save_config_wifi();
   if ((changeMask & 2) == 2)
     save_config_misc();
   if ((changeMask & 4) == 4)

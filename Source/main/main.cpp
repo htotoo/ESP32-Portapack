@@ -443,7 +443,7 @@ extern "C"
         }
         ESP_ERROR_CHECK(err);
         // load prev settings
-        load_config_wifi();
+        WifiM::load_config_wifi();
         load_config_misc();
 
         init_spiffs();
@@ -458,8 +458,8 @@ extern "C"
         ESP_ERROR_CHECK(esp_event_loop_create_default());
         usb_init();
 
-        initialise_wifi();
-        wifi_apsta();
+        WifiM::initialise_wifi();
+        WifiM::wifi_apsta();
         esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);
         esp_sntp_setservername(0, "pool.ntp.org");
         esp_sntp_init();
@@ -643,7 +643,7 @@ extern "C"
 
             if (time_millis - last_millis[TimerEntry_REPORTRGB] > timer_millis[TimerEntry_REPORTRGB])
             {
-                LedFeedback::rgb_set_by_status(getUsbConnected() | i2p_pp_conn_state, getWifiStaStatus(), getWifiApClientNum() > 0, gpsdata.latitude != 0 && gpsdata.longitude != 0 && gpsdata.sats_in_use > 2);
+                LedFeedback::rgb_set_by_status(getUsbConnected() | i2p_pp_conn_state, WifiM::getWifiStaStatus(), WifiM::getWifiApClientNum() > 0, gpsdata.latitude != 0 && gpsdata.longitude != 0 && gpsdata.sats_in_use > 2);
                 last_millis[TimerEntry_REPORTRGB] = time_millis;
             }
 
@@ -752,7 +752,7 @@ extern "C"
             }
 
             // try wifi client connect
-            wifi_loop(time_millis);
+            WifiM::wifi_loop(time_millis);
             vTaskDelay(50 / portTICK_PERIOD_MS);
         }
     }
