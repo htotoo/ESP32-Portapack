@@ -162,7 +162,7 @@ float get_heading()
         hmc5883l_data_t data;
         if (hmc5883l_get_data(&dev_hmc5883l, &data) == ESP_OK)
         {
-            if (orientation_inited == Orientation_none)
+            if (accelo_inited == Accelo_none || (accelo_x == 0 && accelo_y == 0))
                 ret = atan2(data.y, data.x);
             else
             {
@@ -192,7 +192,7 @@ float get_heading()
         if (mpu925x_read_mag(&dev_mpu925x, &magX, &magY, &magZ) == ESP_OK)
         {
             ESP_LOGI("Orientation_mpu925x", "mxyz: %d %d %d", magX, magY, magZ);
-            if (orientation_inited == Orientation_none || (accelo_x == 0 && accelo_y == 0))
+            if (accelo_inited == Accelo_none || (accelo_x == 0 && accelo_y == 0))
                 ret = atan2(magY, magX);
             else
             {
@@ -236,7 +236,7 @@ float get_heading()
             magZ = mag.z;
 
             ESP_LOGI("Orientation_lsm", "mxyz: %d %d %d", magX, magY, magZ);
-            if (orientation_inited == Orientation_none || (accelo_x == 0 && accelo_y == 0))
+            if (accelo_inited == Accelo_none || (accelo_x == 0 && accelo_y == 0))
                 ret = atan2(magY, magX);
             else
             {
