@@ -3,7 +3,7 @@
 
 led_strip_handle_t led_strip;
 uint8_t rgb_brightness = 50; // 0-100 %
-
+extern bool i2p_pp_conn_state;
 void rgb_set(uint8_t r, uint8_t g, uint8_t b)
 {
     // remap based on brightness
@@ -24,7 +24,7 @@ void rgb_set(uint8_t r, uint8_t g, uint8_t b)
 
 void rgb_set_by_status()
 {
-    bool usb = getUsbConnected();
+    bool usb = getUsbConnected() | i2p_pp_conn_state;
     bool wifiSta = getWifiStaStatus();
     bool wifiAp = getWifiApClientNum() > 0;
     bool gps = gpsdata.latitude != 0 && gpsdata.longitude != 0 && gpsdata.sats_in_use > 2;
@@ -101,14 +101,14 @@ void init_rgb()
         .max_leds = 1,                            // The number of LEDs in the strip,
         .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
         .led_model = LED_MODEL_WS2812,            // LED strip model
-        .flags{false}//.invert_out = false,                // whether to invert the output signal (useful when your hardware has a level inverter)
+        .flags{false}                             //.invert_out = false,                // whether to invert the output signal (useful when your hardware has a level inverter)
     };
 
     led_strip_rmt_config_t rmt_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,    // different clock source can lead to different power consumption
         .resolution_hz = 10 * 1000 * 1000, // 10MHz
         .mem_block_symbols = 0,
-        .flags{false},           // whether to enable the DMA feature
+        .flags{false}, // whether to enable the DMA feature
     };
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
 }
