@@ -47,7 +47,23 @@
             <i>Find Declination angle for your location here: <a
                     href="https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml"
                     target="_blank">noaa.gov</a></i><br />
-            GPS baud: <input type="number" step="1" name="gps_baud" value="%d" /><br />
+            GPS baud: <select id="gps_baud">
+                <option value="1200">1200</option>
+                <option value="2400">2400</option>
+                <option value="4800">4800</option>
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="115200">115200</option>
+            </select>
+            <script>
+                const SELECTEDBAUD = 1200;
+                document.addEventListener('DOMContentLoaded', () => {
+                    document.getElementById('gps_baud').value = '%d';
+                });
+            </script>
+            <br />
         </p>
         <input type="submit" name="submit" value="Save" />&nbsp; &nbsp; <a href="/">Cancel</a>
     </form>
