@@ -548,14 +548,10 @@ extern "C"
         PPHandler::add_custom_command((uint16_t)Command::COMMAND_SHELL_READ_DATA_SIZE, nullptr, [](pp_command_data_t data)
                                       {
                                                 data.data->resize(sizeof(uint16_t));
-                                                ESP_DRAM_LOGE(TAG, "COMMAND_SHELL_READ_DATA_SIZE");
-
                                                 *(uint16_t *)(*data.data).data() = PPShellComm::get_i2c_tx_queue_size(); });
 
         PPHandler::add_custom_command((uint16_t)Command::COMMAND_SHELL_READ_DATA, nullptr, [](pp_command_data_t data)
                                       {
-                                            //ESP_LOGE(TAG, "Data write I2C");
-                                            ESP_DRAM_LOGE(TAG, "COMMAND_SHELL_READ_DATA");
                                                 data.data->resize(65);
                                                 data.data->at(0) = PPShellComm::get_i2c_tx_queue_size(); //todo set hasmore, ...
                                                 memcpy(&data.data->at(1), PPShellComm::get_i2c_tx_queue_data(), 64);
@@ -565,7 +561,6 @@ extern "C"
                                       {
                                           I2CQueueMessage_t msg;
                                           msg.size = data.data->size();
-                                          //ESP_LOGE(TAG, "Data read I2C");
                                           if (data.data->size() > 64)
                                           {
                                               data.data->resize(64);
