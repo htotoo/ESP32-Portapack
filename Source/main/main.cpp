@@ -80,7 +80,7 @@ uint32_t last_millis[TimerEntry_MAX] = {0};
 // ______________________________________SEN    GPS  ORI    ENV   TIME        WEB   RGB   SAT    DOWN
 uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000, 2000, 20000};
 
-float heading = 0.0;
+float heading = 400.0;
 float tilt = 0.0;
 float temperatureEsp = 0.0;
 float temperature = 0.0;
@@ -485,9 +485,9 @@ void app_main(void) {
 
     PPShellComm::set_data_rx_callback([](const uint8_t* data, size_t data_len) -> bool {
         ws_sendall((uint8_t*)data, data_len);
-        return true; 
+        return true;
     });
- 
+
     while (true) {
         time_millis = esp_timer_get_time() / 1000;
         if (sat_to_track_new != "") {
