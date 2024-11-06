@@ -141,6 +141,7 @@ void PPShellComm::tryconnectUsb(void* arg) {
         ESP_ERROR_CHECK(cdc_acm_host_set_control_line_state(cdc_dev, true, false));
         cdc_acm_host_desc_print(cdc_dev);
         inCommand = false;
+        usb_connected = true;
         ws_notify_cc();
         xSemaphoreTake(device_disconnected_sem, portMAX_DELAY);
     }
@@ -157,6 +158,7 @@ void PPShellComm::handle_usb_event(const cdc_acm_host_dev_event_data_t* event, v
             ESP_ERROR_CHECK(cdc_acm_host_close(event->data.cdc_hdl));
             xSemaphoreGive(device_disconnected_sem);
             inCommand = false;
+            usb_connected = false;
             ws_notify_dc();
             break;
         case CDC_ACM_HOST_SERIAL_STATE:
