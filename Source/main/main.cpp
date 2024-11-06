@@ -43,9 +43,8 @@ static const char* TAG = "ESP32PP";
 #include "webserver.h"
 
 #include "nmea_parser.h"
-#include "usbpart.h"
 #include "wifim.h"
-
+#include "ppshellcomm.h"
 #include "orientation.h"
 #include "environment.h"
 
@@ -81,7 +80,7 @@ uint32_t last_millis[TimerEntry_MAX] = {0};
 // ______________________________________SEN    GPS  ORI    ENV   TIME        WEB   RGB   SAT    DOWN
 uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000, 2000, 20000};
 
-float heading = 0.0;
+float heading = 400.0;
 float tilt = 0.0;
 float temperatureEsp = 0.0;
 float temperature = 0.0;
@@ -410,7 +409,7 @@ void app_main(void) {
     i2c_scan();
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-    usb_init();
+    PPShellComm::init();
 
     WifiM::initialise_wifi();
     WifiM::wifi_apsta();
@@ -484,6 +483,11 @@ void app_main(void) {
     PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
     PPHandler::add_app((uint8_t*)digitalrain, sizeof(digitalrain));
 
+    PPShellComm::set_data_rx_callback([](const uint8_t* data, size_t data_len) -> bool {
+        ws_sendall((uint8_t*)data, data_len);
+        return true;
+    });
+
     while (true) {
         time_millis = esp_timer_get_time() / 1000;
         if (sat_to_track_new != "") {
@@ -506,7 +510,7 @@ void app_main(void) {
         }
 
         // REPORT ALL SENSOR DATA TO WEB
-        if (!getInCommand() && (time_millis - last_millis[TimerEntry_REPORTWEB] > timer_millis[TimerEntry_REPORTWEB])) {
+        if (!PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTWEB] > timer_millis[TimerEntry_REPORTWEB])) {
             char buff[300] = {0};
             snprintf(buff, 300,
                      "#$##$$#GOTSENS"
@@ -525,49 +529,49 @@ void app_main(void) {
 
         // REPORT SENSOR DATA TO PP. EACH HAS OWN TIMER!
         char gotusb[300];
-        if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS])) {
+        if (PPShellComm::getAnyConnected() && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS])) {
             if (gpsdata.latitude != 0 || gpsdata.longitude != 0) {
                 snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f %d\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed, gpsdata.sats_in_use);
                 ESP_LOGI(TAG, "%s", gotusb);
-                if (wait_till_usb_sending(1)) {
-                    write_usb_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
+                if (PPShellComm::wait_till_sending(1)) {
+                    PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
                     last_millis[TimerEntry_REPORTPPGPS] = time_millis;
                     ESP_LOGI(TAG, "gotgps sent");
                 }
             }
         }
-        if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI])) {
+        if (PPShellComm::getAnyConnected() && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI])) {
             if (heading < 400)  // got heading data
             {
                 snprintf(gotusb, 290, "gotorientation %.01f %.01f\r\n", heading, tilt);
                 ESP_LOGI(TAG, "%s", gotusb);
-                if (wait_till_usb_sending(1)) {
-                    write_usb_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
+                if (PPShellComm::wait_till_sending(1)) {
+                    PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
                     last_millis[TimerEntry_REPORTPPORI] = time_millis;
                     ESP_LOGI(TAG, "gotorientation sent");
                 }
             }
         }
-        if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPENVI] > timer_millis[TimerEntry_REPORTPPENVI])) {
+        if (PPShellComm::getAnyConnected() && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPENVI] > timer_millis[TimerEntry_REPORTPPENVI])) {
             if (heading < 400)  // got heading data
             {
                 snprintf(gotusb, 290, "gotenv %.02f %.01f %.02f %d\r\n", temperature, humidity, pressure, light);
                 ESP_LOGI(TAG, "%s", gotusb);
-                if (wait_till_usb_sending(1)) {
-                    write_usb_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
+                if (PPShellComm::wait_till_sending(1)) {
+                    PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
                     last_millis[TimerEntry_REPORTPPENVI] = time_millis;
                     ESP_LOGI(TAG, "gotenv sent");
                 }
             }
         }
-        if (getUsbConnected() && !getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPTIME] > timer_millis[TimerEntry_REPORTPPTIME])) {
+        if (PPShellComm::getAnyConnected() && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPTIME] > timer_millis[TimerEntry_REPORTPPTIME])) {
             uint16_t cmxs = gpsdata.tim.minute * gpsdata.tim.second + gpsdata.tim.second + gpsdata.tim.hour;
             if (gpsdata.date.year < 44 && gpsdata.date.year >= 23 && lastReportedMxS != cmxs)  // got a valid time, and ti is not the last
             {
                 snprintf(gotusb, 290, "rtcset %d %d %d %d %d %d\r\n", gpsdata.date.year, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second);
                 ESP_LOGI(TAG, "%s", gotusb);
-                if (wait_till_usb_sending(1)) {
-                    write_usb_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
+                if (PPShellComm::wait_till_sending(1)) {
+                    PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
                     last_millis[TimerEntry_REPORTPPTIME] = time_millis;
                     ESP_LOGI(TAG, "settime sent");
                     lastReportedMxS = cmxs;
@@ -576,7 +580,7 @@ void app_main(void) {
         }
 
         if (time_millis - last_millis[TimerEntry_REPORTRGB] > timer_millis[TimerEntry_REPORTRGB]) {
-            LedFeedback::rgb_set_by_status(getUsbConnected() | i2p_pp_conn_state, WifiM::getWifiStaStatus(), WifiM::getWifiApClientNum() > 0, gpsdata.latitude != 0 && gpsdata.longitude != 0 && gpsdata.sats_in_use > 2);
+            LedFeedback::rgb_set_by_status(PPShellComm::getAnyConnected() | i2p_pp_conn_state, WifiM::getWifiStaStatus(), WifiM::getWifiApClientNum() > 0, gpsdata.latitude != 0 && gpsdata.longitude != 0 && gpsdata.sats_in_use > 2);
             last_millis[TimerEntry_REPORTRGB] = time_millis;
         }
 

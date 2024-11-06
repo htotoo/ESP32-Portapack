@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.12</title>
+    <title>ESP32PP v0.13</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -109,7 +109,7 @@
 <body>
     <div class="setupicon"><a href="setup.html">&#9881;</a></div>
 
-    <h1>ESP32 PP v0.12</h1>
+    <h1>ESP32 PP v0.13</h1>
     <div id="connState">WS Connecting...</div>
     <div id="connStatePP">PP not connected to ESP</div>
     <div class="management">
@@ -305,6 +305,14 @@
                         ctx.fillStyle = "#000";
                         ctx.fillRect(0, 0, 240, 320);
                         document.getElementById("connStatePP").innerHTML = "PP NOT connected to ESP";
+                        return false;
+                    }
+                    if (msg == "#$##$$#USB_CC\r\n") {
+                        log("PP Connected");
+                        enadisaControls(true); //not yet working
+                        fileManClose();
+                        document.getElementById("connStatePP").innerHTML = "PP connected to ESP";
+                        autoScreenRefresh();
                         return false;
                     }
                     if (msg == "#$##$$#I2C_CC\r\n") {
