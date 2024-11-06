@@ -1,7 +1,8 @@
 # ESP32-Portapack (ESP32PP)
-An addon module for portapack to add GPS and extra sensors to it for more fun.
+An addon module for Portapack H1 / H2 / H4 to add GPS and extra sensors to it for more fun.
 
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
+
 ## How to build one for yourself, or other questions? Check WIKI!
 
 
