@@ -577,6 +577,7 @@ extern "C"
         PPShellComm::set_data_rx_callback([](const uint8_t *data, size_t data_len) -> bool
                                           {
                                                     ws_sendall((uint8_t*)data, data_len);
+                                                    vTaskDelay(2 / portTICK_PERIOD_MS);
                                                     return true; });
         while (true)
         {
