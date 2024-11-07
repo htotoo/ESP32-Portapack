@@ -328,13 +328,13 @@ esp_err_t download_file_to_spiffs(void) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-
     // Configure the HTTP client
     esp_http_client_config_t config = {
         .url = "http://creativo.hu/sattrack/mini.tle",
         .event_handler = http_event_handler,
     };
 #pragma GCC diagnostic pop
+
     ESP_LOGI(TAG, "HTTP GET request started");
     // Initialize the HTTP client
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -492,9 +492,7 @@ void app_main(void) {
     PPShellComm::set_data_rx_callback([](const uint8_t* data, size_t data_len) -> bool {
                                                     ws_sendall((uint8_t*)data, data_len);
                                                     return true; });
-    PPHandler::add_custom_command((uint16_t)Command::COMMAND_SHELL_READ_DATA_SIZE, nullptr, [](pp_command_data_t data) {
-                                                data.data->resize(sizeof(uint16_t));
-                                                *(uint16_t *)(*data.data).data() = PPShellComm::get_i2c_tx_queue_size(); });
+    PPHandler::set_get_shell_data_size_CB([]() -> uint16_t { return PPShellComm::get_i2c_tx_queue_size(); });
 
     PPHandler::add_custom_command((uint16_t)Command::COMMAND_SHELL_READ_DATA, nullptr, [](pp_command_data_t data) {
                                                 data.data->resize(65);

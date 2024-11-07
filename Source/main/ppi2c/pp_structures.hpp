@@ -7,8 +7,7 @@
 #define PP_API_VERSION 1
 #define ESP_SLAVE_ADDR 0x51
 
-enum class SupportedFeatures : uint64_t
-{
+enum class SupportedFeatures : uint64_t {
     FEAT_NONE = 0,
     FEAT_EXT_APP = 1 << 0,
     FEAT_UART = 1 << 1,
@@ -17,7 +16,7 @@ enum class SupportedFeatures : uint64_t
     FEAT_ENVIRONMENT = 1 << 4,
     FEAT_LIGHT = 1 << 5,
     FEAT_DISPLAY = 1 << 6,
-    FEAT_SHELL = 1 << 7, // can handle shell commands (polling)
+    FEAT_SHELL = 1 << 7,  // can handle shell commands (polling)
 };
 
 typedef struct
@@ -68,8 +67,7 @@ typedef struct
     uint32_t application_count;
 } device_info;
 
-enum app_location_t : uint32_t
-{
+enum app_location_t : uint32_t {
     UTILITIES = 0,
     RX,
     TX,
@@ -87,8 +85,7 @@ typedef struct
     uint32_t binary_size;
 } standalone_app_info;
 
-enum class Command : uint16_t
-{
+enum class Command : uint16_t {
     COMMAND_NONE = 0,
 
     // will respond with device_info
@@ -106,27 +103,28 @@ enum class Command : uint16_t
     COMMAND_GETFEAT_DATA_ENVIRONMENT,
     COMMAND_GETFEAT_DATA_LIGHT,
     // Shell specific communication
-    COMMAND_SHELL_WRITE_DATA,     // pp shell to esp. size not defined
-    COMMAND_SHELL_READ_DATA_SIZE, // how many bytes the esp has to send to pp's shell
-    COMMAND_SHELL_READ_DATA,      // the actual bytes sent by esp. 1st byte's 1st bit is the "hasmore" flag, the remaining 7 bits are the size of the data. exactly 64 byte follows.
+    COMMAND_SHELL_WRITE_DATA,      // pp shell to esp. size not defined
+    COMMAND_SHELL_READ_DATA_SIZE,  // how many bytes the esp has to send to pp's shell
+    COMMAND_SHELL_READ_DATA,       // the actual bytes sent by esp. 1st byte's 1st bit is the "hasmore" flag, the remaining 7 bits are the size of the data. exactly 64 byte follows.
 
 };
 
-typedef void (*get_features_CB)(uint64_t &feat);
-typedef void (*get_gps_data_CB)(ppgpssmall_t &gpsdata);
-typedef void (*get_orientation_data_CB)(orientation_t &gpsdata);
-typedef void (*get_environment_data_CB)(environment_t &envdata);
-typedef void (*get_light_data_CB)(uint16_t &light);
+typedef void (*get_features_CB)(uint64_t& feat);
+typedef void (*get_gps_data_CB)(ppgpssmall_t& gpsdata);
+typedef void (*get_orientation_data_CB)(orientation_t& gpsdata);
+typedef void (*get_environment_data_CB)(environment_t& envdata);
+typedef void (*get_light_data_CB)(uint16_t& light);
+typedef uint16_t (*get_shell_data_size_CB)();
 
 typedef struct
 {
-    uint8_t *binary;
+    uint8_t* binary;
     uint32_t size;
 } app_list_element_t;
 
 typedef struct
 {
-    std::vector<uint8_t> *data;
+    std::vector<uint8_t>* data;
 } pp_command_data_t;
 
 typedef void (*pp_i2c_command)(pp_command_data_t data);
