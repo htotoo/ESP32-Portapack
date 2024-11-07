@@ -94,7 +94,7 @@ bool downloadedTLE = false;
 uint16_t lastReportedMxS = 0; // gps last reported gps time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
 uint32_t gps_baud = 9600;
 
-uint32_t i2c_pp_last_comm_time = 0; // when is it connected last time (last query from pp). todo refactor to pp_handler
+uint32_t i2c_pp_last_comm_time = 0; // when is it connected last time (last query from pp).
 bool i2p_pp_conn_state = false;     // to save and check if i need to send a message to web
 
 typedef struct
@@ -545,19 +545,20 @@ extern "C"
                                         sat_to_track_new =str; }, nullptr);
 
         PPHandler::set_get_shell_data_size_CB([]() -> uint16_t
-                                              { return PPShellComm::get_i2c_tx_queue_size(); });
+                                              {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
         PPHandler::set_got_shell_data_CB([](std::vector<uint8_t> &data)
                                          { I2CQueueMessage_t msg;
-                                          msg.size = data.size();
-                                          size_t size = data.size();
-                                          if (size > 64)
-                                          {
-                                            size = 64;
-                                          }
-                                          memcpy(msg.data, data.data(), size);
-                                          auto ttt = pdFALSE;
-                                          xQueueSendFromISR(PPShellComm::datain_queue, &msg, &ttt); });
+                                           i2c_pp_last_comm_time = time_millis;
+                                           msg.size = data.size();
+                                           size_t size = data.size();
+                                           if (size > 64)
+                                           {
+                                             size = 64;
+                                           }
+                                           memcpy(msg.data, data.data(), size);
+                                           auto ttt = pdFALSE;
+                                           xQueueSendFromISR(PPShellComm::datain_queue, &msg, &ttt); });
 
         PPHandler::set_send_shell_data_CB([](std::vector<uint8_t> &data, bool &hasmore)
                                           {
@@ -776,7 +777,7 @@ extern "C"
             }
 
             // check if i2c connected or dc
-            if (i2c_pp_last_comm_time != 0 && (time_millis - i2c_pp_last_comm_time > 20000)) // pp query time 5 sec, so 20 is a good timeout
+            if (i2c_pp_last_comm_time != 0 && (time_millis - i2c_pp_last_comm_time > 21000)) // pp query time 5 sec, so 20 is a good timeout
             {
                 i2c_pp_last_comm_time = 0; // reset time
                 PPShellComm::set_i2c_connected(false);

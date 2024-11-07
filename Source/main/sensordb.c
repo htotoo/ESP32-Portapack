@@ -1,6 +1,5 @@
 #include "sensordb.h"
 
-// todo set to 0, and only check write if not 0?!
 uint8_t BH1750_addr = 0;
 uint8_t HMC5883L_addr = 0;
 uint8_t ADXL345_addr = 0;
