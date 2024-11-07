@@ -57,6 +57,7 @@ public:
             ret += 2;
         return ret;
     }
+    // this won't be irq data
     static void set_data_rx_callback(bool (*callback)(const uint8_t *data, size_t data_len))
     {
         data_rx_callback = callback;
