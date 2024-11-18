@@ -562,7 +562,7 @@
                 await sendAndWait(tosend);
                 //check if i downloaded it or not
                 if (gotbytes < expectedFileSize) {
-                    log("Error downloading file. I2C or Wifi issue?!");
+                    log("Error downloading file. I2C or Wifi issue?! Got " + gotbytes.toString() + " instead of " + expectedFileSize.toString());
                     return;
                 }
                 expectedFileSize = 0;

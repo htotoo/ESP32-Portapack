@@ -10,7 +10,7 @@
 #ifndef PPSHELLCOMM_H
 #define PPSHELLCOMM_H
 
-#define QUEUE_SIZE 20
+#define QUEUE_SIZE 50
 
 #include <inttypes.h>
 #include <stdio.h>
