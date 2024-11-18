@@ -456,7 +456,7 @@ void app_main(void) {
                                     update_features();
                                     feat = chipFeatures.getFeatures(); });
 
-    PPHandler::set_get_gps_data_CB([](ppgpssmall_t& gpsdata) { gpsdata = gpsdata; i2c_pp_last_comm_time = time_millis; });
+    PPHandler::set_get_gps_data_CB([](ppgpssmall_t& gpsdata_) { gpsdata_ = gpsdata; i2c_pp_last_comm_time = time_millis; });
 
     PPHandler::set_get_orientation_data_CB([](orientation_t& ori) {
                                                 ori.angle = heading;
