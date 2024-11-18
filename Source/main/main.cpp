@@ -87,7 +87,7 @@ float temperature = 0.0;
 float humidity = 0.0;
 float pressure = 0.0;
 uint16_t light = 0;
-ppgpssmall_t gpsdata;
+ppgpssmall_t gpsdata{200, 200, 0, 0, 0, 0, {}, {}};
 bool gotAnyGps = false;
 bool downloadedTLE = false;
 uint16_t lastReportedMxS = 0;  // gps last reported gps time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
@@ -266,6 +266,10 @@ esp_err_t http_event_handler(esp_http_client_event_t* evt) {
 }
 
 esp_err_t load_satellite_tle(const std::string& sat_to_track) {
+    if (sat_to_track.empty()) {
+        ESP_LOGE(TAG, "Satellite name is empty.");
+        return ESP_FAIL;
+    }
     std::string l1, l2;
     // Open the TLE file from SPIFFS
     std::ifstream file("/spiffs/mini.tle");
@@ -481,7 +485,7 @@ void app_main(void) {
 
     PPHandler::add_custom_command(PPCMD_SATTRACK_SETSAT, [](pp_command_data_t data) {
                                         std::string str;
-                                        for(int i = 0; i < data.data->size(); i++)
+                                        for(size_t i = 0; i < data.data->size(); ++i)
                                         {
                                             if (data.data->at(i) == 0) break;
                                             str += (char)data.data->at(i);
@@ -563,7 +567,7 @@ void app_main(void) {
         // REPORT SENSOR DATA TO PP. EACH HAS OWN TIMER!
         char gotusb[300];
         if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS])) {
-            if (gpsdata.latitude != 0 || gpsdata.longitude != 0) {
+            if (gpsdata.latitude != 200 || gpsdata.longitude != 200) {
                 snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f %d\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed, gpsdata.sats_in_use);
                 ESP_LOGI(TAG, "%s", gotusb);
                 if (PPShellComm::wait_till_sending(1)) {
@@ -613,7 +617,7 @@ void app_main(void) {
         }
 
         if (time_millis - last_millis[TimerEntry_REPORTRGB] > timer_millis[TimerEntry_REPORTRGB]) {
-            LedFeedback::rgb_set_by_status(PPShellComm::getAnyConnected() | i2p_pp_conn_state, WifiM::getWifiStaStatus(), WifiM::getWifiApClientNum() > 0, gpsdata.latitude != 0 && gpsdata.longitude != 0 && gpsdata.sats_in_use > 2);
+            LedFeedback::rgb_set_by_status(PPShellComm::getAnyConnected() | i2p_pp_conn_state, WifiM::getWifiStaStatus(), WifiM::getWifiApClientNum() > 0, gpsdata.latitude != 200 && gpsdata.longitude != 200 && gpsdata.sats_in_use > 2);
             last_millis[TimerEntry_REPORTRGB] = time_millis;
         }
 
@@ -621,14 +625,14 @@ void app_main(void) {
             // check for new gps data
             // ESP_LOGI(TAG, "qgps: %f  %f", sattrackdata.lat, sattrackdata.lon);
             if (sat_data_loaded) {
-                if (gpsdata.latitude != 0 || gpsdata.longitude != 0) {
+                if (gpsdata.latitude != 200 || gpsdata.longitude != 200) {
                     sattrackdata.lat = gpsdata.latitude;
                     sattrackdata.lon = gpsdata.longitude;
                 }
                 // if only old, or etc use that nvm
                 if (sattrackdata.lat != 0 || sattrackdata.lon != 0) {
                     struct tm timeinfo;
-                    sat.site(gpsdata.latitude, gpsdata.longitude, gpsdata.altitude);
+                    sat.site(sattrackdata.lat, sattrackdata.lon, gpsdata.altitude);
                     double jd = 0;
                     if (gpsdata.date.year < 44 && gpsdata.date.year >= 23)  // has valid gps time
                     {

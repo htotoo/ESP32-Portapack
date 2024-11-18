@@ -355,8 +355,11 @@
                         //need a download progressbar?
                         if (expectedFileSize > 0) {
                             var gotlines = respLines.length - 1;
-                            var byteperline = (respLastLine.length - 2) / 2;
-                            gotbytes = gotlines * byteperline;
+                            gotbytes = 0;
+                            for (let j = 0; j < gotlines; j++) {
+                                var byteperline = (respLines[j].length - 2) / 2;
+                                gotbytes += byteperline;
+                            }
                             var progress = gotbytes / expectedFileSize * 100;
                             if (progress > 100) progress = 100;
                             setProgress(progress);
@@ -559,6 +562,7 @@
                 enadisaControls(false);
                 var tosend = "fread " + expectedFileSize.toString() + "\r\n";
                 respWaiting = PROMPT;//?!
+                await new Promise(r => setTimeout(r, 100));
                 await sendAndWait(tosend);
                 //check if i downloaded it or not
                 if (gotbytes < expectedFileSize) {
