@@ -196,6 +196,7 @@
         var expectedFileSize = 0; //file size
         var resolveSt = null; //if wait for the resolve during send
         var screensupdState = 0; //0-not that cmd, 1 = begin, 2 = second line
+        var gotbytes = 0; //for file download progress
         window.addEventListener('load', onLoad);
 
         function enadisaControls(ena) {
@@ -355,7 +356,7 @@
                         if (expectedFileSize > 0) {
                             var gotlines = respLines.length - 1;
                             var byteperline = (respLastLine.length - 2) / 2;
-                            var gotbytes = gotlines * byteperline;
+                            gotbytes = gotlines * byteperline;
                             var progress = gotbytes / expectedFileSize * 100;
                             if (progress > 100) progress = 100;
                             setProgress(progress);
@@ -559,6 +560,11 @@
                 var tosend = "fread " + expectedFileSize.toString() + "\r\n";
                 respWaiting = PROMPT;//?!
                 await sendAndWait(tosend);
+                //check if i downloaded it or not
+                if (gotbytes < expectedFileSize) {
+                    log("Error downloading file. I2C or Wifi issue?!");
+                    return;
+                }
                 expectedFileSize = 0;
                 let concatenatedHexData = respLinestp.slice(1, -1).join('').replace(/\r\n/g, "");
                 respLinestp = [];//save ram
