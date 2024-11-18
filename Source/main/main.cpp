@@ -156,7 +156,7 @@ void update_features() {
         chipFeatures.enableFeature(SupportedFeatures::FEAT_ENVIRONMENT);
     if (is_orientation_sensor_present())
         chipFeatures.enableFeature(SupportedFeatures::FEAT_ORIENTATION);
-    if (gotAnyGps)
+    if (gotAnyGps || true)
         chipFeatures.enableFeature(SupportedFeatures::FEAT_GPS);
     if (PPHandler::get_appCount() > 0)
         chipFeatures.enableFeature(SupportedFeatures::FEAT_EXT_APP);
