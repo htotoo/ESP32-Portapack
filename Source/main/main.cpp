@@ -38,8 +38,6 @@
 
 #include <driver/temperature_sensor.h>
 
-static const char* TAG = "ESP32PP";
-
 #include "webserver.h"
 
 #include "nmea_parser.h"
@@ -58,6 +56,8 @@ uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
 #include "../extapps/digitalrain.h"
+
+#define TAG "ESP32PP"
 
 Sgp4 sat;
 
@@ -93,8 +93,8 @@ bool downloadedTLE = false;
 uint16_t lastReportedMxS = 0;  // gps last reported gps time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
 uint32_t gps_baud = 9600;
 
-uint32_t i2c_pp_connected = 0;   // when is it connected last time (last query from pp)
-bool i2p_pp_conn_state = false;  // to save and check if i need to send a message to web
+uint32_t i2c_pp_last_comm_time = 0;  // when is it connected last time (last query from pp).
+bool i2p_pp_conn_state = false;      // to save and check if i need to send a message to web
 
 typedef struct
 {
@@ -162,6 +162,7 @@ void update_features() {
         chipFeatures.enableFeature(SupportedFeatures::FEAT_EXT_APP);
     // uart is not present
     // display is not present
+    chipFeatures.enableFeature(SupportedFeatures::FEAT_SHELL);
 }
 
 esp_err_t init_spiffs(void) {
@@ -325,11 +326,14 @@ esp_err_t load_satellite_tle(const std::string& sat_to_track) {
 esp_err_t download_file_to_spiffs(void) {
     esp_err_t ret;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
     // Configure the HTTP client
     esp_http_client_config_t config = {
         .url = "http://creativo.hu/sattrack/mini.tle",
         .event_handler = http_event_handler,
     };
+#pragma GCC diagnostic pop
 
     ESP_LOGI(TAG, "HTTP GET request started");
     // Initialize the HTTP client
@@ -441,28 +445,31 @@ void app_main(void) {
 
     PPHandler::set_module_name("ESP32PP");
     PPHandler::set_module_version(1);
-    PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
+    PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
+    PPHandler::add_app((uint8_t*)digitalrain, sizeof(digitalrain));
     PPHandler::set_get_features_CB([](uint64_t& feat) {
-                                        i2c_pp_connected = time_millis;
+                                        i2c_pp_last_comm_time = time_millis;
                                     update_features();
                                     feat = chipFeatures.getFeatures(); });
-    PPHandler::set_get_gps_data_CB([](ppgpssmall_t& gpsdata) { gpsdata = gpsdata; i2c_pp_connected = time_millis; });
+
+    PPHandler::set_get_gps_data_CB([](ppgpssmall_t& gpsdata) { gpsdata = gpsdata; i2c_pp_last_comm_time = time_millis; });
+
     PPHandler::set_get_orientation_data_CB([](orientation_t& ori) {
                                                 ori.angle = heading;
-                                                ori.tilt = tilt; i2c_pp_connected = time_millis; });
+                                                ori.tilt = tilt; i2c_pp_last_comm_time = time_millis; });
     PPHandler::set_get_environment_data_CB([](environment_t& env) { 
-                                                i2c_pp_connected = time_millis;
+                                                i2c_pp_last_comm_time = time_millis;
                                                 env.temperature = temperature;
                                                 env.humidity = humidity;
                                                 env.pressure = pressure; });
     PPHandler::set_get_light_data_CB([](uint16_t& light) { light = light; });
 
     PPHandler::add_custom_command(PPCMD_SATTRACK_DATA, nullptr, [](pp_command_data_t data) {
-                                        data.data->resize(sizeof(sattrackdata_t));                                 
+                                        data.data->resize(sizeof(sattrackdata_t));
                                         *(sattrackdata_t *)(*data.data).data() = sattrackdata; });
 
-    PPHandler::add_custom_command(PPCMD_SATTRACK_SETMGPS, [](pp_command_data_t data) { 
-                                        if (data.data->size() != sizeof(sat_mgps_t)) { 
+    PPHandler::add_custom_command(PPCMD_SATTRACK_SETMGPS, [](pp_command_data_t data) {
+                                        if (data.data->size() != sizeof(sat_mgps_t)) {
                                             return;
                                         }
                                         sat_mgps_t tmp;
@@ -472,7 +479,7 @@ void app_main(void) {
                                         sattrackdata.lat = tmp.lat;
                                         sattrackdata.lon = tmp.lon; }, nullptr);
 
-    PPHandler::add_custom_command(PPCMD_SATTRACK_SETSAT, [](pp_command_data_t data) { 
+    PPHandler::add_custom_command(PPCMD_SATTRACK_SETSAT, [](pp_command_data_t data) {
                                         std::string str;
                                         for(int i = 0; i < data.data->size(); i++)
                                         {
@@ -480,14 +487,40 @@ void app_main(void) {
                                             str += (char)data.data->at(i);
                                         }
                                         sat_to_track_new =str; }, nullptr);
-    PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
-    PPHandler::add_app((uint8_t*)digitalrain, sizeof(digitalrain));
 
+    PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
+
+    PPHandler::set_got_shell_data_CB([](std::vector<uint8_t>& data) { I2CQueueMessage_t msg;
+                                           i2c_pp_last_comm_time = time_millis;
+                                           msg.size = data.size();
+                                           size_t size = data.size();
+                                           if (size > 64)
+                                           {
+                                             size = 64;
+                                           }
+                                           memcpy(msg.data, data.data(), size);
+                                           auto ttt = pdFALSE;
+                                           xQueueSendFromISR(PPShellComm::datain_queue, &msg, &ttt); });
+
+    PPHandler::set_send_shell_data_CB([](std::vector<uint8_t>& data, bool& hasmore) {
+                                            hasmore = false;
+                                            data.resize(64); 
+                                            size_t size = PPShellComm::get_i2c_tx_queue_size();
+                                            if (size>64)
+                                            {
+                                                hasmore = true;
+                                                size = 64;
+                                            }
+                                            memcpy(data.data(), PPShellComm::get_i2c_tx_queue_data(), size);
+                                            PPShellComm::clear_tx_queue(); });
+
+    // shell helper
     PPShellComm::set_data_rx_callback([](const uint8_t* data, size_t data_len) -> bool {
-        ws_sendall((uint8_t*)data, data_len);
-        return true;
-    });
+                                                    ws_sendall((uint8_t*)data, data_len);
+                                                    vTaskDelay(1 / portTICK_PERIOD_MS);
+                                                    return true; });
 
+    PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
     while (true) {
         time_millis = esp_timer_get_time() / 1000;
         if (sat_to_track_new != "") {
@@ -529,42 +562,42 @@ void app_main(void) {
 
         // REPORT SENSOR DATA TO PP. EACH HAS OWN TIMER!
         char gotusb[300];
-        if (PPShellComm::getAnyConnected() && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS])) {
+        if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS])) {
             if (gpsdata.latitude != 0 || gpsdata.longitude != 0) {
                 snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f %d\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed, gpsdata.sats_in_use);
                 ESP_LOGI(TAG, "%s", gotusb);
                 if (PPShellComm::wait_till_sending(1)) {
                     PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
-                    last_millis[TimerEntry_REPORTPPGPS] = time_millis;
                     ESP_LOGI(TAG, "gotgps sent");
                 }
+                last_millis[TimerEntry_REPORTPPGPS] = time_millis;
             }
         }
-        if (PPShellComm::getAnyConnected() && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI])) {
+        if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI])) {
             if (heading < 400)  // got heading data
             {
                 snprintf(gotusb, 290, "gotorientation %.01f %.01f\r\n", heading, tilt);
                 ESP_LOGI(TAG, "%s", gotusb);
                 if (PPShellComm::wait_till_sending(1)) {
                     PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
-                    last_millis[TimerEntry_REPORTPPORI] = time_millis;
                     ESP_LOGI(TAG, "gotorientation sent");
                 }
+                last_millis[TimerEntry_REPORTPPORI] = time_millis;
             }
         }
-        if (PPShellComm::getAnyConnected() && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPENVI] > timer_millis[TimerEntry_REPORTPPENVI])) {
+        if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPENVI] > timer_millis[TimerEntry_REPORTPPENVI])) {
             if (heading < 400)  // got heading data
             {
                 snprintf(gotusb, 290, "gotenv %.02f %.01f %.02f %d\r\n", temperature, humidity, pressure, light);
                 ESP_LOGI(TAG, "%s", gotusb);
                 if (PPShellComm::wait_till_sending(1)) {
                     PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
-                    last_millis[TimerEntry_REPORTPPENVI] = time_millis;
                     ESP_LOGI(TAG, "gotenv sent");
                 }
+                last_millis[TimerEntry_REPORTPPENVI] = time_millis;
             }
         }
-        if (PPShellComm::getAnyConnected() && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPTIME] > timer_millis[TimerEntry_REPORTPPTIME])) {
+        if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPTIME] > timer_millis[TimerEntry_REPORTPPTIME])) {
             uint16_t cmxs = gpsdata.tim.minute * gpsdata.tim.second + gpsdata.tim.second + gpsdata.tim.hour;
             if (gpsdata.date.year < 44 && gpsdata.date.year >= 23 && lastReportedMxS != cmxs)  // got a valid time, and ti is not the last
             {
@@ -572,10 +605,10 @@ void app_main(void) {
                 ESP_LOGI(TAG, "%s", gotusb);
                 if (PPShellComm::wait_till_sending(1)) {
                     PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
-                    last_millis[TimerEntry_REPORTPPTIME] = time_millis;
                     ESP_LOGI(TAG, "settime sent");
                     lastReportedMxS = cmxs;
                 }
+                last_millis[TimerEntry_REPORTPPTIME] = time_millis;
             }
         }
 
@@ -658,15 +691,17 @@ void app_main(void) {
         }
 
         // check if i2c connected or dc
-        if (i2c_pp_connected != 0 && (time_millis - i2c_pp_connected > 20000))  // pp query time 5 sec, so 20 is a good timeout
+        if (i2c_pp_last_comm_time != 0 && (time_millis - i2c_pp_last_comm_time > 21000))  // pp query time 5 sec, so 20 is a good timeout
         {
-            i2c_pp_connected = 0;  // reset time
-            ws_notify_dc_i2c();    // send to webpage it is dc
+            i2c_pp_last_comm_time = 0;  // reset time
+            PPShellComm::set_i2c_connected(false);
+            ws_notify_dc_i2c();  // send to webpage it is dc
             i2p_pp_conn_state = false;
-        } else if (i2c_pp_connected != 0)  // no dc, but communication in last 20 sec
+        } else if (i2c_pp_last_comm_time != 0)  // no dc, but communication in last 20 sec
         {
             if (!i2p_pp_conn_state)  // if it was disconnecdet before, and now it is connected, notify
             {
+                PPShellComm::set_i2c_connected(true);
                 ws_notify_cc_i2c();
                 i2p_pp_conn_state = true;
             }
