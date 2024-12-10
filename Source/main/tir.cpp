@@ -2,6 +2,8 @@
 #include "esp_log.h"
 QueueHandle_t TIR::sendQueue;
 gpio_num_t TIR::tx_pin;
+gpio_num_t TIR::rx_pin;
+bool TIR::irTX;
 
 const ir_protocol_t TIR::proto[IR_PROTO_COUNT] = {
     [UNK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, "UNK", 32},
@@ -19,16 +21,93 @@ TIR::~TIR() {
 }
 
 void TIR::init(gpio_num_t tx, gpio_num_t rx) {
+    irTX = false;
     tx_pin = tx;
+    rx_pin = rx;
     // init rx
     if (rx != 0) {
-        // todo start rx thread, and sync with tx
+        xTaskCreate(recvIRTask, "processIRRxTask", 4096, NULL, 5, NULL);
     }
 
     if (tx_pin != 0) {
         sendQueue = xQueueCreate(5, sizeof(ir_data_t));
-        xTaskCreate(processSendTask, "processSendTask", 4096, NULL, 5, NULL);
+        xTaskCreate(processSendTask, "processIRSendTask", 4096, NULL, 5, NULL);
     }
+}
+
+void TIR::recvIRTask(void* param) {
+    rmt_rx_done_event_data_t rx_data;
+    QueueHandle_t rx_queue = xQueueCreate(1, sizeof(rx_data));
+
+    for (;;) {
+        if (irTX) {
+            vTaskDelay(300 / portTICK_PERIOD_MS);
+            continue;
+        }
+        rmt_channel_handle_t rx_channel = NULL;
+        rmt_symbol_word_t symbols[64];
+
+        rmt_receive_config_t rx_config = {
+            .signal_range_min_ns = 1250,
+            .signal_range_max_ns = 12000000,
+        };
+
+        rmt_rx_channel_config_t rx_ch_conf = {
+            .gpio_num = static_cast<gpio_num_t>(rx_pin),
+            .clk_src = RMT_CLK_SRC_DEFAULT,
+            .resolution_hz = 1000000,
+            .mem_block_symbols = 64,
+        };
+
+        rmt_new_rx_channel(&rx_ch_conf, &rx_channel);
+        rmt_rx_event_callbacks_t cbs = {
+            .on_recv_done = irrx_done,
+        };
+
+        rmt_rx_register_event_callbacks(rx_channel, &cbs, rx_queue);
+        rmt_enable(rx_channel);
+        rmt_receive(rx_channel, symbols, sizeof(symbols), &rx_config);
+        for (;;) {
+            if (irTX) {
+                break;
+            }
+            if (xQueueReceive(rx_queue, &rx_data, pdMS_TO_TICKS(1000)) == pdPASS) {
+                size_t len = rx_data.num_symbols;
+                rmt_symbol_word_t* rx_items = rx_data.received_symbols;
+
+                if (len > 11) {
+                    uint32_t rcode = 0;
+                    irproto rproto = UNK;
+                    if ((rcode = nec_check(rx_items, len))) {
+                        rproto = NEC;
+                        // } else if (rcode = necext_check(rx_items, len)) {
+                        //     rproto = NECEXT;
+                    } else if ((rcode = sony_check(rx_items, len))) {
+                        rproto = SONY;
+                    } else if ((rcode = sam_check(rx_items, len))) {
+                        rproto = SAM;
+                    } else if ((rcode = rc5_check(rx_items, len))) {
+                        rproto = RC5;
+                    }
+                    // if (rproto) irReceived(rproto, rcode, len, rx_items);
+                    ESP_LOGI("IR", "Ir rx: %zu %" PRIu32 " %zu", rproto, rcode, len);
+                }
+
+                rmt_receive(rx_channel, symbols, sizeof(symbols), &rx_config);
+            }
+        }
+        rmt_disable(rx_channel);
+        rmt_del_channel(rx_channel);
+    }
+    vQueueDelete(rx_queue);
+    vTaskDelete(NULL);
+}
+
+bool TIR::irrx_done(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t* edata, void* udata) {
+    BaseType_t h = pdFALSE;
+    QueueHandle_t q = (QueueHandle_t)udata;
+    xQueueSendFromISR(q, edata, &h);
+    return h == pdTRUE;
 }
 
 void TIR::send(irproto protocol, uint32_t addr, uint32_t cmd) {
@@ -252,4 +331,125 @@ void TIR::processSendTask(void* pvParameters) {
             rmt_del_encoder(encoder_handle);
         }
     }
+}
+
+uint32_t TIR::nec_check(rmt_symbol_word_t* item, size_t& len) {
+    const uint8_t totalData = 34;
+    if (len < totalData) {
+        return 0;
+    }
+    const uint32_t m = 0x80000000;
+    uint32_t code = 0;
+    for (uint8_t i = 0; i < totalData; i++) {
+        if (i == 0) {  // header
+            if (!checkbit(item[i], proto[NEC].header_high, proto[NEC].header_low)) {
+                return 0;
+            }
+        } else if (i == 33) {  // footer
+            if (!checkbit(item[i], proto[NEC].footer_high, proto[NEC].footer_low)) {
+                return 0;
+            }
+        } else if (checkbit(item[i], proto[NEC].one_high, proto[NEC].one_low)) {
+            code |= (m >> (i - 1));
+        } else if (!checkbit(item[i], proto[NEC].zero_high, proto[NEC].zero_low)) {
+            // Serial.printf("BitError i:%d\n",i);
+            return 0;
+        }
+    }
+    return code;
+}
+
+uint32_t TIR::sam_check(rmt_symbol_word_t* item, size_t& len) {
+    const uint8_t totalData = 34;
+    if (len < totalData) {
+        return 0;
+    }
+    const uint32_t m = 0x80000000;
+    uint32_t code = 0;
+    for (uint8_t i = 0; i < totalData; i++) {
+        if (i == 0) {  // header
+            if (!checkbit(item[i], proto[SAM].header_high, proto[SAM].header_low)) {
+                return 0;
+            }
+        } else if (i == 33) {  // footer
+            if (!checkbit(item[i], proto[SAM].footer_high, proto[SAM].footer_low)) {
+                return 0;
+            }
+        } else if (checkbit(item[i], proto[SAM].one_high, proto[SAM].one_low)) {
+            code |= (m >> (i - 1));
+        } else if (!checkbit(item[i], proto[SAM].zero_high, proto[SAM].zero_low)) {
+            // Serial.printf("BitError i:%d\n",i);
+            return 0;
+        }
+    }
+    return code;
+}
+
+uint32_t TIR::sony_check(rmt_symbol_word_t* item, size_t& len) {
+    const uint8_t totalMin = 12;
+    uint8_t i = 0;
+    if (len < totalMin || !checkbit(item[i], proto[SONY].header_high, proto[SONY].header_low)) {
+        return 0;
+    }
+    i++;
+    uint32_t m = 0x80000000;
+    uint32_t code = 0;
+    uint8_t maxData = 20;
+    if (len < maxData) {
+        maxData = 15;
+    }
+    if (len < maxData) {
+        maxData = 12;
+    }
+    for (int j = 0; j < maxData - 1; j++) {
+        if (checkbit(item[i], proto[SONY].one_high, proto[SONY].one_low)) {
+            code |= (m >> j);
+        } else if (checkbit(item[i], proto[SONY].zero_high, proto[SONY].zero_low)) {
+            code |= 0 & (m >> j);
+        } else if (item[i].duration1 > 15000) {  // space repeats
+            // len = i+1;
+            break;
+        } else {
+            // Serial.printf("BitError %d, max:%d, j:%d\n",i, maxData, j); Serial.printf("d0:%d, d1:%d, L0:%d L1:%d\n", item[i].duration0, item[i].duration1, item[i].level0, item[i].level1);
+            return 0;
+        }
+        i++;
+    }
+    code = code >> (32 - i);
+    len = i + 1;
+    return code;
+}
+
+uint32_t TIR::rc5_check(rmt_symbol_word_t* item, size_t& len) {
+    if (len < 13 || len > 30) {
+        return 0;
+    }
+    const uint16_t RC5_High = proto[RC5].one_high + proto[RC5].one_low;
+    uint32_t code = 0;
+    bool c = false;
+    for (uint8_t i = 0; i < len; i++) {
+        uint32_t d0 = item[i].duration0;
+        uint32_t d1 = item[i].duration1;
+        if (rc5_bit(d0, proto[RC5].one_low)) {
+            code = (code << 1) | c;
+            c = rc5_bit(d1, RC5_High) ? !c : c;
+        } else if (rc5_bit(d0, RC5_High)) {
+            code = (code << 2) | (item[i].level0 << 1) | !item[i].level0;
+            c = rc5_bit(d1, proto[RC5].one_low) ? !c : c;
+        } else {
+            // Serial.printf("BitError i:%d\n",i);
+            return 0;
+        }
+    }
+    return code;
+}
+
+bool TIR::rc5_bit(uint32_t d, uint32_t v) {
+    return (d < (v + bitMargin)) && (d > (v - bitMargin));
+}
+
+bool TIR::checkbit(rmt_symbol_word_t& item, uint16_t high, uint16_t low) {
+    return item.level0 == 0 && item.level1 != 0 &&
+           item.duration0 < (high + bitMargin) && item.duration0 > (high - bitMargin) &&
+           item.duration1 < (low + bitMargin) && item.duration1 > (low - bitMargin);
 }

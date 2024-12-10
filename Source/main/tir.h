@@ -10,6 +10,8 @@
 #include "driver/rmt_tx.h"
 #include "driver/rmt_encoder.h"
 
+#define bitMargin 120
+
 enum irproto : uint8_t {
     UNK,
     NEC,
@@ -64,9 +66,19 @@ class TIR {
     static void create_symbol(rmt_symbol_word_t& item, uint16_t high, uint16_t low, bool bit);
     static size_t rmt_encode_ir(rmt_encoder_t* encoder, rmt_channel_handle_t channel, const void* primary_data, size_t data_size, rmt_encode_state_t* ret_state);
     static void processSendTask(void* pvParameters);
+    static void recvIRTask(void* param);
+    static bool irrx_done(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t* edata, void* udata);
+    static bool checkbit(rmt_symbol_word_t& item, uint16_t high, uint16_t low);
+    static bool rc5_bit(uint32_t d, uint32_t v);
+    static uint32_t rc5_check(rmt_symbol_word_t* item, size_t& len);
+    static uint32_t sony_check(rmt_symbol_word_t* item, size_t& len);
+    static uint32_t sam_check(rmt_symbol_word_t* item, size_t& len);
+    static uint32_t nec_check(rmt_symbol_word_t* item, size_t& len);
     static const ir_protocol_t proto[IR_PROTO_COUNT];
     static QueueHandle_t sendQueue;
     static gpio_num_t tx_pin;
+    static gpio_num_t rx_pin;
+    static bool irTX;
 };
 
 #endif
