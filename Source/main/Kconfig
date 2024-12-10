@@ -27,12 +27,26 @@ menu "ESP32PP"
         default 10
         help
             I2C SLAVE SCL PIN on ESP
+
     config I2C_SLAVE_SDA_IO
         int "I2C SLAVE SDA PIN on ESP"
         range 1 255
         default 11
         help
             I2C SLAVE SDA PIN on ESP
-                   
+    
+    config IR_RX_PIN
+        int "IR RX PIN"
+        range 1 255
+        default 12
+        help
+            IR RX PIN on ESP
+    config IR_TX_PIN
+        int "IR TX PIN"
+        range 1 255
+        default 13
+        help
+            IR TX PIN on ESP
+                                                   
 
 endmenu

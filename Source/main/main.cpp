@@ -46,6 +46,8 @@
 #include "orientation.h"
 #include "environment.h"
 
+#include "tir.h"
+
 #include "ppi2c/pp_handler.hpp"
 
 #define PPCMD_SATTRACK_DATA 0xa000
@@ -60,6 +62,8 @@ uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 #define TAG "ESP32PP"
 
 Sgp4 sat;
+
+TIR tir;
 
 typedef enum TimerEntry {
     TimerEntry_SENSORGET,
@@ -442,6 +446,8 @@ void app_main(void) {
     LedFeedback::init(RGB_LED_PIN);
     LedFeedback::rgb_set(255, 255, 255);
 
+    tir.init((gpio_num_t)CONFIG_IR_TX_PIN, (gpio_num_t)CONFIG_IR_RX_PIN);
+
     init_orientation();  // it loads orientation data too
     init_environment();
 
@@ -537,6 +543,7 @@ void app_main(void) {
         }
         // GET ALL SENSOR DATA
         if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET]) {
+            tir.send(NEC, 0xa, 0xC1AAFC03);  // send a test ir signal
             // GPS IS AUTO
             ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp));  // TEMPINT
             heading = get_heading_degrees();                                                // ORIENTATION
