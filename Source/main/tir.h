@@ -22,7 +22,7 @@ enum irproto {
 
 typedef struct ir_data {
     irproto protocol;
-    uint32_t data;
+    uint64_t data;
     uint8_t repeat;
 } ir_data_t;
 
@@ -56,8 +56,9 @@ class TIR {
     void init(gpio_num_t tx, gpio_num_t rx);  // initializes ir rx,tx
 
     void send(irproto protocol, uint32_t addr, uint32_t cmd);  // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
-    void send(irproto protocol, uint32_t data);                // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
+    void send(irproto protocol, uint64_t data);                // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
     void send(ir_data_t data);                                 // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
+    void send_from_irq(ir_data_t data);
 
    private:
     static void create_symbol(rmt_symbol_word_t& item, uint16_t high, uint16_t low, bool bit);

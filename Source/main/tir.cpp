@@ -54,7 +54,7 @@ void TIR::send(irproto protocol, uint32_t addr, uint32_t cmd) {
     send(data);
 }
 
-void TIR::send(irproto protocol, uint32_t data_) {
+void TIR::send(irproto protocol, uint64_t data_) {
     ir_data_t data;
     data.protocol = protocol;
     data.data = data_;
@@ -63,7 +63,11 @@ void TIR::send(irproto protocol, uint32_t data_) {
 }
 
 void TIR::send(ir_data_t data) {
-    xQueueSend(sendQueue, &data, portMAX_DELAY);  // todo maybe handle error, not needed, since shouldn't add >5
+    auto ttt = pdFALSE;
+    xQueueSendFromISR(sendQueue, &data, &ttt);
+}
+
+void TIR::send_from_irq(ir_data_t data) {
 }
 
 void TIR::create_symbol(rmt_symbol_word_t& item, uint16_t high, uint16_t low, bool bit) {

@@ -53,6 +53,8 @@
 #define PPCMD_SATTRACK_DATA 0xa000
 #define PPCMD_SATTRACK_SETSAT 0xa001
 #define PPCMD_SATTRACK_SETMGPS 0xa002
+#define PPCMD_IRTX_SENDIR 0xa003
+
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 
 #include "sgp4/Sgp4.h"
@@ -497,6 +499,12 @@ void app_main(void) {
                                             str += (char)data.data->at(i);
                                         }
                                         sat_to_track_new =str; }, nullptr);
+    PPHandler::add_custom_command(PPCMD_IRTX_SENDIR, [](pp_command_data_t data) {
+                                        if (data.data->size() != sizeof(ir_data_t)) {
+                                            return;
+                                        }
+                                        ir_data_t tmp;
+                                        memcpy(&tmp, data.data->data(), sizeof(ir_data_t)); }, nullptr);
 
     PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
@@ -543,7 +551,6 @@ void app_main(void) {
         }
         // GET ALL SENSOR DATA
         if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET]) {
-            tir.send(NEC, 0xC1AAFC03);  // send a test ir signal
             // GPS IS AUTO
             ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp));  // TEMPINT
             heading = get_heading_degrees();                                                // ORIENTATION
