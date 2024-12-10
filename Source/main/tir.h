@@ -1,3 +1,5 @@
+// a lot of code from here: https://github.com/junkfix/esp32-rmt-ir/blob/main/esp32-rmt-ir.cpp#L157
+
 #ifndef __TIR_H
 #define __TIR_H
 
