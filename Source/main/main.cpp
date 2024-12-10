@@ -337,6 +337,25 @@ esp_err_t load_satellite_tle(const std::string& sat_to_track) {
 esp_err_t download_file_to_spiffs(void) {
     esp_err_t ret;
 
+    // Get the file information
+    struct stat file_stat;
+    if (stat("/spiffs/mini.tle", &file_stat) == 0) {
+        // Get the current time
+        time_t now;
+        time(&now);
+
+        // Check if the file modification time is within the last 2 hours
+        if (difftime(now, file_stat.st_mtime) <= 2 * 3600) {
+            ESP_LOGI(TAG, "File /spiffs/mini.tle is not older than 2 hours.");
+            downloadedTLE = true;
+            return ESP_OK;
+        } else {
+            ESP_LOGI(TAG, "File /spiffs/mini.tle is older than 2 hours.");
+        }
+    } else {
+        ESP_LOGE(TAG, "Failed to get file information for /spiffs/mini.tle");
+    }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
     // Configure the HTTP client
@@ -707,7 +726,7 @@ void app_main(void) {
         }
 
         if (time_millis - last_millis[TimerEntry_SATDOWN] > timer_millis[TimerEntry_SATDOWN]) {
-            if (!downloadedTLE)
+            if (!downloadedTLE && time_method)  // not yet downloaded, and has valid time
                 download_file_to_spiffs();
             last_millis[TimerEntry_SATDOWN] = time_millis;
         }
