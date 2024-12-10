@@ -46,20 +46,27 @@
 #include "orientation.h"
 #include "environment.h"
 
+#include "tir.h"
+
 #include "ppi2c/pp_handler.hpp"
 
 #define PPCMD_SATTRACK_DATA 0xa000
 #define PPCMD_SATTRACK_SETSAT 0xa001
 #define PPCMD_SATTRACK_SETMGPS 0xa002
+#define PPCMD_IRTX_SENDIR 0xa003
+
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
 #include "../extapps/digitalrain.h"
+#include "../extapps/tirapp.h"
 
 #define TAG "ESP32PP"
 
 Sgp4 sat;
+
+TIR tir;
 
 typedef enum TimerEntry {
     TimerEntry_SENSORGET,
@@ -330,6 +337,25 @@ esp_err_t load_satellite_tle(const std::string& sat_to_track) {
 esp_err_t download_file_to_spiffs(void) {
     esp_err_t ret;
 
+    // Get the file information
+    struct stat file_stat;
+    if (stat("/spiffs/mini.tle", &file_stat) == 0) {
+        // Get the current time
+        time_t now;
+        time(&now);
+
+        // Check if the file modification time is within the last 2 hours
+        if (difftime(now, file_stat.st_mtime) <= 2 * 3600) {
+            ESP_LOGI(TAG, "File /spiffs/mini.tle is not older than 2 hours.");
+            downloadedTLE = true;
+            return ESP_OK;
+        } else {
+            ESP_LOGI(TAG, "File /spiffs/mini.tle is older than 2 hours.");
+        }
+    } else {
+        ESP_LOGE(TAG, "Failed to get file information for /spiffs/mini.tle");
+    }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
     // Configure the HTTP client
@@ -442,6 +468,8 @@ void app_main(void) {
     LedFeedback::init(RGB_LED_PIN);
     LedFeedback::rgb_set(255, 255, 255);
 
+    tir.init((gpio_num_t)CONFIG_IR_TX_PIN, (gpio_num_t)CONFIG_IR_RX_PIN);
+
     init_orientation();  // it loads orientation data too
     init_environment();
 
@@ -451,6 +479,7 @@ void app_main(void) {
     PPHandler::set_module_version(1);
     PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
     PPHandler::add_app((uint8_t*)digitalrain, sizeof(digitalrain));
+    // PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));
     PPHandler::set_get_features_CB([](uint64_t& feat) {
                                         i2c_pp_last_comm_time = time_millis;
                                     update_features();
@@ -491,6 +520,14 @@ void app_main(void) {
                                             str += (char)data.data->at(i);
                                         }
                                         sat_to_track_new =str; }, nullptr);
+    PPHandler::add_custom_command(PPCMD_IRTX_SENDIR, [](pp_command_data_t data) {
+                                        if (data.data->size() != sizeof(ir_data_t)) {
+                                            return;
+                                        }
+                                        ir_data_t tmp;
+                                        memcpy(&tmp, data.data->data(), sizeof(ir_data_t)); 
+                                        ESP_DRAM_LOGW(TAG, "irp: %d %d %d", tmp.protocol, tmp.data, tmp.repeat);
+                                        tir.send_from_irq(tmp); }, nullptr);
 
     PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
@@ -689,7 +726,7 @@ void app_main(void) {
         }
 
         if (time_millis - last_millis[TimerEntry_SATDOWN] > timer_millis[TimerEntry_SATDOWN]) {
-            if (!downloadedTLE)
+            if (!downloadedTLE && time_method)  // not yet downloaded, and has valid time
                 download_file_to_spiffs();
             last_millis[TimerEntry_SATDOWN] = time_millis;
         }
