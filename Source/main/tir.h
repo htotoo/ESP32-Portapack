@@ -10,14 +10,14 @@
 #include "driver/rmt_tx.h"
 #include "driver/rmt_encoder.h"
 
-enum irproto {
+enum irproto : uint8_t {
     UNK,
     NEC,
     NECEXT,
     SONY,
     SAM,
     RC5,
-    PROTO_COUNT
+    IR_PROTO_COUNT
 };
 
 typedef struct ir_data {
@@ -64,7 +64,7 @@ class TIR {
     static void create_symbol(rmt_symbol_word_t& item, uint16_t high, uint16_t low, bool bit);
     static size_t rmt_encode_ir(rmt_encoder_t* encoder, rmt_channel_handle_t channel, const void* primary_data, size_t data_size, rmt_encode_state_t* ret_state);
     static void processSendTask(void* pvParameters);
-    static const ir_protocol_t proto[PROTO_COUNT];
+    static const ir_protocol_t proto[IR_PROTO_COUNT];
     static QueueHandle_t sendQueue;
     static gpio_num_t tx_pin;
 };

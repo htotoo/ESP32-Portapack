@@ -3,7 +3,7 @@
 QueueHandle_t TIR::sendQueue;
 gpio_num_t TIR::tx_pin;
 
-const ir_protocol_t TIR::proto[PROTO_COUNT] = {
+const ir_protocol_t TIR::proto[IR_PROTO_COUNT] = {
     [UNK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, "UNK", 32},
     [NEC] = {9000, 4500, 560, 1690, 560, 560, 560, 0, 38000, "NEC", 32},
     [NECEXT] = {9000, 4500, 560, 1690, 560, 560, 560, 0, 38000, "NECEXT", 32},
@@ -63,11 +63,12 @@ void TIR::send(irproto protocol, uint64_t data_) {
 }
 
 void TIR::send(ir_data_t data) {
-    auto ttt = pdFALSE;
-    xQueueSendFromISR(sendQueue, &data, &ttt);
+    xQueueSend(sendQueue, &data, portMAX_DELAY);
 }
 
 void TIR::send_from_irq(ir_data_t data) {
+    auto ttt = pdFALSE;
+    xQueueSendFromISR(sendQueue, &data, &ttt);
 }
 
 void TIR::create_symbol(rmt_symbol_word_t& item, uint16_t high, uint16_t low, bool bit) {
@@ -173,6 +174,10 @@ void TIR::processSendTask(void* pvParameters) {
     ir_data_t receivedData;
     while (1) {
         if (xQueueReceive(sendQueue, &receivedData, portMAX_DELAY) == pdTRUE) {
+            if (receivedData.protocol >= IR_PROTO_COUNT) {
+                ESP_LOGW("IR", "INVALID PROTOCOL");
+                continue;
+            }
             // wait for rx to finish. todo
             rmt_channel_handle_t tx_channel = NULL;
 

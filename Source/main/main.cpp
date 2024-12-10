@@ -60,6 +60,7 @@ uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
 #include "../extapps/digitalrain.h"
+#include "../extapps/tirapp.h"
 
 #define TAG "ESP32PP"
 
@@ -459,6 +460,7 @@ void app_main(void) {
     PPHandler::set_module_version(1);
     PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
     PPHandler::add_app((uint8_t*)digitalrain, sizeof(digitalrain));
+    PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));
     PPHandler::set_get_features_CB([](uint64_t& feat) {
                                         i2c_pp_last_comm_time = time_millis;
                                     update_features();
@@ -504,7 +506,9 @@ void app_main(void) {
                                             return;
                                         }
                                         ir_data_t tmp;
-                                        memcpy(&tmp, data.data->data(), sizeof(ir_data_t)); }, nullptr);
+                                        memcpy(&tmp, data.data->data(), sizeof(ir_data_t)); 
+                                        ESP_DRAM_LOGW(TAG, "irp: %d %d %d", tmp.protocol, tmp.data, tmp.repeat);
+                                        tir.send_from_irq(tmp); }, nullptr);
 
     PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
