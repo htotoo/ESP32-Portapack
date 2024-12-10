@@ -543,7 +543,7 @@ void app_main(void) {
         }
         // GET ALL SENSOR DATA
         if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET]) {
-            tir.send(NEC, 0xa, 0xC1AAFC03);  // send a test ir signal
+            tir.send(NEC, 0xC1AAFC03);  // send a test ir signal
             // GPS IS AUTO
             ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp));  // TEMPINT
             heading = get_heading_degrees();                                                // ORIENTATION

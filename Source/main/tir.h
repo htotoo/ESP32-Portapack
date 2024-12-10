@@ -13,6 +13,7 @@
 enum irproto {
     UNK,
     NEC,
+    NECEXT,
     SONY,
     SAM,
     RC5,
@@ -21,10 +22,8 @@ enum irproto {
 
 typedef struct ir_data {
     irproto protocol;
-    uint32_t addr;
     uint32_t data;
     uint8_t repeat;
-    uint8_t bits;
 } ir_data_t;
 
 typedef struct
@@ -56,8 +55,9 @@ class TIR {
     ~TIR();
     void init(gpio_num_t tx, gpio_num_t rx);  // initializes ir rx,tx
 
-    void send(irproto protocol, uint32_t addr, uint32_t data);  // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
-    void send(ir_data_t data);                                  // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
+    void send(irproto protocol, uint32_t addr, uint32_t cmd);  // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
+    void send(irproto protocol, uint32_t data);                // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
+    void send(ir_data_t data);                                 // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
 
    private:
     static void create_symbol(rmt_symbol_word_t& item, uint16_t high, uint16_t low, bool bit);

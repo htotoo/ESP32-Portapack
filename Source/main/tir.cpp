@@ -1,11 +1,12 @@
 #include "tir.h"
-
+#include "esp_log.h"
 QueueHandle_t TIR::sendQueue;
 gpio_num_t TIR::tx_pin;
 
 const ir_protocol_t TIR::proto[PROTO_COUNT] = {
     [UNK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, "UNK", 32},
     [NEC] = {9000, 4500, 560, 1690, 560, 560, 560, 0, 38000, "NEC", 32},
+    [NECEXT] = {9000, 4500, 560, 1690, 560, 560, 560, 0, 38000, "NECEXT", 32},
     [SONY] = {2400, 600, 1200, 600, 600, 600, 0, 0, 40000, "SONY", 32},
     [SAM] = {4500, 4500, 560, 1690, 560, 560, 560, 0, 38000, "SAM", 32},
     [RC5] = {0, 0, 889, 889, 889, 889, 0, 0, 38000, "RC5", 32},
@@ -30,10 +31,32 @@ void TIR::init(gpio_num_t tx, gpio_num_t rx) {
     }
 }
 
-void TIR::send(irproto protocol, uint32_t addr, uint32_t data_) {
+void TIR::send(irproto protocol, uint32_t addr, uint32_t cmd) {
     ir_data_t data;
     data.protocol = protocol;
-    data.addr = addr;
+    data.repeat = 1;
+    if (protocol == NEC) {
+        int8_t address = (int8_t)addr;
+        uint8_t address_inverse = ~address;
+        uint8_t command = (uint8_t)cmd;
+        uint8_t command_inverse = ~command;
+        data.data = address;
+        data.data |= address_inverse << 8;
+        data.data |= command << 16;
+        data.data |= command_inverse << 24;
+    } else if (protocol == NECEXT) {
+        data.data = (uint16_t)addr;
+        data.data |= (cmd & 0xFFFF) << 16;
+    } else {
+        ESP_LOGI("IR", "NOT SUPPORTED PROTOCOL, ADD DATA DIRECTLY");
+        return;
+    }
+    send(data);
+}
+
+void TIR::send(irproto protocol, uint32_t data_) {
+    ir_data_t data;
+    data.protocol = protocol;
     data.data = data_;
     data.repeat = 1;
     send(data);
