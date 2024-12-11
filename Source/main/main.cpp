@@ -494,7 +494,7 @@ void app_main(void) {
     PPHandler::set_module_version(1);
     PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
     PPHandler::add_app((uint8_t*)digitalrain, sizeof(digitalrain));
-    // PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));
+    PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));
     PPHandler::set_get_features_CB([](uint64_t& feat) {
                                         i2c_pp_last_comm_time = time_millis;
                                     update_features();
@@ -545,8 +545,10 @@ void app_main(void) {
                                         tir.send_from_irq(tmp); }, nullptr);
 
     PPHandler::add_custom_command(PPCMD_IRTX_GETLASTRCVIR, nullptr, [](pp_command_data_t data) {
-                                        data.data->resize(sizeof(ir_data_t));
-                                        *(ir_data_t *)(*data.data).data() = last_rcvd_ir; });
+        data.data->resize(sizeof(ir_data_t));
+        *(ir_data_t*)(*data.data).data() = last_rcvd_ir;
+        last_rcvd_ir.protocol = UNK;
+    });
 
     PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
