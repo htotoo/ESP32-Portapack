@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.14</title>
+    <title>ESP32PP v0.15</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -109,7 +109,7 @@
 <body>
     <div class="setupicon"><a href="setup.html">&#9881;</a></div>
 
-    <h1>ESP32 PP v0.14</h1>
+    <h1>ESP32 PP v0.15</h1>
     <div id="connState">WS Connecting...</div>
     <div id="connStatePP">PP not connected to ESP</div>
     <div class="management">
@@ -328,6 +328,19 @@
                         var jsStr = msg.substring(14);
                         var gpsdata = JSON.parse(jsStr);
                         gotSensor(gpsdata);
+                        return false;
+                    }
+                    if (msg.startsWith("#$##$$#GOTIRRX")) {
+                        //{"protocol":1,"data":33438150,"len":34
+                        var jsStr = msg.substring(14);
+                        var irdata = JSON.parse(jsStr);
+                        var protocol = "UNK";
+                        if (irdata.protocol == 1) protocol = "NEC";
+                        if (irdata.protocol == 2) protocol = "NECEXT";
+                        if (irdata.protocol == 3) protocol = "SONY";
+                        if (irdata.protocol == 4) protocol = "SAM";
+                        if (irdata.protocol == 5) protocol = "RC5";
+                        log("IR RX: " + protocol + " " + irdata.data.toString(16) + " " + irdata.len + " bits");
                         return false;
                     }
                 }

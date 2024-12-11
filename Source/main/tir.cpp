@@ -4,6 +4,7 @@ QueueHandle_t TIR::sendQueue;
 gpio_num_t TIR::tx_pin;
 gpio_num_t TIR::rx_pin;
 bool TIR::irTX;
+void (*TIR::ir_callback)(irproto proto, uint64_t rcode, size_t len);
 
 const ir_protocol_t TIR::proto[IR_PROTO_COUNT] = {
     [UNK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, "UNK", 32},
@@ -18,6 +19,10 @@ TIR::TIR() {
 }
 
 TIR::~TIR() {
+}
+
+void TIR::set_on_ir_received(void (*callback)(irproto proto, uint64_t rcode, size_t len)) {
+    ir_callback = callback;
 }
 
 void TIR::init(gpio_num_t tx, gpio_num_t rx) {
@@ -57,6 +62,7 @@ void TIR::recvIRTask(void* param) {
             .clk_src = RMT_CLK_SRC_DEFAULT,
             .resolution_hz = 1000000,
             .mem_block_symbols = 64,
+            .intr_priority = 0,
         };
 
         rmt_new_rx_channel(&rx_ch_conf, &rx_channel);
@@ -89,7 +95,9 @@ void TIR::recvIRTask(void* param) {
                     } else if ((rcode = rc5_check(rx_items, len))) {
                         rproto = RC5;
                     }
-                    // if (rproto) irReceived(rproto, rcode, len, rx_items);
+                    if (ir_callback && rproto) {
+                        ir_callback(rproto, rcode, len);
+                    }
                     ESP_LOGI("IR", "Ir rx: %zu %" PRIu32 " %zu", rproto, rcode, len);
                 }
 

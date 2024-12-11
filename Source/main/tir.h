@@ -63,6 +63,10 @@ class TIR {
     void send(irproto protocol, uint64_t data);                // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
     void send(ir_data_t data);                                 // add data to a send queut, that is parsed from a thread that manages sending. queue max size is 5
     void send_from_irq(ir_data_t data);
+    void set_on_ir_received(void (*callback)(irproto proto, uint64_t rcode, size_t len));  // subscribe to receive a callback when an IR signal is processed
+
+   private:
+    static void (*ir_callback)(irproto proto, uint64_t rcode, size_t len);  // callback function pointer
 
    private:
     static void create_symbol(rmt_symbol_word_t& item, uint16_t high, uint16_t low, bool bit);

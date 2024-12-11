@@ -54,6 +54,7 @@
 #define PPCMD_SATTRACK_SETSAT 0xa001
 #define PPCMD_SATTRACK_SETMGPS 0xa002
 #define PPCMD_IRTX_SENDIR 0xa003
+#define PPCMD_IRTX_GETLASTRCVIR 0xa004
 
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 
@@ -133,6 +134,8 @@ uint8_t sattrack_task_last_error = 0;
 std::string sat_to_track = "NOAA 15";
 std::string sat_to_track_new = "";
 bool sat_data_loaded = false;
+
+ir_data_t last_rcvd_ir{UNK, 0, 0};
 
 #include "led.h"
 
@@ -469,6 +472,18 @@ void app_main(void) {
     LedFeedback::rgb_set(255, 255, 255);
 
     tir.init((gpio_num_t)CONFIG_IR_TX_PIN, (gpio_num_t)CONFIG_IR_RX_PIN);
+    tir.set_on_ir_received([](irproto proto, uint64_t rcode, size_t len) {
+        if (proto == UNK) return;
+        last_rcvd_ir.protocol = proto;
+        last_rcvd_ir.data = rcode;
+        char buff[150] = {0};
+        snprintf(buff, 150,
+                 "#$##$$#GOTIRRX"
+                 "{\"protocol\":%d,\"data\":%" PRIu64
+                 ",\"len\":%d}\r\n",
+                 proto, rcode, len);
+        ws_sendall((uint8_t*)buff, strlen(buff));
+    });
 
     init_orientation();  // it loads orientation data too
     init_environment();
@@ -528,6 +543,10 @@ void app_main(void) {
                                         memcpy(&tmp, data.data->data(), sizeof(ir_data_t)); 
                                         ESP_DRAM_LOGW(TAG, "irp: %d %d %d", tmp.protocol, tmp.data, tmp.repeat);
                                         tir.send_from_irq(tmp); }, nullptr);
+
+    PPHandler::add_custom_command(PPCMD_IRTX_GETLASTRCVIR, nullptr, [](pp_command_data_t data) {
+                                        data.data->resize(sizeof(ir_data_t));
+                                        *(ir_data_t *)(*data.data).data() = last_rcvd_ir; });
 
     PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
