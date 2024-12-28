@@ -582,12 +582,12 @@
                 gotbytes = 0;
                 let gotbytesAll = 0;
                 let concatenatedHexData = "";
-                // todo guard too many tries when no data arrives
                 while (gotbytesAll < expectedFileSize) {
                     //var tosend = "fread " + expectedFileSize.toString() + "\r\n";
                     var tosend = "fread 512\r\n";
                     respWaiting = PROMPT;//?!
                     await sendAndWait(tosend);
+                    var beflen = concatenatedHexData.length;
                     concatenatedHexData += respLinestp.slice(1, -1).join('').replace(/\r\n/g, "");
                     if (respLinestp[respLinestp.length - 1] != "ok\r\n") {
                         concatenatedHexData += respLinestp[respLinestp.length - 1].replace(/\r\n/g, "");
@@ -598,6 +598,9 @@
                     if (progress > 100) progress = 100;
                     setProgress(progress);
                     //await new Promise(r => setTimeout(r, 150));
+                    if (concatenatedHexData.length == beflen) {
+                        break;
+                    }
                 }
                 //check if i downloaded it or not
                 if (gotbytesAll < expectedFileSize) {
