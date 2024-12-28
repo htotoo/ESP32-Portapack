@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.15</title>
+    <title>ESP32PP v0.16</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -109,7 +109,7 @@
 <body>
     <div class="setupicon"><a href="setup.html">&#9881;</a></div>
 
-    <h1>ESP32 PP v0.15</h1>
+    <h1>ESP32 PP v0.16</h1>
     <div id="connState">WS Connecting...</div>
     <div id="connStatePP">PP not connected to ESP</div>
     <div class="management">
@@ -373,9 +373,6 @@
                                 var byteperline = (respLines[j].length - 2) / 2;
                                 gotbytes += byteperline;
                             }
-                            var progress = gotbytes / expectedFileSize * 100;
-                            if (progress > 100) progress = 100;
-                            setProgress(progress);
                         }
                     }
                     if (respLastLine.endsWith(respWaiting) || respLastLine.startsWith(respWaiting)) {
@@ -391,6 +388,14 @@
             catch (err) {
                 console.log(err);
             }
+        }
+
+        function enterCritical() {
+            sendMessage("#$##$$#DISABLEESPASYNC\r\n");
+        }
+
+        function exitCritical() {
+            sendMessage("#$##$$#ENABLEESPASYNC\r\n");
         }
 
         function sendMessage(data) {
@@ -569,22 +574,37 @@
                 await sendAndWait(tosend);
                 //file opened
                 enadisaControls(false);
+                enterCritical();
                 var tosend = "fseek 0\r\n";
                 respWaiting = PROMPT;
                 await sendAndWait(tosend);
                 enadisaControls(false);
-                var tosend = "fread " + expectedFileSize.toString() + "\r\n";
-                respWaiting = PROMPT;//?!
-                await new Promise(r => setTimeout(r, 100));
-                await sendAndWait(tosend);
+                gotbytes = 0;
+                let gotbytesAll = 0;
+                let concatenatedHexData = "";
+                // todo guard too many tries when no data arrives
+                while (gotbytesAll < expectedFileSize) {
+                    //var tosend = "fread " + expectedFileSize.toString() + "\r\n";
+                    var tosend = "fread 512\r\n";
+                    respWaiting = PROMPT;//?!
+                    await sendAndWait(tosend);
+                    concatenatedHexData += respLinestp.slice(1, -1).join('').replace(/\r\n/g, "");
+                    if (respLinestp[respLinestp.length - 1] != "ok\r\n") {
+                        concatenatedHexData += respLinestp[respLinestp.length - 1].replace(/\r\n/g, "");
+                    }
+                    respLinestp = [];//save ram
+                    gotbytesAll = concatenatedHexData.length / 2;
+                    var progress = gotbytesAll / expectedFileSize * 100;
+                    if (progress > 100) progress = 100;
+                    setProgress(progress);
+                    //await new Promise(r => setTimeout(r, 150));
+                }
                 //check if i downloaded it or not
-                if (gotbytes < expectedFileSize) {
+                if (gotbytesAll < expectedFileSize) {
                     log("Error downloading file. I2C or Wifi issue?! Got " + gotbytes.toString() + " instead of " + expectedFileSize.toString());
                     return;
                 }
                 expectedFileSize = 0;
-                let concatenatedHexData = respLinestp.slice(1, -1).join('').replace(/\r\n/g, "");
-                respLinestp = [];//save ram
                 setProgress(-1);
                 const bytes = new Uint8Array(concatenatedHexData.length / 2);
                 for (let i = 0; i < concatenatedHexData.length; i += 2) {
@@ -598,6 +618,7 @@
                 var tosend = "fclose\r\n";
                 respWaiting = PROMPT;
                 await sendAndWait(tosend);
+                exitCritical();
             }
         }
 
