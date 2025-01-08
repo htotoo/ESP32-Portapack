@@ -154,8 +154,22 @@ bool PPHandler::i2c_slave_callback_ISR(struct i2c_slave_device_t* dev, I2CSlaveC
         case I2C_CALLBACK_SEND_DATA:
             if (dev->state == I2C_STATE_SEND) {
                 auto data = on_send_ISR();
-                if (data.size() > 0)
-                    i2c_slave_send_data(dev, data.data(), data.size());
+
+                if (data.size() == 0)
+                    return false;
+
+                if (data.size() > 128) {
+                    esp_rom_printf("FAILED SENDING DATA. Byte count of %d is exceeding cache size of 128.\n", data.size());
+                    return false;
+                }
+
+                uint8_t len = data.size();
+                i2c_slave_send_data(dev, data.data(), &len);
+
+                if (len != data.size()) {
+                    esp_rom_printf("FAILED SENDING DATA. Tried to send %d bytes, but only %d bytes were sent because of cache limitation.\n", data.size(), len);
+                    return false;
+                }
             }
             break;
 

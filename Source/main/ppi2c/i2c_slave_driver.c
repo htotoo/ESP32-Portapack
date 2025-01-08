@@ -38,14 +38,14 @@
 #include "esp_private/gpio.h"
 #include "esp_private/periph_ctrl.h"
 #include "esp_heap_caps.h"
+#include "sdkconfig.h"  // for switching on target types, until hal is fixed.
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
 #include "esp_check.h"
 
-static const char *TAG = "i2c.unicom_slave";
+static const char* TAG = "i2c.unicom_slave";
 
-typedef struct
-{
+typedef struct {
     i2c_slave_device_t user_dev;
     int portNum;
     i2c_slave_callback_fn callback;
@@ -53,19 +53,17 @@ typedef struct
     gpio_num_t scl;
     gpio_num_t sda;
     i2c_hal_context_t hal;
-    bool allocated; // is this device used
+    bool allocated;  // is this device used
 } i2c_slave_dev_private_t;
 
 static i2c_slave_dev_private_t i2cdev[2] = {0};
 
-static IRAM_ATTR void s_i2c_reset_buffer(i2c_slave_dev_private_t *i2c_slave)
-{
+static IRAM_ATTR void s_i2c_reset_buffer(i2c_slave_dev_private_t* i2c_slave) {
     i2c_slave->user_dev.bufstart = 0;
     i2c_slave->user_dev.bufend = 0;
 }
 
-static esp_err_t s_hp_i2c_pins_config(i2c_slave_dev_private_t *handle)
-{
+static esp_err_t s_hp_i2c_pins_config(i2c_slave_dev_private_t* handle) {
     int port_id = handle->portNum;
 
     // SDA pin configurations
@@ -99,50 +97,42 @@ static esp_err_t s_hp_i2c_pins_config(i2c_slave_dev_private_t *handle)
     return ESP_OK;
 }
 
-static IRAM_ATTR void s_i2c_handle_rx_fifo_wm(i2c_slave_dev_private_t *i2c_slave)
-{
+static IRAM_ATTR void s_i2c_handle_rx_fifo_wm(i2c_slave_dev_private_t* i2c_slave) {
     // read all data out of the rx fifo queue.
-    i2c_hal_context_t *hal = &i2c_slave->hal;
-    i2c_slave_device_t *s = &i2c_slave->user_dev;
+    i2c_hal_context_t* hal = &i2c_slave->hal;
+    i2c_slave_device_t* s = &i2c_slave->user_dev;
     // can't be in send mode here.
     uint32_t rx_fifo_cnt;
     i2c_ll_get_rxfifo_cnt(hal->dev, &rx_fifo_cnt);
     uint32_t fifo_cnt_rd = MIN(sizeof(s->buffer) - s->bufend, rx_fifo_cnt);
-    if (fifo_cnt_rd > 0)
-    {
+    if (fifo_cnt_rd > 0) {
         ESP_ERROR_CHECK(s->state == I2C_STATE_SEND ? ESP_ERR_INVALID_STATE : ESP_OK);
         i2c_ll_read_rxfifo(hal->dev, s->buffer + s->bufend, fifo_cnt_rd);
         s->bufend += fifo_cnt_rd;
         s->state = I2C_STATE_RECV;
     }
 
-    if (rx_fifo_cnt > fifo_cnt_rd)
-    {
+    if (rx_fifo_cnt > fifo_cnt_rd) {
         // throw away additional bytes, we don't have a place to put them
         i2c_ll_rxfifo_rst(hal->dev);
     }
 }
 
-static IRAM_ATTR void s_i2c_handle_complete(i2c_slave_dev_private_t *i2c_slave)
-{
-    i2c_hal_context_t *hal = &i2c_slave->hal;
-    i2c_slave_device_t *s = &i2c_slave->user_dev;
+static IRAM_ATTR void s_i2c_handle_complete(i2c_slave_dev_private_t* i2c_slave) {
+    i2c_hal_context_t* hal = &i2c_slave->hal;
+    i2c_slave_device_t* s = &i2c_slave->user_dev;
     // check if we have received any data. If so, this is an rx complete
-    if (s->state == I2C_STATE_SEND)
-    {
+    if (s->state == I2C_STATE_SEND) {
         // sending, check to see if there were bytes that didn't get sent.
         uint32_t tx_fifo_len;
         i2c_ll_get_txfifo_len(hal->dev, &tx_fifo_len);
         tx_fifo_len = SOC_I2C_FIFO_LEN - tx_fifo_len;
-        if (tx_fifo_len > 0)
-        {
+        if (tx_fifo_len > 0) {
             s->bufstart -= tx_fifo_len;
             // clear the fifo
             i2c_ll_txfifo_rst(hal->dev);
         }
-    }
-    else
-    {
+    } else {
         // read all remaining fifo data
         s_i2c_handle_rx_fifo_wm(i2c_slave);
     }
@@ -155,94 +145,86 @@ static IRAM_ATTR void s_i2c_handle_complete(i2c_slave_dev_private_t *i2c_slave)
     s->state = I2C_STATE_IDLE;
 }
 
-static IRAM_ATTR void s_i2c_handle_tx_fifo_wm(i2c_slave_dev_private_t *i2c_slave)
-{
-    i2c_hal_context_t *hal = &i2c_slave->hal;
-    i2c_slave_device_t *s = &i2c_slave->user_dev;
+static IRAM_ATTR void s_i2c_handle_tx_fifo_wm(i2c_slave_dev_private_t* i2c_slave) {
+    i2c_hal_context_t* hal = &i2c_slave->hal;
+    i2c_slave_device_t* s = &i2c_slave->user_dev;
     uint32_t tx_fifo_rem;
     i2c_ll_get_txfifo_len(hal->dev, &tx_fifo_rem);
     uint8_t size = s->bufend - s->bufstart;
-    if (size > tx_fifo_rem)
-    {
+    if (size > tx_fifo_rem) {
         size = tx_fifo_rem;
     }
-    if (size == 0)
-    {
+    if (size == 0) {
         // disable the interrupt, there is no data left to send
         i2c_ll_slave_disable_tx_it(hal->dev);
-    }
-    else
-    {
+    } else {
         ESP_ERROR_CHECK(s->state == I2C_STATE_SEND ? ESP_OK : ESP_ERR_INVALID_STATE);
         i2c_ll_write_txfifo(hal->dev, s->buffer + s->bufstart, size);
         s->bufstart += size;
         i2c_ll_slave_clear_stretch(hal->dev);
-        if (s->bufstart == s->bufend) // no more data to send
+        if (s->bufstart == s->bufend)  // no more data to send
             i2c_ll_slave_disable_tx_it(hal->dev);
     }
 }
 
-static IRAM_ATTR void s_i2c_handle_clock_stretch(i2c_slave_dev_private_t *i2c_slave)
-{
-    i2c_hal_context_t *hal = &i2c_slave->hal;
-    int stretch_cause = hal->dev->sr.stretch_cause;
-    i2c_slave_device_t *s = &i2c_slave->user_dev;
+static IRAM_ATTR void s_i2c_handle_clock_stretch(i2c_slave_dev_private_t* i2c_slave) {
+    i2c_hal_context_t* hal = &i2c_slave->hal;
+    i2c_slave_stretch_cause_t stretch_cause = 0xff;
+#ifdef CONFIG_IDF_TARGET_ESP32S2
+    // ESP32S2 does not have a properly defined HAL.
+    stretch_cause = hal->dev->status_reg.stretch_cause;
+#else
+    i2c_ll_slave_get_stretch_cause(hal->dev, &stretch_cause);
+#endif
+    i2c_slave_device_t* s = &i2c_slave->user_dev;
     // esp_rom_printf("stretch cause is %d\n", stretch_cause);
     // esp_rom_printf("buffer length is %d\n", hal->dev->status_reg.tx_fifo_cnt);
-    switch (stretch_cause)
-    {
-    case I2C_SLAVE_STRETCH_CAUSE_ADDRESS_MATCH:
-        // start of a send. Receive any lingering data in the rx buffer, and call the callback.
-        s_i2c_handle_rx_fifo_wm(i2c_slave);
-        if (s->state == I2C_STATE_RECV)
-        {
-            // transaction in progress, but the master has re-addressed us, let the callback know.
-            i2c_slave->callback(&i2c_slave->user_dev, I2C_CALLBACK_REPEAT_START);
-        }
-        // reset the buffer and fifos for the next transaction
-        s->state = I2C_STATE_SEND;
-        s_i2c_reset_buffer(i2c_slave);
-        // tell the callback that we need some data.
-        i2c_slave->callback(s, I2C_CALLBACK_SEND_DATA);
-        // esp_rom_printf("here, receive mode is %d\n", hal->dev->status_reg.slave_rw);
-        break;
-    case I2C_SLAVE_STRETCH_CAUSE_RX_FULL:
-    case I2C_SLAVE_STRETCH_CAUSE_SENDING_ACK:
-    default:
-        // clear the condition, we can't do anything at this point
-        i2c_ll_slave_clear_stretch(hal->dev);
-        break;
-    case I2C_SLAVE_STRETCH_CAUSE_TX_EMPTY:
-        // tell the callback we need more data
-        i2c_slave->callback(s, I2C_CALLBACK_SEND_DATA);
-        break;
+    switch (stretch_cause) {
+        case I2C_SLAVE_STRETCH_CAUSE_ADDRESS_MATCH:
+            // start of a send. Receive any lingering data in the rx buffer, and call the callback.
+            s_i2c_handle_rx_fifo_wm(i2c_slave);
+            if (s->state == I2C_STATE_RECV) {
+                // transaction in progress, but the master has re-addressed us, let the callback know.
+                i2c_slave->callback(&i2c_slave->user_dev, I2C_CALLBACK_REPEAT_START);
+            }
+            // reset the buffer and fifos for the next transaction
+            s->state = I2C_STATE_SEND;
+            s_i2c_reset_buffer(i2c_slave);
+            // tell the callback that we need some data.
+            i2c_slave->callback(s, I2C_CALLBACK_SEND_DATA);
+            // esp_rom_printf("here, receive mode is %d\n", hal->dev->status_reg.slave_rw);
+            break;
+        case I2C_SLAVE_STRETCH_CAUSE_RX_FULL:
+        case I2C_SLAVE_STRETCH_CAUSE_SENDING_ACK:
+        default:
+            // clear the condition, we can't do anything at this point
+            i2c_ll_slave_clear_stretch(hal->dev);
+            break;
+        case I2C_SLAVE_STRETCH_CAUSE_TX_EMPTY:
+            // tell the callback we need more data
+            i2c_slave->callback(s, I2C_CALLBACK_SEND_DATA);
+            break;
     }
 }
 
-static IRAM_ATTR void s_slave_fifo_isr_handler(uint32_t int_mask, i2c_slave_dev_private_t *i2c_slave)
-{
-    if (int_mask & I2C_INTR_STRETCH)
-    {
+static IRAM_ATTR void s_slave_fifo_isr_handler(uint32_t int_mask, i2c_slave_dev_private_t* i2c_slave) {
+    if (int_mask & I2C_INTR_STRETCH) {
         s_i2c_handle_clock_stretch(i2c_slave);
     }
-    if (int_mask & I2C_INTR_SLV_RXFIFO_WM)
-    {
+    if (int_mask & I2C_INTR_SLV_RXFIFO_WM) {
         s_i2c_handle_rx_fifo_wm(i2c_slave);
     }
-    if (int_mask & I2C_INTR_SLV_COMPLETE)
-    {
+    if (int_mask & I2C_INTR_SLV_COMPLETE) {
         s_i2c_handle_complete(i2c_slave);
     }
-    if (int_mask & I2C_INTR_SLV_TXFIFO_WM)
-    {
+    if (int_mask & I2C_INTR_SLV_TXFIFO_WM) {
         s_i2c_handle_tx_fifo_wm(i2c_slave);
     }
 }
 
-static IRAM_ATTR void s_slave_isr_handle_default(void *arg)
-{
-    i2c_slave_dev_private_t *i2c_slave = (i2c_slave_dev_private_t *)arg;
-    i2c_hal_context_t *hal = &i2c_slave->hal;
+static IRAM_ATTR void s_slave_isr_handle_default(void* arg) {
+    i2c_slave_dev_private_t* i2c_slave = (i2c_slave_dev_private_t*)arg;
+    i2c_hal_context_t* hal = &i2c_slave->hal;
     uint32_t int_mask = 0;
 
     i2c_ll_get_intr_mask(hal->dev, &int_mask);
@@ -250,8 +232,7 @@ static IRAM_ATTR void s_slave_isr_handle_default(void *arg)
     // esp_rom_printf("rx buffer length is %d\n", hal->dev->status_reg.rx_fifo_cnt);
     // esp_rom_printf("slave addressed is %d\n", hal->dev->status_reg.slave_addressed);
     // esp_rom_printf("rw is %d\n", hal->dev->status_reg.slave_rw);
-    if (int_mask == 0)
-    {
+    if (int_mask == 0) {
         return;
     }
 
@@ -260,16 +241,13 @@ static IRAM_ATTR void s_slave_isr_handle_default(void *arg)
     i2c_ll_clear_intr_mask(hal->dev, int_mask);
 }
 
-esp_err_t i2c_slave_new(i2c_slave_config_t *config, i2c_slave_device_t **result)
-{
+esp_err_t i2c_slave_new(i2c_slave_config_t* config, i2c_slave_device_t** result) {
     // determine the port opened
     ESP_RETURN_ON_FALSE(config && result, ESP_ERR_INVALID_ARG, TAG, "invalid argument");
     ESP_RETURN_ON_FALSE(GPIO_IS_VALID_GPIO(config->gpio_sda) && GPIO_IS_VALID_GPIO(config->gpio_scl), ESP_ERR_INVALID_ARG, TAG, "invalid SDA/SCL pin number");
-    i2c_slave_dev_private_t *dev = NULL;
-    for (int i = 0; i < 2; ++i)
-    {
-        if (!i2cdev[i].allocated)
-        {
+    i2c_slave_dev_private_t* dev = NULL;
+    for (int i = 0; i < 2; ++i) {
+        if (!i2cdev[i].allocated) {
             dev = &i2cdev[i];
             dev->allocated = true;
         }
@@ -282,14 +260,13 @@ esp_err_t i2c_slave_new(i2c_slave_config_t *config, i2c_slave_device_t **result)
     dev->portNum = config->i2c_port;
     dev->user_dev.bufstart = dev->user_dev.bufend = 0;
     // initialize the registers
-    PERIPH_RCC_ATOMIC()
-    {
+    PERIPH_RCC_ATOMIC() {
         i2c_ll_enable_bus_clock(dev->portNum, true);
         i2c_ll_reset_register(dev->portNum);
     }
 
     // set up the hal
-    i2c_hal_context_t *hal = &dev->hal;
+    i2c_hal_context_t* hal = &dev->hal;
     i2c_hal_init(hal, dev->portNum);
     // enable the GPIO config
     ESP_RETURN_ON_ERROR(s_hp_i2c_pins_config(dev), TAG, "Unable to set up pins");
@@ -309,51 +286,50 @@ esp_err_t i2c_slave_new(i2c_slave_config_t *config, i2c_slave_device_t **result)
     i2c_ll_set_sda_timing(hal->dev, 10, 10);
     i2c_ll_set_tout(hal->dev, 32000);
 
-    // enable interrupts for stretch and receiveing, those always stay enabled.
+    // enable interrupts for stretch and receiving, those always stay enabled.
     i2c_ll_slave_enable_scl_stretch(hal->dev, true);
     hal->dev->scl_stretch_conf.stretch_protect_num = 500;
-
     i2c_ll_slave_tx_auto_start_en(hal->dev, true);
     i2c_ll_slave_enable_rx_it(hal->dev);
     i2c_ll_enable_intr_mask(hal->dev, I2C_SLAVE_STRETCH_INT_ENA_M);
-
     i2c_ll_update(hal->dev);
     *result = &dev->user_dev;
     return ESP_OK;
 }
 
-IRAM_ATTR esp_err_t i2c_slave_send_data(i2c_slave_device_t *dev, uint8_t *buf, uint8_t len)
-{
+IRAM_ATTR esp_err_t i2c_slave_send_data(i2c_slave_device_t* dev, uint8_t* buf, uint8_t* len) {
     // write the data to the buffer
     ESP_RETURN_ON_FALSE_ISR(dev->state == I2C_STATE_SEND, ESP_ERR_INVALID_STATE, TAG, "Trying to send while not in send state!");
-    i2c_slave_dev_private_t *i2c_slave = (i2c_slave_dev_private_t *)dev;
-    i2c_hal_context_t *hal = &i2c_slave->hal;
-    len = MIN(len, sizeof(dev->buffer) - dev->bufend);
-    memcpy(dev->buffer + dev->bufend, buf, len);
-    dev->bufend += len;
-    if (len > 0)
-    {
+    i2c_slave_dev_private_t* i2c_slave = (i2c_slave_dev_private_t*)dev;
+    i2c_hal_context_t* hal = &i2c_slave->hal;
+    if (dev->bufstart == dev->bufend) {
+        // buffer is empty, reset the start/end to make sure we have room.
+        s_i2c_reset_buffer(i2c_slave);
+    }
+    uint8_t nbytes = MIN(*len, sizeof(dev->buffer) - dev->bufend);
+    memcpy(dev->buffer + dev->bufend, buf, nbytes);
+    dev->bufend += nbytes;
+    if (nbytes > 0) {
         // enable the tx interrupt so data gets copied into the fifo
         i2c_ll_slave_enable_tx_it(hal->dev);
     }
+    // tell the caller how many bytes were written.
+    *len = nbytes;
     return ESP_OK;
 }
 
-IRAM_ATTR esp_err_t i2c_slave_del(i2c_slave_device_t *dev)
-{
-    i2c_slave_dev_private_t *i2c_slave = (i2c_slave_dev_private_t *)dev;
+IRAM_ATTR esp_err_t i2c_slave_del(i2c_slave_device_t* dev) {
+    i2c_slave_dev_private_t* i2c_slave = (i2c_slave_dev_private_t*)dev;
     ESP_RETURN_ON_FALSE(i2c_slave, ESP_ERR_INVALID_ARG, TAG, "invalid slave handle");
     ESP_RETURN_ON_FALSE(i2c_slave->allocated, ESP_ERR_INVALID_ARG, TAG, "Trying to deallocate unallocated slave");
-    if (i2c_slave->allocated)
-    {
+    if (i2c_slave->allocated) {
         i2c_ll_disable_intr_mask(i2c_slave->hal.dev,
                                  I2C_TRANS_COMPLETE_INT_ENA_M |
                                      I2C_SLAVE_STRETCH_INT_ENA_M |
                                      I2C_RXFIFO_WM_INT_ENA_M |
                                      I2C_TXFIFO_WM_INT_ENA_M);
         ESP_RETURN_ON_ERROR(esp_intr_free(i2c_slave->intr), TAG, "delete interrupt service failed");
-        PERIPH_RCC_ATOMIC()
-        {
+        PERIPH_RCC_ATOMIC() {
             i2c_ll_enable_bus_clock(i2c_slave->portNum, false);
         }
         i2c_slave_dev_private_t blank = {0};
