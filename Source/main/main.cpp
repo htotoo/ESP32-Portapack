@@ -482,7 +482,7 @@ void app_main(void) {
                  "{\"protocol\":%d,\"data\":%" PRIu64
                  ",\"len\":%d}\r\n",
                  proto, rcode, len);
-        ws_sendall((uint8_t*)buff, strlen(buff));
+        ws_sendall((uint8_t*)buff, strlen(buff), true);
     });
 
     init_orientation();  // it loads orientation data too
@@ -618,7 +618,7 @@ void app_main(void) {
                      gpsdata.sats_in_use, gpsdata.sats_in_view, gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed,
                      heading, tilt,
                      temperatureEsp, temperature, humidity, pressure, light);
-            ws_sendall((uint8_t*)buff, strlen(buff));
+            ws_sendall((uint8_t*)buff, strlen(buff), true);
             last_millis[TimerEntry_REPORTWEB] = time_millis;
         }
 
