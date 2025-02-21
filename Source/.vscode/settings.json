@@ -59,5 +59,8 @@
         "typeinfo": "cpp"
     },
     "idf.portWin": "COM5",
-    "idf.flashType": "UART"
+    "idf.flashType": "UART",
+    "idf.openOcdConfigs": [
+        "board/esp32s3-builtin.cfg"
+    ]
 }
