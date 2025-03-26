@@ -417,7 +417,7 @@ static void gps_event_handler(void* event_handler_arg, esp_event_base_t event_ba
         case GPS_DEBUG:
             // ESP_LOGW(TAG, "NMEA statement:%s", (char*)event_data);
             // todo pass the debug to web
-            if (gpsDebug) {
+            if (gpsDebug && PPShellComm::wait_till_sending(1)) {
                 snprintf(buff, 400, "#$##$$#GOTGPSDEBUG%s\r\n", (char*)event_data);
                 ws_sendall((uint8_t*)buff, strlen(buff), true);
             }
