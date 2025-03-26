@@ -1,8 +1,7 @@
 #pragma once
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include "driver/uart.h"
@@ -12,77 +11,74 @@ extern "C"
 
 #define CONFIG_NMEA_PARSER_UART_RXD 18
 #define TIME_ZONE (0)
-#define YEAR_BASE (2000) // date in GPS starts from 2000
+#define YEAR_BASE (2000)  // date in GPS starts from 2000
 
-  /**
-   * @brief Declare of NMEA Parser Event base
-   *
-   */
-  ESP_EVENT_DECLARE_BASE(ESP_NMEA_EVENT);
+/**
+ * @brief Declare of NMEA Parser Event base
+ *
+ */
+ESP_EVENT_DECLARE_BASE(ESP_NMEA_EVENT);
 
-  /**
-   * @brief GPS fix type
-   *
-   */
-  typedef enum
-  {
+/**
+ * @brief GPS fix type
+ *
+ */
+typedef enum {
     GPS_FIX_INVALID, /*!< Not fixed */
     GPS_FIX_GPS,     /*!< GPS */
     GPS_FIX_DGPS,    /*!< Differential GPS */
-  } gps_fix_t;
+} gps_fix_t;
 
-  /**
-   * @brief GPS fix mode
-   *
-   */
-  typedef enum
-  {
+/**
+ * @brief GPS fix mode
+ *
+ */
+typedef enum {
     GPS_MODE_INVALID = 1, /*!< Not fixed */
     GPS_MODE_2D,          /*!< 2D GPS */
     GPS_MODE_3D           /*!< 3D GPS */
-  } gps_fix_mode_t;
+} gps_fix_mode_t;
 
-  /**
-   * @brief GPS satellite information
-   *
-   */
-  typedef struct
-  {
+/**
+ * @brief GPS satellite information
+ *
+ */
+typedef struct
+{
     uint8_t num;       /*!< Satellite number */
     uint8_t elevation; /*!< Satellite elevation */
     uint16_t azimuth;  /*!< Satellite azimuth */
     uint8_t snr;       /*!< Satellite signal noise ratio */
-  } gps_satellite_t;
+} gps_satellite_t;
 
-  /**
-   * @brief GPS time
-   *
-   */
-  typedef struct
-  {
+/**
+ * @brief GPS time
+ *
+ */
+typedef struct
+{
     uint8_t hour;      /*!< Hour */
     uint8_t minute;    /*!< Minute */
     uint8_t second;    /*!< Second */
     uint16_t thousand; /*!< Thousand */
-  } gps_time_t;
+} gps_time_t;
 
-  /**
-   * @brief GPS date
-   *
-   */
-  typedef struct
-  {
+/**
+ * @brief GPS date
+ *
+ */
+typedef struct
+{
     uint8_t day;   /*!< Day (start from 1) */
     uint8_t month; /*!< Month (start from 1) */
     uint16_t year; /*!< Year (start from 2000) */
-  } gps_date_t;
+} gps_date_t;
 
-  /**
-   * @brief NMEA Statement
-   *
-   */
-  typedef enum
-  {
+/**
+ * @brief NMEA Statement
+ *
+ */
+typedef enum {
     STATEMENT_UNKNOWN = 0, /*!< Unknown statement */
     STATEMENT_GGA,         /*!< GGA */
     STATEMENT_GSA,         /*!< GSA */
@@ -90,14 +86,14 @@ extern "C"
     STATEMENT_GSV,         /*!< GSV */
     STATEMENT_GLL,         /*!< GLL */
     STATEMENT_VTG          /*!< VTG */
-  } nmea_statement_t;
+} nmea_statement_t;
 
-  /**
-   * @brief GPS object
-   *
-   */
-  typedef struct
-  {
+/**
+ * @brief GPS object
+ *
+ */
+typedef struct
+{
     float latitude;          /*!< Latitude (degrees) */
     float longitude;         /*!< Longitude (degrees) */
     float altitude;          /*!< Altitude (meters) */
@@ -114,103 +110,101 @@ extern "C"
     float speed;             /*!< Ground speed, unit: m/s */
     float cog;               /*!< Course over ground */
     float variation;         /*!< Magnetic variation */
-  } gps_t;
+} gps_t;
 
-  /**
-   * @brief Configuration of NMEA Parser
-   *
-   */
-  typedef struct
-  {
+/**
+ * @brief Configuration of NMEA Parser
+ *
+ */
+typedef struct
+{
     struct
     {
-      uart_port_t uart_port;        /*!< UART port number */
-      uint32_t rx_pin;              /*!< UART Rx Pin number */
-      uint32_t baud_rate;           /*!< UART baud rate */
-      uart_word_length_t data_bits; /*!< UART data bits length */
-      uart_parity_t parity;         /*!< UART parity */
-      uart_stop_bits_t stop_bits;   /*!< UART stop bits length */
-      uint32_t event_queue_size;    /*!< UART event queue size */
-    } uart;                         /*!< UART specific configuration */
-  } nmea_parser_config_t;
+        uart_port_t uart_port;        /*!< UART port number */
+        uint32_t rx_pin;              /*!< UART Rx Pin number */
+        uint32_t baud_rate;           /*!< UART baud rate */
+        uart_word_length_t data_bits; /*!< UART data bits length */
+        uart_parity_t parity;         /*!< UART parity */
+        uart_stop_bits_t stop_bits;   /*!< UART stop bits length */
+        uint32_t event_queue_size;    /*!< UART event queue size */
+    } uart;                           /*!< UART specific configuration */
+} nmea_parser_config_t;
 
-  /**
-   * @brief NMEA Parser Handle
-   *
-   */
-  typedef void *nmea_parser_handle_t;
+/**
+ * @brief NMEA Parser Handle
+ *
+ */
+typedef void* nmea_parser_handle_t;
 
 /**
  * @brief Default configuration for NMEA Parser
  *
  */
-#define NMEA_PARSER_CONFIG_DEFAULT() \
-  {                                  \
-    .uart = {                        \
-      .uart_port = UART_NUM_1,       \
-      .rx_pin = CONFIG_GPSTXPIN,     \
-      .baud_rate = 9600,             \
-      .data_bits = UART_DATA_8_BITS, \
-      .parity = UART_PARITY_DISABLE, \
-      .stop_bits = UART_STOP_BITS_1, \
-      .event_queue_size = 30         \
-    }                                \
-  }
+#define NMEA_PARSER_CONFIG_DEFAULT()       \
+    {                                      \
+        .uart = {                          \
+            .uart_port = UART_NUM_1,       \
+            .rx_pin = CONFIG_GPSTXPIN,     \
+            .baud_rate = 9600,             \
+            .data_bits = UART_DATA_8_BITS, \
+            .parity = UART_PARITY_DISABLE, \
+            .stop_bits = UART_STOP_BITS_1, \
+            .event_queue_size = 30}}
 
-  /**
-   * @brief NMEA Parser Event ID
-   *
-   */
-  typedef enum
-  {
-    GPS_UPDATE, /*!< GPS information has been updated */
-    GPS_UNKNOWN /*!< Unknown statements detected */
-  } nmea_event_id_t;
+/**
+ * @brief NMEA Parser Event ID
+ *
+ */
+typedef enum {
+    GPS_UPDATE,  /*!< GPS information has been updated */
+    GPS_UNKNOWN, /*!< Unknown statements detected */
+    GPS_DEBUG,   /*!< Debug information */
+} nmea_event_id_t;
 
-  /**
-   * @brief Init NMEA Parser
-   *
-   * @param config Configuration of NMEA Parser
-   * @return nmea_parser_handle_t handle of NMEA parser
-   */
-  nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t *config);
+/**
+ * @brief Init NMEA Parser
+ *
+ * @param config Configuration of NMEA Parser
+ * @return nmea_parser_handle_t handle of NMEA parser
+ */
+nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config);
 
-  /**
-   * @brief Deinit NMEA Parser
-   *
-   * @param nmea_hdl handle of NMEA parser
-   * @return esp_err_t ESP_OK on success, ESP_FAIL on error
-   */
-  esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl);
+/**
+ * @brief Deinit NMEA Parser
+ *
+ * @param nmea_hdl handle of NMEA parser
+ * @return esp_err_t ESP_OK on success, ESP_FAIL on error
+ */
+esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl);
 
-  /**
-   * @brief Add user defined handler for NMEA parser
-   *
-   * @param nmea_hdl handle of NMEA parser
-   * @param event_handler user defined event handler
-   * @param handler_args handler specific arguments
-   * @return esp_err_t
-   *  - ESP_OK: Success
-   *  - ESP_ERR_NO_MEM: Cannot allocate memory for the handler
-   *  - ESP_ERR_INVALIG_ARG: Invalid combination of event base and event id
-   *  - Others: Fail
-   */
-  esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl,
-                                    esp_event_handler_t event_handler,
-                                    void *handler_args);
+/**
+ * @brief Add user defined handler for NMEA parser
+ *
+ * @param nmea_hdl handle of NMEA parser
+ * @param event_handler user defined event handler
+ * @param handler_args handler specific arguments
+ * @return esp_err_t
+ *  - ESP_OK: Success
+ *  - ESP_ERR_NO_MEM: Cannot allocate memory for the handler
+ *  - ESP_ERR_INVALIG_ARG: Invalid combination of event base and event id
+ *  - Others: Fail
+ */
+esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl,
+                                  esp_event_handler_t event_handler,
+                                  void* handler_args);
 
-  /**
-   * @brief Remove user defined handler for NMEA parser
-   *
-   * @param nmea_hdl handle of NMEA parser
-   * @param event_handler user defined event handler
-   * @return esp_err_t
-   *  - ESP_OK: Success
-   *  - ESP_ERR_INVALIG_ARG: Invalid combination of event base and event id
-   *  - Others: Fail
-   */
-  esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
-                                       esp_event_handler_t event_handler);
+/**
+ * @brief Remove user defined handler for NMEA parser
+ *
+ * @param nmea_hdl handle of NMEA parser
+ * @param event_handler user defined event handler
+ * @return esp_err_t
+ *  - ESP_OK: Success
+ *  - ESP_ERR_INVALIG_ARG: Invalid combination of event base and event id
+ *  - Others: Fail
+ */
+esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
+                                     esp_event_handler_t event_handler);
 
 #ifdef __cplusplus
 }

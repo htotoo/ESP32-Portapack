@@ -137,6 +137,8 @@ bool sat_data_loaded = false;
 
 ir_data_t last_rcvd_ir{UNK, 0, 0};
 
+bool gpsDebug = false;  // todo set to false, and give it an ui to be able to turn it on / off
+
 #include "led.h"
 
 static void i2c_scan() {
@@ -390,6 +392,7 @@ esp_err_t download_file_to_spiffs(void) {
 
 static void gps_event_handler(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
     gps_t* gps = NULL;
+    char buff[400] = {0};
     switch (event_id) {
         case GPS_UPDATE:
             gotAnyGps = true;
@@ -410,6 +413,14 @@ static void gps_event_handler(void* event_handler_arg, esp_event_base_t event_ba
             break;
         case GPS_UNKNOWN:
             // ESP_LOGW(TAG, "Unknown statement:%s", (char*)event_data);
+            break;
+        case GPS_DEBUG:
+            // ESP_LOGW(TAG, "NMEA statement:%s", (char*)event_data);
+            // todo pass the debug to web
+            if (gpsDebug) {
+                snprintf(buff, 400, "#$##$$#GOTGPSDEBUG%s\r\n", (char*)event_data);
+                ws_sendall((uint8_t*)buff, strlen(buff), true);
+            }
             break;
         default:
             break;

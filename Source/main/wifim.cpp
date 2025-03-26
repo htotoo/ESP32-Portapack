@@ -114,7 +114,7 @@ void WifiM::wifi_loop(uint32_t millis) {
         return;
     if (millis - last_wifi_conntry > WIFI_CLIENR_RC_TIME) {
         ESP_LOGI(TAG, "esp_wifi_connect started.");
-        esp_wifi_connect();
+        if (!(strcmp(wifiStaSSID, "-") == 0)) esp_wifi_connect();  // just connect if configured
         last_wifi_conntry = millis;
     }
 }
