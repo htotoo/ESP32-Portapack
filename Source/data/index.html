@@ -169,6 +169,8 @@
                 <div id="devGpsLon">Lon: ?</div>
                 <div id="devHead">Heading: ?</div>
                 <div id="devGpsSats">Sats: ?</div>
+                Gps debug: <input type="checkbox" id="gpsDebugChk" class="uicontrols"
+                    onchange="gpsDebugChkChanged(this)" /> <br />
                 <button onclick="getGPSPosition();" id="btnGps" class="uicontrols">&#128204;</button>
                 <button class="uicontrols" onclick="fileManOpen(); return false;">Open file manager</button>
             </div>
@@ -824,6 +826,15 @@
             //document.getElementById("manualcommand").style.display = "none";
 
             ls();
+        }
+
+        function gpsDebugChkChanged(chk) {
+            if (chk.checked) {
+                sendMessage("#$##$$#GPSDEBUGON\r\n");
+            }
+            else {
+                sendMessage("#$##$$#GPSDEBUGOFF\r\n");
+            }
         }
 
     </script>

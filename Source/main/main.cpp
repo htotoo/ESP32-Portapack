@@ -38,6 +38,8 @@
 
 #include <driver/temperature_sensor.h>
 
+bool gpsDebug = false;  // todo set to false, and give it an ui to be able to turn it on / off
+
 #include "webserver.h"
 
 #include "nmea_parser.h"
@@ -136,8 +138,6 @@ std::string sat_to_track_new = "";
 bool sat_data_loaded = false;
 
 ir_data_t last_rcvd_ir{UNK, 0, 0};
-
-bool gpsDebug = false;  // todo set to false, and give it an ui to be able to turn it on / off
 
 #include "led.h"
 

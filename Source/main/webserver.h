@@ -306,6 +306,16 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
             disable_esp_async = false;
             return ESP_OK;
         }
+        if (strcmp((const char*)ws_pkt.payload, "#$##$$#GPSDEBUGON\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
+            // enable async
+            gpsDebug = true;
+            return ESP_OK;
+        }
+        if (strcmp((const char*)ws_pkt.payload, "#$##$$#GPSDEBUGOFF\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
+            // enable async
+            gpsDebug = false;
+            return ESP_OK;
+        }
         PPShellComm::write(ws_pkt.payload, ws_pkt.len, false, true);
         free(buf);
     }
