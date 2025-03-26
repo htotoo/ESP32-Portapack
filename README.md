@@ -4,6 +4,7 @@ An addon module for Portapack H1 / H2 / H4 to add GPS and extra sensors to it fo
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
 
 ## How to build one for yourself, or other questions? Check WIKI!
+If you got the MDK hardware, it has a different pinout, so check the corresponding wiki page for that! Also download the right binary!
 
 
 ### Features:

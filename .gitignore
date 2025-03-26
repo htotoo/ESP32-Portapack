@@ -1,0 +1,22 @@
+# Editor/ IDE files
+*.sublime-project
+*.sublime-workspace
+.vscode
+.idea
+*.swp
+
+# VSCodium extensions
+.history
+
+# Host OS leftovers
+.DS_Store
+/firmware/CMakeCache.txt
+
+# Python env/ venv and cache
+env/
+venv/
+**/__pycache__/
+*.pyc
+
+# Other
+*.bak
