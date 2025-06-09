@@ -29,7 +29,7 @@
       "ninjaArgs": [],
       "buildDirectoryPath": "",
       "sdkconfigDefaults": [],
-      "sdkconfigFilePath": "d:\\fapp\\pp\\esp\\ESP32PP\\Source\\sdkconfig.mdk"
+      "sdkconfigFilePath": "sdkconfig.mdk"
     },
     "env": {},
     "flashBaudRate": "",
