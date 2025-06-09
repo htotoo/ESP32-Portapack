@@ -289,7 +289,7 @@ esp_err_t i2c_slave_new(i2c_slave_config_t* config, i2c_slave_device_t** result)
     // enable interrupts for stretch and receiving, those always stay enabled.
     i2c_ll_slave_enable_scl_stretch(hal->dev, true);
     hal->dev->scl_stretch_conf.stretch_protect_num = 500;
-    i2c_ll_slave_tx_auto_start_en(hal->dev, true);
+    i2c_ll_slave_enable_auto_start(hal->dev, true);
     i2c_ll_slave_enable_rx_it(hal->dev);
     i2c_ll_enable_intr_mask(hal->dev, I2C_SLAVE_STRETCH_INT_ENA_M);
     i2c_ll_update(hal->dev);
