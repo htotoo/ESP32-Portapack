@@ -309,6 +309,7 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
         if (strcmp((const char*)ws_pkt.payload, "#$##$$#GPSDEBUGON\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
             // enable async
             gpsDebug = true;
+            ESP_LOGW("WEB", "GPS_DEBUG enabled");
             return ESP_OK;
         }
         if (strcmp((const char*)ws_pkt.payload, "#$##$$#GPSDEBUGOFF\r\n") == 0) {  // parse here, since we shouldn't sent it to pp

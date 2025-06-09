@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.18</title>
+    <title>ESP32PP v0.19</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -109,7 +109,7 @@
 <body>
     <div class="setupicon"><a href="setup.html">&#9881;</a></div>
 
-    <h1>ESP32 PP v0.18</h1>
+    <h1>ESP32 PP v0.19</h1>
     <div id="connState">WS Connecting...</div>
     <div id="connStatePP">PP not connected to ESP</div>
     <div class="management">
@@ -171,6 +171,7 @@
                 <div id="devGpsSats">Sats: ?</div>
                 Gps debug: <input type="checkbox" id="gpsDebugChk" class="uicontrols"
                     onchange="gpsDebugChkChanged(this)" /> <br />
+                <div id="devGPSDebugRes" style="display: none;"></div>
                 <button onclick="getGPSPosition();" id="btnGps" class="uicontrols">&#128204;</button>
                 <button class="uicontrols" onclick="fileManOpen(); return false;">Open file manager</button>
             </div>
@@ -347,6 +348,10 @@
                         if (irdata.protocol == 4) protocol = "SAM";
                         if (irdata.protocol == 5) protocol = "RC5";
                         log("IR RX: " + protocol + " " + irdata.data.toString(16) + " " + irdata.len + " bits");
+                        return false;
+                    }
+                    if (msg.startsWith("#$##$$#GOTGPSDEBUG")) {
+                        document.getElementById("devGPSDebugRes").innerHTML = msg.substring(19);
                         return false;
                     }
                 }
@@ -835,9 +840,11 @@
         function gpsDebugChkChanged(chk) {
             if (chk.checked) {
                 sendMessage("#$##$$#GPSDEBUGON\r\n");
+                document.getElementById("devGPSDebugRes").style.display = "block";
             }
             else {
                 sendMessage("#$##$$#GPSDEBUGOFF\r\n");
+                document.getElementById("devGPSDebugRes").style.display = "none";
             }
         }
 

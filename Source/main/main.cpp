@@ -38,8 +38,8 @@
 
 #include <driver/temperature_sensor.h>
 
-bool gpsDebug = false;  // todo set to false, and give it an ui to be able to turn it on / off
-
+bool gpsDebug = false;  // set to false, and give it an ui to be able to turn it on / off
+uint8_t gps_debug_limiter = 0;
 #include "webserver.h"
 
 #include "nmea_parser.h"
@@ -415,11 +415,14 @@ static void gps_event_handler(void* event_handler_arg, esp_event_base_t event_ba
             // ESP_LOGW(TAG, "Unknown statement:%s", (char*)event_data);
             break;
         case GPS_DEBUG:
-            // ESP_LOGW(TAG, "NMEA statement:%s", (char*)event_data);
-            // todo pass the debug to web
-            if (gpsDebug && PPShellComm::wait_till_sending(1)) {
-                snprintf(buff, 400, "#$##$$#GOTGPSDEBUG%s\r\n", (char*)event_data);
-                ws_sendall((uint8_t*)buff, strlen(buff), true);
+            // passing debug dat to web. needs rate limit, so wifi won't die.
+            if (gpsDebug && !PPShellComm::getInCommand()) {
+                // ESP_LOGW(TAG, "NMEA statement:%s", (char*)event_data);
+                gps_debug_limiter++;
+                if (gps_debug_limiter % 5 == 0) {
+                    snprintf(buff, 400, "#$##$$#GOTGPSDEBUG%s\r\n", (char*)event_data);
+                    ws_sendall((uint8_t*)buff, strlen(buff), true);
+                };
             }
             break;
         default:
@@ -758,7 +761,7 @@ void app_main(void) {
         }
 
         if (time_millis - last_millis[TimerEntry_SATDOWN] > timer_millis[TimerEntry_SATDOWN]) {
-            if (!downloadedTLE && time_method)  // not yet downloaded, and has valid time
+            if (!downloadedTLE && time_method && WifiM::getWifiStaStatus())  // not yet downloaded, and has valid time, and has wifi
                 download_file_to_spiffs();
             last_millis[TimerEntry_SATDOWN] = time_millis;
         }
