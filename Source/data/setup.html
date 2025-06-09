@@ -5,49 +5,40 @@
     <title>ESP32PP Setup</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="data:,">
-    <style>
-        body {
-            box-sizing: border-box;
-            background-color: #120707;
-            color: white;
-            margin: 0;
-            padding: 3px;
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-
-        h2 {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-    </style>
+    <link rel="stylesheet" href="setup.css">
 </head>
 
 <body>
     <h1>ESP32 PP Setup</h1>
     <form method="post">
-        <p>HostName:
-            <input type="text" maxlength="60" name="wifiHostName" value="%s" /><br />
-        </p>
-        <p>Wifi AP<br />
-            SSID: <input type="text" maxlength="60" name="wifiAPSSID" value="%s" /><br />
-            Pass: <input type="text" maxlength="60" name="wifiAPPASS" value="%s" />
-        </p>
-        <p>Wifi STA<br />
-            SSID: <input type="text" maxlength="60" name="wifiStaSSID" value="%s" /><br />
-            Pass: <input type="text" maxlength="60" name="wifiStaPASS" value="%s" />
-        </p>
-        <p>Misc<br />
-            RGB Brightness %%: <input type="number" min="0" max="100" step="1" name="rgb_brightness" value="%d" /><br />
-            Mag declination angle: <input type="number" min="0" max="365" step="0.1" name="declinationAngle"
-                value="%0.1f" /><br />
+        <div class="form-section">
+            <p>Host Name:</p>
+            <input type="text" maxlength="60" name="wifiHostName" value="%s" />
+        </div>
+        <div class="form-section">
+            <p>Wi-Fi AP</p>
+            <label>SSID:</label>
+            <input type="text" maxlength="60" name="wifiAPSSID" value="%s" />
+            <label>Password:</label>
+            <input type="text" maxlength="60" name="wifiAPPASS" value="%s" />
+        </div>
+        <div class="form-section">
+            <p>Wi-Fi STA</p>
+            <label>SSID:</label>
+            <input type="text" maxlength="60" name="wifiStaSSID" value="%s" />
+            <label>Password:</label>
+            <input type="text" maxlength="60" name="wifiStaPASS" value="%s" />
+        </div>
+        <div class="form-section">
+            <p>Miscellaneous</p>
+            <label>RGB Brightness (%):</label>
+            <input type="number" min="0" max="100" step="1" name="rgb_brightness" value="%d" />
+            <label>Magnetic Declination Angle:</label>
+            <input type="number" min="0" max="365" step="0.1" name="declinationAngle" value="%0.1f" />
             <i>Find Declination angle for your location here: <a
-                    href="https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml"
-                    target="_blank">noaa.gov</a></i><br />
-            GPS baud: <select id="gps_baud">
+                    href="https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml" target="_blank">noaa.gov</a></i>
+            <label style="margin-top: 20px;">GPS Baud Rate:</label>
+            <select id="gps_baud" name="gps_baud">
                 <option value="1200">1200</option>
                 <option value="2400">2400</option>
                 <option value="4800">4800</option>
@@ -57,18 +48,21 @@
                 <option value="57600">57600</option>
                 <option value="115200">115200</option>
             </select>
-            <script>
-                const SELECTEDBAUD = 1200;
-                document.addEventListener('DOMContentLoaded', () => {
-                    document.getElementById('gps_baud').value = '%d';
-                });
-            </script>
-            <br />
-        </p>
-        <input type="submit" name="submit" value="Save" />&nbsp; &nbsp; <a href="/">Cancel</a>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('gps_baud').value = '%d';
+            });
+        </script>
+        <div class="actions">
+            <input type="submit" name="submit" value="Save" />
+            <a href="/">Cancel</a>
+        </div>
     </form>
-    <br /><i>Wifi changes needs rebooting ESP to apply</i><br /><br />
-    <a href="/ota.html" style="font-size:large">OTA update ESP</a>
+    <div class="info-text">
+        Wi-Fi changes require rebooting the ESP to apply.<br />
+        <a href="/ota.html">OTA Update ESP</a>
+    </div>
 </body>
 
 </html>

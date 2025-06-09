@@ -1,58 +1,96 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="en">
 
 <head>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32 OTA Update</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 10px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #bb86fc;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+
+        input[type="file"] {
+            padding: 5px;
+            border-radius: 5px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #333;
+        }
+
+        button {
+            background-color: #03dac6;
+            color: #121212;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            background-color: #018786;
+        }
+
+        #progress {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: #bb86fc;
+        }
+    </style>
     <script>
         function startUpload() {
             var otafile = document.getElementById("otafile").files;
+            if (otafile.length === 0) return alert("No file selected!");
+            document.getElementById("otafile").disabled = true;
+            document.getElementById("upload").disabled = true;
 
-            if (otafile.length == 0) {
-                alert("No file selected!");
-            } else {
-                document.getElementById("otafile").disabled = true;
-                document.getElementById("upload").disabled = true;
-
-                var file = otafile[0];
-                var xhr = new XMLHttpRequest();
-                xhr.onreadystatechange = function () {
-                    if (xhr.readyState == 4) {
-                        if (xhr.status == 200) {
-                            document.open();
-                            document.write(xhr.responseText);
-                            document.close();
-                        } else if (xhr.status == 0) {
-                            alert("Server closed the connection abruptly!");
-                            location.reload()
-                        } else {
-                            alert(xhr.status + " Error!\n" + xhr.responseText);
-                            location.reload()
-                        }
+            var file = otafile[0];
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        document.open();
+                        document.write(xhr.responseText);
+                        document.close();
+                    } else {
+                        alert(xhr.status + " Error!\n" + xhr.responseText);
+                        location.reload();
                     }
-                };
-
-                xhr.upload.onprogress = function (e) {
-                    var progress = document.getElementById("progress");
-                    progress.textContent = "Progress: " + (e.loaded / e.total * 100).toFixed(0) + "%";
-                };
-                xhr.open("POST", "/update", true);
-                xhr.send(file);
-            }
+                }
+            };
+            xhr.upload.onprogress = function (e) {
+                document.getElementById("progress").textContent =
+                    "Progress: " + ((e.loaded / e.total) * 100).toFixed(0) + "%";
+            };
+            xhr.open("POST", "/update", true);
+            xhr.send(file);
         }
     </script>
 </head>
 
 <body>
-    <h1>ESP32 OTA Firmware Update</h1>
-    <div>
-        <label for="otafile">Firmware file:</label>
-        <input type="file" id="otafile" name="otafile" />
-    </div>
-    <div>
-        <button id="upload" type="button" onclick="startUpload()">Upload</button>
-    </div>
+    <h1>OTA Firmware Update</h1>
+    <label for="otafile">Firmware file:</label>
+    <input type="file" id="otafile" />
+    <br><br>
+    <button id="upload" onclick="startUpload()">Upload</button>
     <div id="progress"></div>
 </body>
 

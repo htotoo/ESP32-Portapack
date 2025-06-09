@@ -31,13 +31,16 @@ static bool disable_esp_async = false;  // for example while in file transfer mo
 
 #define INDEX_HTML_PATH "/spiffs/index.html"
 #define SETUP_HTML_PATH "/spiffs/setup.html"
+#define SETUP_CSS_PATH "/spiffs/setup.css"
 #define OTA_HTML_PATH "/spiffs/ota.html"
 
-static char setup_html_out[3000];
+static char setup_html_out[3300];
 extern const char index_start[] asm("_binary_index_html_start");
 extern const char index_end[] asm("_binary_index_html_end");
 extern const char setup_start[] asm("_binary_setup_html_start");
 extern const char setup_end[] asm("_binary_setup_html_end");
+extern const char setupcss_start[] asm("_binary_setup_css_start");
+extern const char setupcss_end[] asm("_binary_setup_css_end");
 extern const char ota_start[] asm("_binary_ota_html_start");
 extern const char ota_end[] asm("_binary_ota_html_end");
 
@@ -45,6 +48,13 @@ extern const char ota_end[] asm("_binary_ota_html_end");
 static esp_err_t get_req_handler(httpd_req_t* req) {
     const uint32_t index_len = index_end - index_start;
     int response = httpd_resp_send(req, index_start, index_len);
+    return response;
+}
+
+static esp_err_t get_req_handler_setupcss(httpd_req_t* req) {
+    const uint32_t setupcss_len = setupcss_end - setupcss_start;
+    httpd_resp_set_type(req, "text/css");
+    int response = httpd_resp_send(req, setupcss_start, setupcss_len);
     return response;
 }
 
@@ -349,6 +359,13 @@ static httpd_handle_t setup_websocket_server(void) {
                                 .is_websocket = false,
                                 .handle_ws_control_frames = false,
                                 .supported_subprotocol = NULL};
+    httpd_uri_t uri_getsetupcss = {.uri = "/setup.css",
+                                   .method = HTTP_GET,
+                                   .handler = get_req_handler_setupcss,
+                                   .user_ctx = NULL,
+                                   .is_websocket = false,
+                                   .handle_ws_control_frames = false,
+                                   .supported_subprotocol = NULL};
     httpd_uri_t uri_getota = {.uri = "/ota.html",
                               .method = HTTP_GET,
                               .handler = get_req_handler_ota,
@@ -375,6 +392,7 @@ static httpd_handle_t setup_websocket_server(void) {
         httpd_register_uri_handler(server, &uri_get);
         httpd_register_uri_handler(server, &uri_getsetup);
         httpd_register_uri_handler(server, &uri_postsetup);
+        httpd_register_uri_handler(server, &uri_getsetupcss);
         httpd_register_uri_handler(server, &uri_getota);
         httpd_register_uri_handler(server, &update_post);
         httpd_register_uri_handler(server, &ws);
