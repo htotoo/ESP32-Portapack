@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.19</title>
+    <title>ESP32PP v0.20</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * {
@@ -174,7 +174,9 @@
             gap: 20px;
         }
 
-        #btnManualSend {
+        #btnManualSend,
+        #btnOpenFlmgr,
+        #bntRefresh {
             background-color: #2196f3;
             color: white;
             padding: 10px 15px;
@@ -184,11 +186,16 @@
             transition: background-color 0.3s;
         }
 
-        #btnManualSend:hover {
+        #btnManualSend:hover,
+        #btnOpenFlmgr:hover,
+        #bntRefresh:hover {
             background-color: #1976d2;
         }
 
-        #btnManualSend:disabled {
+        #btnManualSend:disabled,
+        #btnOpenFlmgr:disabled,
+        #bntRefresh:disabled,
+        #btnGps:disabled {
             background-color: #3a3a3a;
             color: #7a7a7a;
             cursor: not-allowed;
@@ -208,6 +215,19 @@
             border-color: #018786;
         }
 
+        #btnGps {
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #filemanager button {
+            padding: 4px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+
         #fileList {
             min-width: 300px;
         }
@@ -220,7 +240,7 @@
 
 <body>
     <header>
-        <h1>ESP32 PP v0.19</h1>
+        <h1>ESP32 PP v0.20</h1>
         <div class="status">
             <div id="connState">WS Connecting...</div>
             <div id="connStatePP">PP not connected to ESP</div>
@@ -296,7 +316,8 @@
 
             <div>
                 <button onclick="getGPSPosition();" id="btnGps" class="uicontrols">&#128204;</button>
-                <button class="uicontrols" onclick="fileManOpen(); return false;">Open file manager</button>
+                <button class="uicontrols" id="btnOpenFlmgr" onclick="fileManOpen(); return false;">Open file
+                    manager</button>
             </div>
         </section>
 

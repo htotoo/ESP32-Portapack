@@ -1,0 +1,139 @@
+body {
+    box-sizing: border-box;
+    background-color: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 10px;
+    font-family: 'Roboto', sans-serif;
+    line-height: 1.6;
+}
+
+h1 {
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    color: #bb86fc;
+}
+
+form {
+    background-color: #1e1e1e;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    max-width: 600px;
+    margin: auto;
+}
+
+form p {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    width: calc(100% - 20px);
+    border-radius: 5px;
+    padding: 10px;
+    border: none;
+    background-color: #2e2e2e;
+    color: #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    outline: none;
+    border: 2px solid #03dac6;
+}
+
+input[type="submit"] {
+    background-color: #4caf50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+input[type="submit"]:hover {
+    background-color: #388e3c;
+    transform: scale(1.05);
+}
+
+a {
+    color: #2196f3;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.info-text {
+    font-size: 1rem;
+    color: #bdbdbd;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.info-text a {
+    font-size: 1.1rem;
+    color: #bb86fc;
+}
+
+.form-section {
+    margin-bottom: 20px;
+}
+
+.form-section i {
+    font-size: 1rem;
+    display: block;
+    margin-top: 10px;
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.info-text,
+.actions {
+    margin-top: 20px;
+}
+
+.info-text a {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.form-section:last-of-type {
+    margin-top: 20px;
+}
+
+.form-section:last-of-type label {
+    margin-bottom: 15px;
+}
+
+.form-section:last-of-type select {
+    margin-bottom: 10px;
+}
+
+.form-section:last-of-type i {
+    margin-top: 10px;
+    font-size: 0.95rem;
+}

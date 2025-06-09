@@ -7,4 +7,4 @@ idf_component_register(SRCS "tir.cpp" "ppshellcomm.cpp" "wifim.cpp" "led.cpp" "c
 "sgp4/sgp4pred.cpp"
 "sgp4/sgp4unit.cpp"
 "sgp4/visible.cpp"
-INCLUDE_DIRS "." "./sgp4"  EMBED_FILES ../data/index.html ../data/ota.html ../data/setup.html)
+INCLUDE_DIRS "." "./sgp4"  EMBED_FILES ../data/index.html ../data/ota.html ../data/setup.html ../data/setup.css)
