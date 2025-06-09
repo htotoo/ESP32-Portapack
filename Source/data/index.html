@@ -258,9 +258,13 @@
         }
         function gotSensor(data) {
             document.getElementById("devTemp").innerHTML = "Temp: " + data.env.temp + " &#8451;";
-            if (data.gps.lat != 0 && data.gps.lon != 0) {
+            if (data.gps.lat != 200 && data.gps.lon != 200) {
                 document.getElementById("devGpsLat").innerHTML = "Lat: " + data.gps.lat;
                 document.getElementById("devGpsLon").innerHTML = "Lon: " + data.gps.lon;
+            }
+            else {
+                document.getElementById("devGpsLat").innerHTML = "Lat: ? ";
+                document.getElementById("devGpsLon").innerHTML = "Lon: ? ";
             }
             var headstr = "Heading: " + data.ori.head + "&#176;";
             if (data.ori.tilt < 400) headstr += " Tilt: " + data.ori.tilt + "&#176;";
