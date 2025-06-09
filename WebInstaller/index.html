@@ -81,17 +81,23 @@
     <div class="content">
       <h1>ESP32PP web installer</h1>
       <p>This module is in early development.</p>
+      <p>After flashing the device, you may need to wait for some minutes for it to shown up over wifi or in the PP. Give it some time.</p>
 	  <p><a href='https://github.com/htotoo/ESP32-Portapack/' target='_blank'>Source</a> &nbsp; &nbsp;<a href='https://github.com/htotoo/ESP32-Portapack/wiki'>Help</a> &nbsp; &nbsp;<a href='https://discord.gg/Kn6sMPDVrH'>Discord</a></p>
 	  <p><i>This will erease all data and settings!</i></p>
       <p class="button-row" align="center">
-        <esp-web-install-button class="invisible"></esp-web-install-button>
+        ESP32PP HW: <esp-web-install-button  manifest="./manifest.json"></esp-web-install-button> <BR/><BR/><BR/>
+        MDK HW: <esp-web-install-button  manifest="./manifest2.json"></esp-web-install-button> <BR/>
       </p>
 
     </div>
     <script>
-          const button = document.querySelector('esp-web-install-button');
+         /* const button = document.querySelector('esp-web-install-button');
           button.manifest = `./manifest.json`;
           button.classList.remove('invisible');
+		  
+		  const button2 = document.querySelector('esp-web-install-button2');
+          button2.manifest = `./manifest2.json`;
+          button2.classList.remove('invisible');*/
     </script>
   </body>
 </html>
