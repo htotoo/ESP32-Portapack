@@ -1,5 +1,6 @@
 
 #include "displaymanager.hpp"
+#include "display_ssd1306.hpp"
 
 bool DisplayManager::init() {
     uint8_t i2caddr = 0;
@@ -7,8 +8,16 @@ bool DisplayManager::init() {
     // check for sd1306 display
     i2caddr = getDevAddr(SSD1306);
     if (i2caddr != 0) {
-        ESP_LOGE("DisplayManager", "SSD1306 display found!");
-        return true;  // No display found
+        ESP_LOGI("DisplayManager", "SSD1306 display found!");
+        displayMain = new Display_Ssd1306();
+        if (displayMain->init(i2caddr)) {
+            ESP_LOGI("DisplayManager", "SSD1306 display initialized successfully.");
+            return true;
+        } else {
+            ESP_LOGE("DisplayManager", "Failed to initialize SSD1306 display.");
+            delete displayMain;  // Clean up if initialization failed
+            displayMain = nullptr;
+        }
     }
 
     return false;  // No display found
@@ -37,6 +46,7 @@ void DisplayManager::loop(uint32_t currentMillis) {
             if (currDispScreen >= SCREEN_MAX) {
                 currDispScreen = SCREEN_MAIN_INFO;  // reset to main info
             }
+            isDirty = true;
         }
     }
 
