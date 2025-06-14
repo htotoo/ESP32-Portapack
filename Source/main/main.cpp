@@ -65,7 +65,11 @@ uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 #include "../extapps/digitalrain.h"
 #include "../extapps/tirapp.h"
 
+#include "display/displaymanager.hpp"
+
 #define TAG "ESP32PP"
+
+DisplayManager displayManager;
 
 Sgp4 sat;
 
@@ -502,6 +506,7 @@ void app_main(void) {
     init_orientation();  // it loads orientation data too
     init_environment();
 
+    displayManager.init();
     i2c_scan();
 
     PPHandler::set_module_name("ESP32PP");
