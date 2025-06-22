@@ -87,6 +87,25 @@ typedef struct
 
 typedef struct
 {
+    float azimuth;
+    float elevation;
+    uint8_t day;    // data time for setting when the data last updated, and to let user check if it is ok or not
+    uint8_t month;  // lat lon won't sent with this, since it is queried by driver
+    uint16_t year;
+    uint8_t hour;
+    uint8_t minute;
+    uint8_t second;
+    uint8_t sat_day;  // sat last data
+    uint8_t sat_month;
+    uint16_t sat_year;
+    uint8_t sat_hour;
+    float lat;
+    float lon;
+    uint8_t time_method;
+} sattrackdata_t;
+
+typedef struct
+{
     uint32_t api_version;
     uint32_t module_version;
     char module_name[20];

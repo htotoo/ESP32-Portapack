@@ -95,7 +95,6 @@ uint32_t last_millis[TimerEntry_MAX] = {0};
 uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000, 2000, 20000};
 
 orientation_t orientation{400.0, 0.0};
-
 environment_t environment{0.0, 0.0, 0.0};  // temperature, humidity, pressure
 
 float temperatureEsp = 0.0;
@@ -115,24 +114,6 @@ typedef struct
     float lon;
 } sat_mgps_t;
 
-typedef struct
-{
-    float azimuth;
-    float elevation;
-    uint8_t day;    // data time for setting when the data last updated, and to let user check if it is ok or not
-    uint8_t month;  // lat lon won't sent with this, since it is queried by driver
-    uint16_t year;
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
-    uint8_t sat_day;  // sat last data
-    uint8_t sat_month;
-    uint16_t sat_year;
-    uint8_t sat_hour;
-    float lat;
-    float lon;
-    uint8_t time_method;
-} sattrackdata_t;
 sattrackdata_t sattrackdata;
 uint8_t sattrack_task = 0;  // this will set to the main thread what is the current task. 0 = none, 1 = update db, 2 = change sat. each task needs to reset it.
 uint8_t sattrack_task_last_error = 0;
@@ -509,6 +490,7 @@ void app_main(void) {
     displayManager.setGpsDataSource(&gpsdata);
     displayManager.setOrientationDataSource(&orientation);
     displayManager.setEnvironmentDataSource(&environment);
+    displayManager.setSatTrackDataSource(&sattrackdata, &sat_to_track);
     i2c_scan();
 
     PPHandler::set_module_name("ESP32PP");
@@ -759,6 +741,7 @@ void app_main(void) {
                     sattrackdata.time_method = time_method;
                 }
                 last_millis[TimerEntry_SATTRACK] = time_millis;
+                displayManager.setSatTrackDataSource(&sattrackdata, &sat_to_track);  // to update screen is that screen is selected
             } else {
                 sattrackdata.sat_day = 0;
                 sattrackdata.sat_month = 0;

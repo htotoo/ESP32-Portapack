@@ -130,8 +130,22 @@ void DisplayManager::DrawGpsInfo(DisplayGeneric* display) {
 void DisplayManager::DrawSatTrackInfo(DisplayGeneric* display) {
     if (display == nullptr) return;
     display->clear();
-    display->showTitle("Satellite Tracking Info");
-
+    display->showTitle("Satellite Tracking");
+    if (sattrackdata == nullptr || sattrackname == nullptr) {
+        display->showMainText("No sat selected");
+        display->draw();
+        return;
+    }
+    // Limit satellite name to 10+16 characters
+    std::string satName = sattrackname->substr(0, std::min(10 + 16, (int)sattrackname->length()));
+    // Format azimuth and elevation to 2 decimal places
+    char aziStr[8], elevStr[8];
+    snprintf(aziStr, sizeof(aziStr), "%.2f", sattrackdata->azimuth);
+    snprintf(elevStr, sizeof(elevStr), "%.2f", sattrackdata->elevation);
+    std::string satText = "Sat: " + satName + "\n" +
+                          "Azi: " + std::string(aziStr) + "\n" +
+                          "Elev: " + std::string(elevStr) + "\n";
+    display->showMainTextMultiline(satText);
     display->draw();
 }
 
@@ -144,9 +158,13 @@ void DisplayManager::DrawMeasurementInfo(DisplayGeneric* display) {
         display->draw();
         return;
     }
-    std::string measurementText = "Temp: " + std::to_string(environmentdata->temperature) + " C\n" +
-                                  "Hum: " + std::to_string(environmentdata->humidity) + " %\n" +
-                                  "Pres: " + std::to_string(environmentdata->pressure) + " hPa\n";
+    char tempStr[16], humStr[16], presStr[16];
+    snprintf(tempStr, sizeof(tempStr), "%.2f", environmentdata->temperature);
+    snprintf(humStr, sizeof(humStr), "%.2f", environmentdata->humidity);
+    snprintf(presStr, sizeof(presStr), "%.2f", environmentdata->pressure);
+    std::string measurementText = "Temp: " + std::string(tempStr) + " C\n" +
+                                  "Hum: " + std::string(humStr) + " %\n" +
+                                  "Pres: " + std::string(presStr) + " hPa\n";
     display->showMainTextMultiline(measurementText);
     display->draw();
 }

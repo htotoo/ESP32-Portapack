@@ -44,6 +44,13 @@ class DisplayManager {
             isDirty = true;  // mark display as dirty to update
         }
     }
+    void setSatTrackDataSource(sattrackdata_t* sattrackdata, std::string* sattrackname) {
+        this->sattrackdata = sattrackdata;
+        this->sattrackname = sattrackname;
+        if (currDispScreen == SCREEN_SAT_TRACK_INFO) {
+            isDirty = true;  // mark display as dirty to update
+        }
+    }
 
     void setEspState(bool wifi, bool wifi_ap, bool gps, bool pp) {
         bool changed = false;
@@ -94,6 +101,8 @@ class DisplayManager {
     ppgpssmall_t* gpsdata = nullptr;
     orientation_t* orientationdata = nullptr;
     environment_t* environmentdata = nullptr;
+    sattrackdata_t* sattrackdata = nullptr;
+    std::string* sattrackname = nullptr;
 };
 
 #endif  // DISPLAYMANAGER_HPP
