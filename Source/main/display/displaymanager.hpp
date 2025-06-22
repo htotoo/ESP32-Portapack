@@ -44,6 +44,13 @@ class DisplayManager {
             isDirty = true;  // mark display as dirty to update
         }
     }
+
+    void setLightDataSource(uint16_t* lightdata) {
+        this->lightdata = lightdata;
+        if (currDispScreen == SCREEN_MEASUREMENT_INFO) {
+            isDirty = true;  // mark display as dirty to update
+        }
+    }
     void setSatTrackDataSource(sattrackdata_t* sattrackdata, std::string* sattrackname) {
         this->sattrackdata = sattrackdata;
         this->sattrackname = sattrackname;
@@ -101,6 +108,7 @@ class DisplayManager {
     ppgpssmall_t* gpsdata = nullptr;
     orientation_t* orientationdata = nullptr;
     environment_t* environmentdata = nullptr;
+    uint16_t* lightdata = nullptr;
     sattrackdata_t* sattrackdata = nullptr;
     std::string* sattrackname = nullptr;
 };

@@ -130,7 +130,7 @@ void DisplayManager::DrawGpsInfo(DisplayGeneric* display) {
 void DisplayManager::DrawSatTrackInfo(DisplayGeneric* display) {
     if (display == nullptr) return;
     display->clear();
-    display->showTitle("Satellite Tracking");
+    display->showTitle("Sat tracking");
     if (sattrackdata == nullptr || sattrackname == nullptr) {
         display->showMainText("No sat selected");
         display->draw();
@@ -165,6 +165,9 @@ void DisplayManager::DrawMeasurementInfo(DisplayGeneric* display) {
     std::string measurementText = "Temp: " + std::string(tempStr) + " C\n" +
                                   "Hum: " + std::string(humStr) + " %\n" +
                                   "Pres: " + std::string(presStr) + " hPa\n";
+    if (lightdata) {
+        measurementText += "Light: " + std::to_string(*lightdata) + " lx\n";
+    }
     display->showMainTextMultiline(measurementText);
     display->draw();
 }

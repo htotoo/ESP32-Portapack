@@ -490,6 +490,7 @@ void app_main(void) {
     displayManager.setGpsDataSource(&gpsdata);
     displayManager.setOrientationDataSource(&orientation);
     displayManager.setEnvironmentDataSource(&environment);
+    displayManager.setLightDataSource(&light);
     displayManager.setSatTrackDataSource(&sattrackdata, &sat_to_track);
     i2c_scan();
 
