@@ -52,11 +52,67 @@ void DisplayManager::loop(uint32_t currentMillis) {
 
     if (isDirty) {        // maybe needs different level of dirtyness, to avoid redwar everything
         isDirty = false;  // reset dirty flag
-        if (displayMain != nullptr) {
-            ;  // todo
-        }
-        if (displayWs != nullptr) {
-            ;  // todo
+        switch (currDispScreen) {
+            case SCREEN_GPS_INFO:
+                DrawGpsInfo(displayMain);
+                DrawGpsInfo(displayWs);
+                break;
+            case SCREEN_SAT_TRACK_INFO:
+                DrawSatTrackInfo(displayMain);
+                DrawSatTrackInfo(displayWs);
+                break;
+            case SCREEN_MEASUREMENT_INFO:
+                DrawMeasurementInfo(displayMain);
+                DrawMeasurementInfo(displayWs);
+                break;
+            case SCREEN_PP_DATA:
+                DrawPPData(displayMain);
+                DrawPPData(displayWs);
+                break;
+            default:
+            case SCREEN_MAIN_INFO:
+                DrawMainInfo(displayMain);
+                DrawMainInfo(displayWs);
+                break;
         }
     }
+}
+
+void DisplayManager::DrawMainInfo(DisplayGeneric* display) {
+    if (display == nullptr) return;
+    display->clear();
+    display->showTitle("Main Info");
+
+    display->draw();
+}
+
+void DisplayManager::DrawGpsInfo(DisplayGeneric* display) {
+    if (display == nullptr) return;
+    display->clear();
+    display->showTitle("GPS Info");
+
+    display->draw();
+}
+
+void DisplayManager::DrawSatTrackInfo(DisplayGeneric* display) {
+    if (display == nullptr) return;
+    display->clear();
+    display->showTitle("Satellite Tracking Info");
+
+    display->draw();
+}
+
+void DisplayManager::DrawMeasurementInfo(DisplayGeneric* display) {
+    if (display == nullptr) return;
+    display->clear();
+    display->showTitle("Measurement Info");
+
+    display->draw();
+}
+void DisplayManager::DrawPPData(DisplayGeneric* display) {
+    if (display == nullptr) return;
+    display->clear();
+    display->showTitle("PP Data");
+
+    display->draw();
 }

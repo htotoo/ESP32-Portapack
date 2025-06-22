@@ -24,8 +24,36 @@ class DisplayManager {
     bool init();
     void loop(uint32_t currentMillis);
     void setDirty();
+    void setEspState(bool wifi, bool wifi_ap, bool gps, bool pp) {
+        bool changed = false;
+        if (state_wifi != wifi) {
+            state_wifi = wifi;
+            changed = true;
+        }
+        if (state_wifi_ap != wifi_ap) {
+            state_wifi_ap = wifi_ap;
+            changed = true;
+        }
+        if (state_gps != gps) {
+            state_gps = gps;
+            changed = true;
+        }
+        if (state_pp != pp) {
+            state_pp = pp;
+            changed = true;
+        }
+        if (changed) {
+            isDirty = true;  // mark display as dirty to update
+        }
+    }
 
    private:
+    void DrawMainInfo(DisplayGeneric* display);
+    void DrawGpsInfo(DisplayGeneric* display);
+    void DrawSatTrackInfo(DisplayGeneric* display);
+    void DrawMeasurementInfo(DisplayGeneric* display);
+    void DrawPPData(DisplayGeneric* display);
+
     uint32_t time_last_millis_hit = 0;  // when the last loop was called
     uint8_t selectedScreen = SCREEN_ROTATE;
     uint8_t currDispScreen = SCREEN_MAIN_INFO;
@@ -36,6 +64,11 @@ class DisplayManager {
 
     DisplayGeneric* displayMain = nullptr;  // Main display
     DisplayGeneric* displayWs = nullptr;    // WebSocket virtual display //todo
+
+    bool state_wifi = false;
+    bool state_wifi_ap = false;
+    bool state_gps = false;
+    bool state_pp = false;
 };
 
 #endif  // DISPLAYMANAGER_HPP

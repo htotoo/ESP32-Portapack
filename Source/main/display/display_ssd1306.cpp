@@ -18,3 +18,27 @@ bool Display_Ssd1306::init(uint8_t addr) {
 
     return true;
 };
+
+void Display_Ssd1306::clear() {
+    if (dev_hdl != NULL) {
+        ssd1306_clear_display(dev_hdl, false);
+    }
+}
+
+void Display_Ssd1306::showTitle(const std::string& title) {
+    if (dev_hdl != NULL) {
+        ssd1306_display_text(dev_hdl, 2, title.c_str(), false);
+    }
+}
+
+void Display_Ssd1306::showMainText(const std::string& text) {
+    if (dev_hdl != NULL) {
+        ssd1306_display_text(dev_hdl, 4, text.c_str(), false);
+    }
+}
+
+void Display_Ssd1306::draw() {
+    if (dev_hdl != NULL) {
+        ssd1306_display_pages(dev_hdl);
+    }
+}

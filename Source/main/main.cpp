@@ -82,7 +82,7 @@ typedef enum TimerEntry {
     TimerEntry_REPORTPPENVI,
     TimerEntry_REPORTPPTIME,
     TimerEntry_REPORTWEB,
-    TimerEntry_REPORTRGB,
+    TimerEntry_REPORTSTATES,
     TimerEntry_SATTRACK,
     TimerEntry_SATDOWN,
     TimerEntry_MAX
@@ -693,9 +693,10 @@ void app_main(void) {
             }
         }
 
-        if (time_millis - last_millis[TimerEntry_REPORTRGB] > timer_millis[TimerEntry_REPORTRGB]) {
+        if (time_millis - last_millis[TimerEntry_REPORTSTATES] > timer_millis[TimerEntry_REPORTSTATES]) {
             LedFeedback::rgb_set_by_status(PPShellComm::getAnyConnected() | i2p_pp_conn_state, WifiM::getWifiStaStatus(), WifiM::getWifiApClientNum() > 0, gpsdata.latitude != 200 && gpsdata.longitude != 200 && gpsdata.sats_in_use > 2);
-            last_millis[TimerEntry_REPORTRGB] = time_millis;
+            displayManager.setEspState(WifiM::getWifiStaStatus(), WifiM::getWifiApClientNum() > 0, gpsdata.latitude != 200 && gpsdata.longitude != 200 && gpsdata.sats_in_use > 2, PPShellComm::getAnyConnected() | i2p_pp_conn_state);
+            last_millis[TimerEntry_REPORTSTATES] = time_millis;
         }
 
         if (time_millis - last_millis[TimerEntry_SATTRACK] > timer_millis[TimerEntry_SATTRACK]) {
@@ -790,6 +791,7 @@ void app_main(void) {
 
         // try wifi client connect
         WifiM::wifi_loop(time_millis);
+        displayManager.loop(time_millis);
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }
