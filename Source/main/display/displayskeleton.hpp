@@ -2,6 +2,7 @@
 #define _DISPLAY_SKELETON_HPP_
 #include <stdint.h>
 #include <string>
+#include "string.h"
 #include "esp_log.h"
 
 class DisplayGeneric {

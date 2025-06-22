@@ -1,11 +1,16 @@
 
 #include "displaymanager.hpp"
 #include "display_ssd1306.hpp"
+#include "display_ws.hpp"
 
 bool DisplayManager::init() {
     uint8_t i2caddr = 0;
 
-    // todo init ws display
+    // init ws display
+    displayWs = new Display_Ws();
+    displayWs->init(254);
+
+    // init any main displays
 
     // check for sd1306 display
     i2caddr = getDevAddr(SSD1306);
@@ -166,7 +171,7 @@ void DisplayManager::DrawMeasurementInfo(DisplayGeneric* display) {
                                   "Hum: " + std::string(humStr) + " %\n" +
                                   "Pres: " + std::string(presStr) + " hPa\n";
     if (lightdata) {
-        measurementText += "Light: " + std::to_string(*lightdata) + " lx\n";
+        measurementText += "Light: " + std::to_string(*lightdata) + " lx";
     }
     display->showMainTextMultiline(measurementText);
     display->draw();

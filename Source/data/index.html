@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.20</title>
+    <title>ESP32PP v0.21</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * {
@@ -157,12 +157,14 @@
 
 
 
-        #devdatas {
+        #devdatas,
+        #wsDisplay,
+        #manualcommand {
             display: flex;
             flex-direction: column;
             background-color: #1e1e1e;
             border-radius: 10px;
-            padding: 20px;
+            padding: 15px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
             gap: 20px;
         }
@@ -235,12 +237,20 @@
         #fileProgress {
             display: none;
         }
+
+        #wsd_title {
+            display: inline;
+        }
+
+        #wsDisplay {
+            min-height: 252px;
+        }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>ESP32 PP v0.20</h1>
+        <h1>ESP32 PP v0.21</h1>
         <div class="status">
             <div id="connState">WS Connecting...</div>
             <div id="connStatePP">PP not connected to ESP</div>
@@ -310,8 +320,7 @@
                 <div id="devGpsSats">Sats: ?</div>
             </div>
             <div>
-                Gps debug: <input type="checkbox" id="gpsDebugChk" class="uicontrols"
-                    onchange="gpsDebugChkChanged(this)" /></div>
+                Gps debug: <input type="checkbox" id="gpsDebugChk" class="" onchange="gpsDebugChkChanged(this)" /></div>
             <div id="devGPSDebugRes" style="display: none;"></div>
 
             <div>
@@ -320,7 +329,13 @@
                     manager</button>
             </div>
         </section>
+        <section id="wsDisplay">
+            <h2>WSD-<div id="wsd_title">not loaded yet</div>
+            </h2>
 
+            <div id="wsd_maintext"></div>
+
+        </section>
         <section id="manualcommand">
             <h2>Manual Commands</h2>
             <input type="text" id="manualtxt" />
@@ -435,6 +450,13 @@
                 }
             } catch (err) { console.log(err); }
         }
+
+        function escapeHTML(unsafe) {
+            return unsafe.replace(
+                /[\u0000-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u00FF]/g,
+                c => '&#' + ('000' + c.charCodeAt(0)).slice(-4) + ';'
+            )
+        }
         //one line received
         function onMessageLine(msg) {
             try {
@@ -497,6 +519,16 @@
                     }
                     if (msg.startsWith("#$##$$#GOTGPSDEBUG")) {
                         document.getElementById("devGPSDebugRes").innerHTML = msg.substring(19);
+                        return false;
+                    }
+                    if (msg.startsWith("#$##$$#GOTDISPLAYTITLE")) {
+                        document.getElementById("wsd_title").innerHTML = escapeHTML(msg.substring(22));
+                        return false;
+                    }
+                    if (msg.startsWith("#$##$$#GOTDISPLAYMAIN")) {
+                        let tmp = escapeHTML(msg.substring(21));
+                        tmp = tmp.replaceAll("&#0092;n", "<br/>");
+                        document.getElementById("wsd_maintext").innerHTML = tmp;
                         return false;
                     }
                 }
