@@ -468,7 +468,7 @@ esp_err_t ssd1306_display_image(ssd1306_handle_t handle, uint8_t page, uint8_t s
  * @param invert Text is inverted when true.
  * @return esp_err_t ESP_OK on success.
  */
-esp_err_t ssd1306_display_text(ssd1306_handle_t handle, uint8_t page, const char* text, bool invert);
+esp_err_t ssd1306_display_text(ssd1306_handle_t handle, uint8_t page, char* text, bool invert);
 
 /**
  * @brief Displays text x2 larger by page on the SSD1306.

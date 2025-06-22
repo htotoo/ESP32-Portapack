@@ -10,6 +10,7 @@ class Display_Ssd1306 : public DisplayGeneric {
     void clear() override;
     void showTitle(const std::string& title) override;
     void showMainText(const std::string& text) override;
+    void showMainTextMultiline(const std::string& text) override;
     void draw() override;
 
    private:

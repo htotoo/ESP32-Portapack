@@ -760,13 +760,16 @@ err:
     return ret;
 }
 
-esp_err_t ssd1306_display_text(ssd1306_handle_t handle, uint8_t page, const char* text, bool invert) {
+esp_err_t ssd1306_display_text(ssd1306_handle_t handle, uint8_t page, char* text, bool invert) {
     /* validate parameters */
     ESP_ARG_CHECK(handle);
 
     if (page >= handle->pages) return ESP_ERR_INVALID_SIZE;
 
-    if (strnlen(text, SSD1306_TEXT_DISPLAY_MAX_LEN + 1) > SSD1306_TEXT_DISPLAY_MAX_LEN) return ESP_ERR_INVALID_SIZE;
+    if (strnlen(text, SSD1306_TEXT_DISPLAY_MAX_LEN + 1) > SSD1306_TEXT_DISPLAY_MAX_LEN) {
+        text[SSD1306_TEXT_DISPLAY_MAX_LEN - 1] = '\0';  // Ensure null termination at end //todo maybe scroll text instead of truncating
+        // return ESP_ERR_INVALID_SIZE;
+    }
 
     uint8_t seg = 0;
     uint8_t image[8];
@@ -775,7 +778,7 @@ esp_err_t ssd1306_display_text(ssd1306_handle_t handle, uint8_t page, const char
         memcpy(image, font_latin_8x8_tr[(uint8_t)text[i]], 8);
         if (invert) ssd1306_invert_buffer(image, 8);
         if (handle->dev_config.flip_enabled) ssd1306_flip_buffer(image, 8);
-        ESP_RETURN_ON_ERROR(ssd1306_display_image(handle, page, seg, image, 8), TAG, "display image for display text failed");
+        ssd1306_display_image(handle, page, seg, image, 8);
         seg = seg + 8;
     }
 
@@ -1428,12 +1431,6 @@ esp_err_t ssd1306_init(i2c_dev_t master_handle, const ssd1306_config_t* ssd1306_
     /* copy configuration */
     out_handle->dev_config = *ssd1306_config;
     out_handle->i2c_handle = master_handle;
-    /* set device configuration */
-    const i2c_device_config_t i2c_dev_conf = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = out_handle->dev_config.i2c_address,
-        .scl_speed_hz = out_handle->dev_config.i2c_clock_speed,
-    };
 
     /* set panel properties */
     out_handle->width = ssd1306_panel_properties[out_handle->dev_config.panel_size].width;

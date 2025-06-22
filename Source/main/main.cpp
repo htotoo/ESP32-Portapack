@@ -507,6 +507,7 @@ void app_main(void) {
     init_environment();
 
     displayManager.init();
+    displayManager.setGpsDataSource(&gpsdata);
     i2c_scan();
 
     PPHandler::set_module_name("ESP32PP");

@@ -11,6 +11,7 @@ class DisplayGeneric {
     virtual void clear() = 0;                              // Clear the display
     virtual void showTitle(const std::string& title) = 0;  // Show a title on the display
     virtual void showMainText(const std::string& text) = 0;
+    virtual void showMainTextMultiline(const std::string& text) = 0;
 
     virtual void draw() = 0;
 

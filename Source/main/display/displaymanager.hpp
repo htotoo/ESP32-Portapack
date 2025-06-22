@@ -7,6 +7,7 @@
 #include "esp_log.h"
 #include "displayskeleton.hpp"
 #include "../sensordb.h"
+#include "../ppi2c/pp_structures.hpp"
 
 enum ScreenType : uint8_t {
     SCREEN_ROTATE = 0,
@@ -24,6 +25,9 @@ class DisplayManager {
     bool init();
     void loop(uint32_t currentMillis);
     void setDirty();
+    void setGpsDataSource(ppgpssmall_t* gpsdata) {
+        this->gpsdata = gpsdata;
+    }
     void setEspState(bool wifi, bool wifi_ap, bool gps, bool pp) {
         bool changed = false;
         if (state_wifi != wifi) {
@@ -56,7 +60,7 @@ class DisplayManager {
 
     uint32_t time_last_millis_hit = 0;  // when the last loop was called
     uint8_t selectedScreen = SCREEN_ROTATE;
-    uint8_t currDispScreen = SCREEN_MAIN_INFO;
+    uint8_t currDispScreen = SCREEN_ROTATE;
     uint8_t rotationSpeed = 5;  // how many seconds to wait before rotating the screen
     uint8_t rotationTimer = 0;  // sec since last rotation
 
@@ -69,6 +73,8 @@ class DisplayManager {
     bool state_wifi_ap = false;
     bool state_gps = false;
     bool state_pp = false;
+
+    ppgpssmall_t* gpsdata = nullptr;  // Pointer to GPS data, can be set by the main application
 };
 
 #endif  // DISPLAYMANAGER_HPP

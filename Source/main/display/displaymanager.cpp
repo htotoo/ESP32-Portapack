@@ -5,6 +5,8 @@
 bool DisplayManager::init() {
     uint8_t i2caddr = 0;
 
+    // todo init ws display
+
     // check for sd1306 display
     i2caddr = getDevAddr(SSD1306);
     if (i2caddr != 0) {
@@ -38,6 +40,7 @@ void DisplayManager::loop(uint32_t currentMillis) {
         return;  // Nothing to do
     }
 
+    // check if rotation needed
     if (selectedScreen == SCREEN_ROTATE) {
         rotationTimer++;
         if (rotationTimer >= rotationSpeed) {
@@ -50,6 +53,7 @@ void DisplayManager::loop(uint32_t currentMillis) {
         }
     }
 
+    // check if draw is needed
     if (isDirty) {        // maybe needs different level of dirtyness, to avoid redwar everything
         isDirty = false;  // reset dirty flag
         switch (currDispScreen) {
@@ -82,7 +86,11 @@ void DisplayManager::DrawMainInfo(DisplayGeneric* display) {
     if (display == nullptr) return;
     display->clear();
     display->showTitle("Main Info");
-
+    std::string mainText = "Wifi: " + std::string(state_wifi ? "+" : "-") + "\n" +
+                           "AP: " + std::string(state_wifi_ap ? "+" : "-") + "\n" +
+                           "GPS: " + std::string(state_gps ? "+" : "-") + "\n" +
+                           "PP: " + std::string(state_pp ? "+" : "-");
+    display->showMainTextMultiline(mainText);
     display->draw();
 }
 
@@ -90,7 +98,20 @@ void DisplayManager::DrawGpsInfo(DisplayGeneric* display) {
     if (display == nullptr) return;
     display->clear();
     display->showTitle("GPS Info");
-
+    std::string gpsText = "";
+    if (!gpsdata || (gpsdata->latitude == 200 && gpsdata->longitude == 200) || (gpsdata->latitude == 0 && gpsdata->longitude == 0)) {
+        gpsText = "No GPS data.";
+    } else {
+        char latStr[16], lonStr[16], altStr[16];
+        snprintf(latStr, sizeof(latStr), "%.5f", gpsdata->latitude);
+        snprintf(lonStr, sizeof(lonStr), "%.5f", gpsdata->longitude);
+        snprintf(altStr, sizeof(altStr), "%.1f", gpsdata->altitude);
+        gpsText = "Lat: " + std::string(latStr) + "\n" +
+                  "Lon: " + std::string(lonStr) + "\n" +
+                  "Alt: " + std::string(altStr) + " m\n" +
+                  "Sats: " + std::to_string(gpsdata->sats_in_use);
+    }
+    display->showMainTextMultiline(gpsText);
     display->draw();
 }
 
