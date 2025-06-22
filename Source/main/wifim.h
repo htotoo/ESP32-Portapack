@@ -26,6 +26,7 @@
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "mdns.h"
+#include <string>
 
 #define CONFIG_AP_MAX_STA_CONN 4
 #define WIFI_CLIENR_RC_TIME 35000
@@ -41,6 +42,8 @@ class WifiM {
     static int getWifiApClientNum();
     static void save_config_wifi();
     static void load_config_wifi();
+    static std::string getStaIp();
+    static std::string getApIp();
 
     static char wifiAPSSID[64];
     static char wifiAPPASS[64];

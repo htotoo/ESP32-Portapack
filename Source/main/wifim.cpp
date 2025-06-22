@@ -173,3 +173,27 @@ void WifiM::save_config_wifi() {
         ESP_LOGI("CONFIG", "save_config_wifi ok");
     }
 }
+
+std::string WifiM::getStaIp() {
+    esp_netif_t* sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (sta_netif) {
+        esp_netif_ip_info_t ipinfo;
+        esp_netif_get_ip_info(sta_netif, &ipinfo);
+        char ip_str[16];
+        snprintf(ip_str, sizeof(ip_str), IPSTR, IP2STR((esp_ip4_addr_t*)&ipinfo.ip));
+        return std::string(ip_str);
+    }
+    return std::string("-");
+}
+
+std::string WifiM::getApIp() {
+    esp_netif_t* ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    if (ap_netif) {
+        esp_netif_ip_info_t ipinfo;
+        esp_netif_get_ip_info(ap_netif, &ipinfo);
+        char ip_str[16];
+        snprintf(ip_str, sizeof(ip_str), IPSTR, IP2STR((esp_ip4_addr_t*)&ipinfo.ip));
+        return std::string(ip_str);
+    }
+    return std::string("-");
+}
