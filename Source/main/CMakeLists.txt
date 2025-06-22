@@ -11,4 +11,5 @@ idf_component_register(SRCS "tir.cpp" "ppshellcomm.cpp" "wifim.cpp" "led.cpp" "c
 "drivers/ssd1306.c" 
 "display/displaymanager.cpp"
 "display/display_ssd1306.cpp"
+"display/display_ws.cpp"
 INCLUDE_DIRS "." "./sgp4"  EMBED_FILES ../data/index.html ../data/ota.html ../data/setup.html ../data/setup.css)
