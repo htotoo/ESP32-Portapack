@@ -8,6 +8,7 @@
 #include "displayskeleton.hpp"
 #include "../sensordb.h"
 #include "../ppi2c/pp_structures.hpp"
+#include "../wifim.h"
 
 enum ScreenType : uint8_t {
     SCREEN_ROTATE = 0,
@@ -27,7 +28,23 @@ class DisplayManager {
     void setDirty();
     void setGpsDataSource(ppgpssmall_t* gpsdata) {
         this->gpsdata = gpsdata;
+        if (currDispScreen == SCREEN_GPS_INFO) {
+            isDirty = true;  // mark display as dirty to update
+        }
     }
+    void setOrientationDataSource(orientation_t* orientationdata) {
+        this->orientationdata = orientationdata;
+        if (currDispScreen == SCREEN_GPS_INFO) {
+            isDirty = true;  // mark display as dirty to update
+        }
+    }
+    void setEnvironmentDataSource(environment_t* environmentdata) {
+        this->environmentdata = environmentdata;
+        if (currDispScreen == SCREEN_MEASUREMENT_INFO) {
+            isDirty = true;  // mark display as dirty to update
+        }
+    }
+
     void setEspState(bool wifi, bool wifi_ap, bool gps, bool pp) {
         bool changed = false;
         if (state_wifi != wifi) {
@@ -74,7 +91,9 @@ class DisplayManager {
     bool state_gps = false;
     bool state_pp = false;
 
-    ppgpssmall_t* gpsdata = nullptr;  // Pointer to GPS data, can be set by the main application
+    ppgpssmall_t* gpsdata = nullptr;
+    orientation_t* orientationdata = nullptr;
+    environment_t* environmentdata = nullptr;
 };
 
 #endif  // DISPLAYMANAGER_HPP

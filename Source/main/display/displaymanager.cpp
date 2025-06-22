@@ -90,6 +90,12 @@ void DisplayManager::DrawMainInfo(DisplayGeneric* display) {
                            "AP: " + std::string(state_wifi_ap ? "+" : "-") + "\n" +
                            "GPS: " + std::string(state_gps ? "+" : "-") + "\n" +
                            "PP: " + std::string(state_pp ? "+" : "-");
+    if (state_wifi) {
+        mainText += "\nIP:\n" + WifiM::getStaIp();
+    }
+    if (state_wifi_ap) {
+        mainText += "\nIP:\n" + WifiM::getApIp();
+    }
     display->showMainTextMultiline(mainText);
     display->draw();
 }
@@ -111,6 +117,12 @@ void DisplayManager::DrawGpsInfo(DisplayGeneric* display) {
                   "Alt: " + std::string(altStr) + " m\n" +
                   "Sats: " + std::to_string(gpsdata->sats_in_use);
     }
+    if (orientationdata) {
+        char angleStr[6], tiltStr[6];
+        snprintf(angleStr, sizeof(angleStr), "%.1f", orientationdata->angle);
+        snprintf(tiltStr, sizeof(tiltStr), "%.1f", orientationdata->tilt);
+        gpsText += "\nHead: " + std::string(angleStr) + "\nTilt: " + std::string(tiltStr);
+    }
     display->showMainTextMultiline(gpsText);
     display->draw();
 }
@@ -127,13 +139,21 @@ void DisplayManager::DrawMeasurementInfo(DisplayGeneric* display) {
     if (display == nullptr) return;
     display->clear();
     display->showTitle("Measurement Info");
-
+    if (environmentdata == nullptr || (environmentdata->temperature == 0 && environmentdata->humidity == 0 && environmentdata->pressure == 0)) {
+        display->showMainText("No meas data.");
+        display->draw();
+        return;
+    }
+    std::string measurementText = "Temp: " + std::to_string(environmentdata->temperature) + " C\n" +
+                                  "Hum: " + std::to_string(environmentdata->humidity) + " %\n" +
+                                  "Pres: " + std::to_string(environmentdata->pressure) + " hPa\n";
+    display->showMainTextMultiline(measurementText);
     display->draw();
 }
 void DisplayManager::DrawPPData(DisplayGeneric* display) {
     if (display == nullptr) return;
     display->clear();
     display->showTitle("PP Data");
-
+    display->showMainTextMultiline("Not implemented yet.");
     display->draw();
 }

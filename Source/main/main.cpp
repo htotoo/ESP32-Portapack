@@ -94,12 +94,11 @@ uint32_t last_millis[TimerEntry_MAX] = {0};
 // ______________________________________SEN    GPS  ORI    ENV   TIME        WEB   RGB   SAT    DOWN
 uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000, 2000, 20000};
 
-float heading = 400.0;
-float tilt = 0.0;
+orientation_t orientation{400.0, 0.0};
+
+environment_t environment{0.0, 0.0, 0.0};  // temperature, humidity, pressure
+
 float temperatureEsp = 0.0;
-float temperature = 0.0;
-float humidity = 0.0;
-float pressure = 0.0;
 uint16_t light = 0;
 ppgpssmall_t gpsdata{200, 200, 0, 0, 0, 0, {}, {}};
 bool gotAnyGps = false;
@@ -508,6 +507,8 @@ void app_main(void) {
 
     displayManager.init();
     displayManager.setGpsDataSource(&gpsdata);
+    displayManager.setOrientationDataSource(&orientation);
+    displayManager.setEnvironmentDataSource(&environment);
     i2c_scan();
 
     PPHandler::set_module_name("ESP32PP");
@@ -523,13 +524,13 @@ void app_main(void) {
     PPHandler::set_get_gps_data_CB([](ppgpssmall_t& gpsdata_) { gpsdata_ = gpsdata; i2c_pp_last_comm_time = time_millis; });
 
     PPHandler::set_get_orientation_data_CB([](orientation_t& ori) {
-                                                ori.angle = heading;
-                                                ori.tilt = tilt; i2c_pp_last_comm_time = time_millis; });
+                                                ori.angle = orientation.angle;
+                                                ori.tilt = orientation.tilt; i2c_pp_last_comm_time = time_millis; });
     PPHandler::set_get_environment_data_CB([](environment_t& env) { 
                                                 i2c_pp_last_comm_time = time_millis;
-                                                env.temperature = temperature;
-                                                env.humidity = humidity;
-                                                env.pressure = pressure; });
+                                                env.temperature = environment.temperature;
+                                                env.humidity = environment.humidity;
+                                                env.pressure = environment.pressure; });
     PPHandler::set_get_light_data_CB([](uint16_t& light) { light = light; });
 
     PPHandler::add_custom_command(PPCMD_SATTRACK_DATA, nullptr, [](pp_command_data_t data) {
@@ -616,11 +617,11 @@ void app_main(void) {
         // GET ALL SENSOR DATA
         if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET]) {
             // GPS IS AUTO
-            ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp));  // TEMPINT
-            heading = get_heading_degrees();                                                // ORIENTATION
-            tilt = get_tilt();                                                              // TILT
-            get_environment_meas(&temperature, &pressure, &humidity);                       // env data
-            get_environment_light(&light);                                                  // light (lux) data
+            ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperatureEsp));                 // TEMPINT
+            orientation.angle = get_heading_degrees();                                                     // ORIENTATION
+            orientation.tilt = get_tilt();                                                                 // TILT
+            get_environment_meas(&environment.temperature, &environment.pressure, &environment.humidity);  // env data
+            get_environment_light(&light);                                                                 // light (lux) data
             last_millis[TimerEntry_SENSORGET] = time_millis;
         }
 
@@ -636,8 +637,8 @@ void app_main(void) {
                      "}\r\n",
                      gpsdata.date.year + YEAR_BASE, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour + TIME_ZONE, gpsdata.tim.minute, gpsdata.tim.second,
                      gpsdata.sats_in_use, gpsdata.sats_in_view, gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed,
-                     heading, tilt,
-                     temperatureEsp, temperature, humidity, pressure, light);
+                     orientation.angle, orientation.tilt,
+                     temperatureEsp, environment.temperature, environment.humidity, environment.pressure, light);
             ws_sendall((uint8_t*)buff, strlen(buff), true);
             last_millis[TimerEntry_REPORTWEB] = time_millis;
         }
@@ -656,26 +657,28 @@ void app_main(void) {
             }
         }
         if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI])) {
-            if (heading < 400)  // got heading data
+            if (orientation.angle < 400)  // got orientation data
             {
-                snprintf(gotusb, 290, "gotorientation %.01f %.01f\r\n", heading, tilt);
+                snprintf(gotusb, 290, "gotorientation %.01f %.01f\r\n", orientation.angle, orientation.tilt);
                 ESP_LOGI(TAG, "%s", gotusb);
                 if (PPShellComm::wait_till_sending(1)) {
                     PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
                     ESP_LOGI(TAG, "gotorientation sent");
                 }
+                displayManager.setOrientationDataSource(&orientation);  // to update screen is that screen is selected
                 last_millis[TimerEntry_REPORTPPORI] = time_millis;
             }
         }
         if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPENVI] > timer_millis[TimerEntry_REPORTPPENVI])) {
-            if (heading < 400)  // got heading data
+            if (environment.temperature != 0 || environment.humidity != 0 || environment.pressure != 0 || light != 0)  // got env data
             {
-                snprintf(gotusb, 290, "gotenv %.02f %.01f %.02f %d\r\n", temperature, humidity, pressure, light);
+                snprintf(gotusb, 290, "gotenv %.02f %.01f %.02f %d\r\n", environment.temperature, environment.humidity, environment.pressure, light);
                 ESP_LOGI(TAG, "%s", gotusb);
                 if (PPShellComm::wait_till_sending(1)) {
                     PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
                     ESP_LOGI(TAG, "gotenv sent");
                 }
+                displayManager.setEnvironmentDataSource(&environment);  // to update screen is that screen is selected
                 last_millis[TimerEntry_REPORTPPENVI] = time_millis;
             }
         }
