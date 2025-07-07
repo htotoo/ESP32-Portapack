@@ -44,6 +44,36 @@ extern const char setupcss_end[] asm("_binary_setup_css_end");
 extern const char ota_start[] asm("_binary_ota_html_start");
 extern const char ota_end[] asm("_binary_ota_html_end");
 
+static int hex_to_int(char c) {
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    }
+    if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    }
+    return 0;
+}
+
+// Function to decode a URL-encoded string
+std::string url_decode(const std::string& encoded_string) {
+    std::string decoded_string;
+    for (size_t i = 0; i < encoded_string.length(); ++i) {
+        if (encoded_string[i] == '%' && i + 2 < encoded_string.length() && isxdigit(encoded_string[i + 1]) && isxdigit(encoded_string[i + 2])) {
+            int high = hex_to_int(encoded_string[++i]);
+            int low = hex_to_int(encoded_string[++i]);
+            decoded_string += static_cast<char>((high << 4) | low);
+        } else if (encoded_string[i] == '+') {
+            decoded_string += ' ';
+        } else {
+            decoded_string += encoded_string[i];
+        }
+    }
+    return decoded_string;
+}
+
 // root / get handler.
 static esp_err_t get_req_handler(httpd_req_t* req) {
     const uint32_t index_len = index_end - index_start;
@@ -120,15 +150,15 @@ static esp_err_t post_req_handler_setup(httpd_req_t* req) {
     uint8_t changeMask = 1;  // wifi
 
     if (find_post_value((char*)"wifiHostName=", buf, tmp) > 0)
-        strcpy(WifiM::wifiHostName, tmp);
+        strcpy(WifiM::wifiHostName, url_decode(tmp).c_str());
     if (find_post_value((char*)"wifiAPSSID=", buf, tmp) > 0)
-        strcpy(WifiM::wifiAPSSID, tmp);
+        strcpy(WifiM::wifiAPSSID, url_decode(tmp).c_str());
     if (find_post_value((char*)"wifiAPPASS=", buf, tmp) > 0)
-        strcpy(WifiM::wifiAPPASS, tmp);
+        strcpy(WifiM::wifiAPPASS, url_decode(tmp).c_str());
     if (find_post_value((char*)"wifiStaSSID=", buf, tmp) > 0)
-        strcpy(WifiM::wifiStaSSID, tmp);
+        strcpy(WifiM::wifiStaSSID, url_decode(tmp).c_str());
     if (find_post_value((char*)"wifiStaPASS=", buf, tmp) > 0)
-        strcpy(WifiM::wifiStaPASS, tmp);
+        strcpy(WifiM::wifiStaPASS, url_decode(tmp).c_str());
 
     if (find_post_value((char*)"rgb_brightness=", buf, tmp) > 0) {
         uint8_t rgb_brightness = (uint8_t)atoi(tmp);
