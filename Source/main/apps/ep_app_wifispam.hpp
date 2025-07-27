@@ -35,7 +35,7 @@ class EPAppWifiSpam : public EPApp {
    private:
     void sendBeacon(std::string ssid, uint8_t macid);
     void randomizeBeaconSrcMac(uint8_t* beacon_raw, uint8_t macid);
-    uint8_t current_mode = 1;  // standby, 1 = random chars, 2 = Rick Roll
+    uint8_t current_mode = 0;  // standby, 1 = random chars, 2 = Rick Roll
     uint8_t ricknum = 0;
     uint32_t lastBeaconTime = 0;
 
