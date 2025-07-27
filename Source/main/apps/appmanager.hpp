@@ -3,6 +3,8 @@
 
 #include "ep_app.hpp"
 
+#define APPMGR_PRE_STR "#$##$$$"
+
 // Enum for the list of applications, please keep the order. This is used in several different places.
 enum class AppList {
     NONE,
@@ -33,8 +35,11 @@ class AppManager {
 
     static void handleDisplayRequest(DisplayGeneric* display);
 
+    static void sendCurrentAppToWeb();
+
    private:
     static EPApp* currentApp;
+    static uint16_t currentAppId;
 };
 
 #endif  // APPMANAGER_HPP

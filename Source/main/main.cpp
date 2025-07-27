@@ -11,6 +11,7 @@
 
 // todo add an option to disable rtc set (bc utc only)
 // todo add +- time
+// todo move sattrack to EP_App format
 
 // rgb led: GPIO48 on ESP S3. set to -1 to disable
 #define RGB_LED_PIN 48
