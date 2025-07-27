@@ -1,12 +1,10 @@
 #include "appmanager.hpp"
+
 void SetDisplayDirtyMain();
 EPApp* AppManager::currentApp = nullptr;
 
 void AppManager::startApp(AppList app) {
-    if (currentApp != nullptr) {
-        delete currentApp;  // Clean up previous app
-        currentApp = nullptr;
-    }
+    stopApp();
     switch (app) {
         case AppList::WIFISPAM:
 
@@ -22,7 +20,6 @@ void AppManager::startApp(AppList app) {
             currentApp = nullptr;
             break;
     }
-    SetDisplayDirtyMain();
 }
 
 void AppManager::loop(uint32_t currentMillis) {
@@ -31,10 +28,20 @@ void AppManager::loop(uint32_t currentMillis) {
     }
 }
 
-bool AppManager::handlePPData(std::string& data) {
+// IRQ CALLBACK!!!!!
+bool AppManager::handlePPData(uint16_t command, std::vector<uint8_t>& data) {
     // todo check if the data is for me
     if (currentApp) {
-        return currentApp->OnPPData(data);
+        return currentApp->OnPPData(command, data);
+    }
+    return false;
+}
+
+// IRQ CALLBACK!!!!!
+bool AppManager::handlePPReqData(uint16_t command, std::vector<uint8_t>& data) {
+    // todo check if the data is for me
+    if (currentApp) {
+        return currentApp->OnPPReqData(command, data);
     }
     return false;
 }

@@ -14,7 +14,8 @@ class EPApp {
    public:
     virtual ~EPApp() = 0;
 
-    virtual bool OnPPData(std::string& data);
+    virtual bool OnPPData(uint16_t command, std::vector<uint8_t>& data);     // IRQ CALLBACK!!!
+    virtual bool OnPPReqData(uint16_t command, std::vector<uint8_t>& data);  // IRQ CALLBACK!!!
     virtual bool OnWebData(std::string& data);
     virtual void OnDisplayRequest(DisplayGeneric* display) {};
     virtual void Loop(uint32_t currentMillis) {};
@@ -23,7 +24,7 @@ class EPApp {
     bool SendDataToWeb(const std::string& data) {
         return ws_sendall((uint8_t*)data.c_str(), data.size(), true);
     }
-    bool SendDataToPP(const std::string& data) {
+    bool SendDataToPPShell(const std::string& data) {
         if (PPShellComm::wait_till_sending(50)) {
             PPShellComm::write_blocking((uint8_t*)data.c_str(), data.size(), true, false);
         }

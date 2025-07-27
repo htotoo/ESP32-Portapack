@@ -3,6 +3,7 @@
 
 #include "ep_app.hpp"
 
+// Enum for the list of applications, please keep the order. This is used in several different places.
 enum class AppList {
     NONE,
     WIFISPAM,
@@ -25,7 +26,8 @@ class AppManager {
 
     static EPApp* getCurrentApp() { return currentApp; }
 
-    static bool handlePPData(std::string& data);
+    static bool handlePPData(uint16_t command, std::vector<uint8_t>& data);
+    static bool handlePPReqData(uint16_t command, std::vector<uint8_t>& data);
 
     static bool handleWebData(const char* data, size_t len);
 
