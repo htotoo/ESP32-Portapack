@@ -66,6 +66,7 @@ uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 #include "../extapps/tirapp.h"
 
 #include "display/displaymanager.hpp"
+#include "apps/appmanager.hpp"
 
 #define TAG "ESP32PP"
 
