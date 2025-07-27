@@ -3,38 +3,33 @@
 
 #include "ep_app.hpp"
 
+enum class AppList {
+    NONE,
+    WIFISPAM,
+    WIFILIST,
+    WIFIPROBESNIFFER,
+    MAX
+};
+
 class AppManager {
    public:
     static void init() {
         currentApp = nullptr;
     }
 
-    static EPApp* getCurrentApp() {
-        return currentApp;
-    }
+    static void startApp(AppList app);
 
-    static bool handlePPData(std::string& data) {
-        if (currentApp) {
-            return currentApp->OnPPData(data);
-        }
-        return false;
-    }
+    static void stopApp();
 
-    static bool handleWebData(std::string& data) {
-        if (currentApp) {
-            return currentApp->OnWebData(data);
-        }
-        return false;
-    }
+    static void loop(uint32_t currentMillis);
 
-    static void handleDisplayRequest(DisplayGeneric* display) {
-        if (currentApp) {
-            currentApp->OnDisplayRequest(display);
-        } else {
-            display->showTitle("App");
-            display->showMainText("No app running");
-        }
-    }
+    static EPApp* getCurrentApp() { return currentApp; }
+
+    static bool handlePPData(std::string& data);
+
+    static bool handleWebData(const char* data, size_t len);
+
+    static void handleDisplayRequest(DisplayGeneric* display);
 
    private:
     static EPApp* currentApp;

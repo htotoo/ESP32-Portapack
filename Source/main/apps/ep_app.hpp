@@ -8,6 +8,7 @@
 #include "display/displayskeleton.hpp"
 
 bool ws_sendall(uint8_t* data, size_t len, bool asyncmsg);
+void SetDisplayDirtyMain();
 
 class EPApp {
    public:
@@ -16,6 +17,7 @@ class EPApp {
     virtual bool OnPPData(std::string& data);
     virtual bool OnWebData(std::string& data);
     virtual void OnDisplayRequest(DisplayGeneric* display) {};
+    virtual void Loop(uint32_t currentMillis) {};
 
    protected:
     bool SendDataToWeb(const std::string& data) {
@@ -26,6 +28,9 @@ class EPApp {
             PPShellComm::write_blocking((uint8_t*)data.c_str(), data.size(), true, false);
         }
         return false;
+    }
+    void SetDisplayDirty() {
+        SetDisplayDirtyMain();
     }
 };
 

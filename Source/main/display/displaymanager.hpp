@@ -82,6 +82,13 @@ class DisplayManager {
         }
     }
 
+    uint8_t getDisplayCount() {
+        uint8_t cnt = 0;
+        if (displayMain) cnt++;
+        if (displayWs) cnt++;
+        return cnt;
+    }
+
    private:
     void DrawMainInfo(DisplayGeneric* display);
     void DrawGpsInfo(DisplayGeneric* display);
