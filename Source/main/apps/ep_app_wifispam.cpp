@@ -41,12 +41,14 @@ void EPAppWifiSpam::sendBeacon(std::string ssid, uint8_t macid) {
     beacon[OFFSET_BEACON_SEQNUM] = (seq << 4) & 0xF0;
     beacon[OFFSET_BEACON_SEQNUM + 1] = (seq >> 4) & 0xFF;
 
+    // esp_wifi_80211_tx(WIFI_IF_AP, beacon, 90 + ssid.size(), false);
+    // vTaskDelay(1 / portTICK_PERIOD_MS);
     esp_wifi_80211_tx(WIFI_IF_AP, beacon, 90 + ssid.size(), false);
 }
 
 void EPAppWifiSpam::Loop(uint32_t currentMillis) {
     if (current_mode == 0) return;  // Standby mode, do nothing
-    if (currentMillis - lastBeaconTime > 15) {
+    if (currentMillis - lastBeaconTime > 10) {
         if (current_mode == 1) {  // Random characters mode
             std::string ssid;
             uint8_t len = esp_random() % 31 + 1;

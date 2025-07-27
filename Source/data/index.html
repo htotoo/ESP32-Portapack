@@ -253,6 +253,13 @@
             font-size: 1rem;
             cursor: pointer;
         }
+
+        .espAppCnt button {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -352,7 +359,8 @@
                 <button onclick="sendMessage('#$##$$$02\r\n')">Wifi list</button>
                 <button onclick="sendMessage('#$##$$$03\r\n')">Wifi probe sniffer</button>
             </div>
-            <div id="espAppDT1">
+            <div id="espAppDT1" class="espAppCnt" style="display: none;">
+                <h3>Wifi spam</h3>
                 <button onclick="sendMessage('#$$#$$$10\r\n')">Standby mode</button>
                 <button onclick="sendMessage('#$$#$$$11\r\n')">Random mode</button>
                 <button onclick="sendMessage('#$$#$$$12\r\n')">Rick Roll mode</button>
