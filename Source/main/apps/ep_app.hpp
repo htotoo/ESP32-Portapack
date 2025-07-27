@@ -12,11 +12,11 @@ void SetDisplayDirtyMain();
 
 class EPApp {
    public:
-    virtual ~EPApp() = 0;
+    virtual ~EPApp() = default;
 
-    virtual bool OnPPData(uint16_t command, std::vector<uint8_t>& data);     // IRQ CALLBACK!!!
-    virtual bool OnPPReqData(uint16_t command, std::vector<uint8_t>& data);  // IRQ CALLBACK!!!
-    virtual bool OnWebData(std::string& data);
+    virtual bool OnPPData(uint16_t command, std::vector<uint8_t>& data) { return false; };     // IRQ CALLBACK!!!
+    virtual bool OnPPReqData(uint16_t command, std::vector<uint8_t>& data) { return false; };  // IRQ CALLBACK!!!
+    virtual bool OnWebData(std::string& data) { return false; };
     virtual void OnDisplayRequest(DisplayGeneric* display) {};
     virtual void Loop(uint32_t currentMillis) {};
 

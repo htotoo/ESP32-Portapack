@@ -1,5 +1,7 @@
 #include "appmanager.hpp"
 
+#include "ep_app_wifispam.hpp"
+
 void SetDisplayDirtyMain();
 EPApp* AppManager::currentApp = nullptr;
 uint16_t AppManager::currentAppId = 0;
@@ -8,6 +10,7 @@ void AppManager::startApp(AppList app) {
     stopApp();
     switch (app) {
         case AppList::WIFISPAM:
+            currentApp = new EPAppWifiSpam();
             currentAppId = (uint16_t)app;
             break;
         case AppList::WIFILIST:

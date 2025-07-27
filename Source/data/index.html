@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.21</title>
+    <title>ESP32PP v0.30</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * {
@@ -258,7 +258,7 @@
 
 <body>
     <header>
-        <h1>ESP32 PP v0.21</h1>
+        <h1>ESP32 PP v0.30</h1>
         <div class="status">
             <div id="connState">WS Connecting...</div>
             <div id="connStatePP">PP not connected to ESP</div>
@@ -352,6 +352,11 @@
                 <button onclick="sendMessage('#$##$$$02\r\n')">Wifi list</button>
                 <button onclick="sendMessage('#$##$$$03\r\n')">Wifi probe sniffer</button>
             </div>
+            <div id="espAppDT1">
+                <button onclick="sendMessage('#$$#$$$10\r\n')">Standby mode</button>
+                <button onclick="sendMessage('#$$#$$$11\r\n')">Random mode</button>
+                <button onclick="sendMessage('#$$#$$$12\r\n')">Rick Roll mode</button>
+            </div>
         </section>
 
         <section id="manualcommand">
@@ -414,7 +419,7 @@
         function refreshUIForCurrentApp(app) {
             document.getElementById("btnEspAppStop").style.display = (app == 0) ? "none" : "inline-block";
             document.getElementById("espAppStartList").style.display = (app == 0) ? "block" : "none";
-
+            document.getElementById("espAppDT1").style.display = (app == 1) ? "block" : "none";
         }
 
 
