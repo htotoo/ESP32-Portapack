@@ -38,15 +38,15 @@ class PPHandler {
     // base working code
     static bool i2c_slave_callback_ISR(struct i2c_slave_device_t* dev, I2CSlaveCallbackReason reason);
     static std::vector<uint8_t> on_send_ISR();
-    static void on_command_ISR(Command command, std::vector<uint8_t> additional_data);
+    static void on_command_ISR(uint16_t command, std::vector<uint8_t> additional_data);
     static uint8_t addr;  // my i2c address
     static i2c_slave_device_t* slave_device;
     static QueueHandle_t slave_queue;
     static uint32_t module_version;
     static char module_name[20];
 
-    static volatile Command command_state;  // current command
-    static volatile uint16_t app_counter;   // for transfer
+    static volatile uint16_t command_state;  // current command
+    static volatile uint16_t app_counter;    // for transfer
     static volatile uint16_t app_transfer_block;
 
     static std::vector<app_list_element_t> app_list;

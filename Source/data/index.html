@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.21</title>
+    <title>ESP32PP v0.30</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * {
@@ -156,7 +156,7 @@
         }
 
 
-
+        #espAppContainer,
         #devdatas,
         #wsDisplay,
         #manualcommand {
@@ -245,12 +245,27 @@
         #wsDisplay {
             min-height: 252px;
         }
+
+        #espAppStartList button,
+        #btnEspAppStop {
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .espAppCnt button {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>ESP32 PP v0.21</h1>
+        <h1>ESP32 PP v0.30</h1>
         <div class="status">
             <div id="connState">WS Connecting...</div>
             <div id="connStatePP">PP not connected to ESP</div>
@@ -334,8 +349,25 @@
             </h2>
 
             <div id="wsd_maintext"></div>
-
         </section>
+        <section id="espAppContainer">
+            <h2>Esp's App</h2>
+            <div><button id="btnEspAppStop" style="display: none;" onclick="sendMessage('#$##$$$00\r\n')">Stop</button>
+            </div>
+            <div id="espAppStartList" style="display: none;">
+                <button onclick="sendMessage('#$##$$$01\r\n')">Wifi spam</button>
+                <!-- <button onclick="sendMessage('#$##$$$02\r\n')">Wifi list</button>
+                <button onclick="sendMessage('#$##$$$03\r\n')">Wifi probe sniffer</button> -->
+            </div>
+            <div id="espAppDT1" class="espAppCnt" style="display: none;">
+                <h3>Wifi spam</h3>
+                <button onclick="sendMessage('#$$#$$$10\r\n')">Standby mode</button>
+                <button onclick="sendMessage('#$$#$$$11\r\n')">Random mode</button>
+                <button onclick="sendMessage('#$$#$$$12\r\n')">Rick Roll mode</button>
+                <button onclick="sendMessage('#$$#$$$13\r\n')">Emoji spam mode</button>
+            </div>
+        </section>
+
         <section id="manualcommand">
             <h2>Manual Commands</h2>
             <input type="text" id="manualtxt" />
@@ -392,6 +424,15 @@
             }
         }
 
+        //esp app specific functions
+        function refreshUIForCurrentApp(app) {
+            document.getElementById("btnEspAppStop").style.display = (app == 0) ? "none" : "inline-block";
+            document.getElementById("espAppStartList").style.display = (app == 0) ? "block" : "none";
+            document.getElementById("espAppDT1").style.display = (app == 1) ? "block" : "none";
+        }
+
+
+        //others
         function initWebSocket() {
             log("WS Connecting...");
             websocket = new WebSocket(gateway);
@@ -409,6 +450,7 @@
             log("WS Connected");
             document.getElementById("connState").innerHTML = "WS Connected.";
             sendMessage("#$##$$#GETUSBSTATE\r\n");
+            sendMessage("#$##$$$99\r\n"); //get currenltly running esp app
         }
 
         function onClose(event) {
@@ -531,6 +573,13 @@
                         document.getElementById("wsd_maintext").innerHTML = tmp;
                         return false;
                     }
+                }
+                if (msg.startsWith("#$##$$$")) {
+                    let tmp = msg.substring(7);
+                    log("Got ESP app: " + tmp);
+                    let appid = parseInt(tmp);
+                    refreshUIForCurrentApp(appid);
+                    return false;
                 }
                 if (screensupdState == 1) {
                     screensupdState = 2;

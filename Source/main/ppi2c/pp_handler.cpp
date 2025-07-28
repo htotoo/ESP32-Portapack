@@ -1,11 +1,12 @@
 
 #include "pp_handler.hpp"
 #include <cstring>
+#include "apps/appmanager.hpp"
 
 uint8_t PPHandler::addr = 0;
 i2c_slave_device_t* PPHandler::slave_device;
 QueueHandle_t PPHandler::slave_queue;
-volatile Command PPHandler::command_state = Command::COMMAND_NONE;
+volatile uint16_t PPHandler::command_state = (uint16_t)Command::COMMAND_NONE;
 volatile uint16_t PPHandler::app_counter = 0;
 volatile uint16_t PPHandler::app_transfer_block = 0;
 get_features_CB PPHandler::features_cb = nullptr;
@@ -105,26 +106,26 @@ void PPHandler::add_custom_command(uint16_t command, pp_i2c_command got_command,
 }
 
 // when pp tx-es to us
-void PPHandler::on_command_ISR(Command command, std::vector<uint8_t> additional_data) {
+void PPHandler::on_command_ISR(uint16_t command, std::vector<uint8_t> additional_data) {
     command_state = command;
-
+    bool found = false;
     switch (command) {
-        case Command::COMMAND_APP_INFO:
+        case (uint16_t)Command::COMMAND_APP_INFO:
             if (additional_data.size() == 2)
                 app_counter = *(uint16_t*)additional_data.data();
             break;
 
-        case Command::COMMAND_APP_TRANSFER:
+        case (uint16_t)Command::COMMAND_APP_TRANSFER:
             if (additional_data.size() == 4) {
                 app_counter = *(uint16_t*)additional_data.data();
                 app_transfer_block = *(uint16_t*)(additional_data.data() + 2);
             }
             break;
 
-        case Command::COMMAND_GETFEATURE_MASK:
+        case (uint16_t)Command::COMMAND_GETFEATURE_MASK:
             break;
 
-        case Command::COMMAND_SHELL_PPTOMOD_DATA:
+        case (uint16_t)Command::COMMAND_SHELL_PPTOMOD_DATA:
             if (got_shell_data_cb)
                 got_shell_data_cb(additional_data);
             break;
@@ -136,8 +137,12 @@ void PPHandler::on_command_ISR(Command command, std::vector<uint8_t> additional_
                         data.data = &additional_data;
                         element.got_command(data);
                     }
+                    found = true;
                     break;
                 }
+            }
+            if (!found) {
+                AppManager::handlePPData(command, additional_data);
             }
             break;
     }
@@ -177,7 +182,7 @@ bool PPHandler::i2c_slave_callback_ISR(struct i2c_slave_device_t* dev, I2CSlaveC
             if (dev->state == I2C_STATE_RECV) {
                 uint16_t command = *(uint16_t*)&dev->buffer[dev->bufstart];
                 std::vector<uint8_t> additional_data(dev->buffer + dev->bufstart + 2, dev->buffer + dev->bufend);
-                on_command_ISR((Command)command, additional_data);
+                on_command_ISR(command, additional_data);
             }
             break;
 
@@ -188,10 +193,10 @@ bool PPHandler::i2c_slave_callback_ISR(struct i2c_slave_device_t* dev, I2CSlaveC
 }
 
 // this handle, when the PP needs data
-
 std::vector<uint8_t> PPHandler::on_send_ISR() {
+    bool found = false;
     switch (command_state) {
-        case Command::COMMAND_INFO: {
+        case (uint16_t)Command::COMMAND_INFO: {
             device_info info = {
                 /* api_version = */ PP_API_VERSION,
                 /* module_version = */ module_version,
@@ -201,7 +206,7 @@ std::vector<uint8_t> PPHandler::on_send_ISR() {
             return std::vector<uint8_t>((uint8_t*)&info, (uint8_t*)&info + sizeof(info));
         }
 
-        case Command::COMMAND_APP_INFO: {
+        case (uint16_t)Command::COMMAND_APP_INFO: {
             if (app_counter <= app_list.size() - 1) {
                 standalone_app_info app_info;
                 std::memset(&app_info, 0, sizeof(app_info));
@@ -214,14 +219,14 @@ std::vector<uint8_t> PPHandler::on_send_ISR() {
             break;
         }
 
-        case Command::COMMAND_APP_TRANSFER: {
+        case (uint16_t)Command::COMMAND_APP_TRANSFER: {
             if (app_counter <= app_list.size() - 1 && app_transfer_block < app_list[app_counter].size / 128) {
                 return std::vector<uint8_t>(app_list[app_counter].binary + app_transfer_block * 128, app_list[app_counter].binary + app_transfer_block * 128 + 128);
             }
             break;
         }
 
-        case Command::COMMAND_GETFEATURE_MASK: {
+        case (uint16_t)Command::COMMAND_GETFEATURE_MASK: {
             uint64_t features = 0;
             if (features_cb)
                 features_cb(features);
@@ -230,42 +235,42 @@ std::vector<uint8_t> PPHandler::on_send_ISR() {
             return std::vector<uint8_t>((uint8_t*)&features, (uint8_t*)&features + sizeof(features));
         }
 
-        case Command::COMMAND_GETFEAT_DATA_GPS: {
+        case (uint16_t)Command::COMMAND_GETFEAT_DATA_GPS: {
             ppgpssmall_t gpsdata = {};
             if (gps_data_cb)
                 gps_data_cb(gpsdata);
             return std::vector<uint8_t>((uint8_t*)&gpsdata, (uint8_t*)&gpsdata + sizeof(gpsdata));
         }
 
-        case Command::COMMAND_GETFEAT_DATA_ORIENTATION: {
+        case (uint16_t)Command::COMMAND_GETFEAT_DATA_ORIENTATION: {
             orientation_t ori = {400, 400};  // false data
             if (orientation_data_cb)
                 orientation_data_cb(ori);
             return std::vector<uint8_t>((uint8_t*)&ori, (uint8_t*)&ori + sizeof(ori));
         }
 
-        case Command::COMMAND_GETFEAT_DATA_ENVIRONMENT: {
+        case (uint16_t)Command::COMMAND_GETFEAT_DATA_ENVIRONMENT: {
             environment_t env = {};
             if (environment_data_cb)
                 environment_data_cb(env);
             return std::vector<uint8_t>((uint8_t*)&env, (uint8_t*)&env + sizeof(env));
         }
 
-        case Command::COMMAND_GETFEAT_DATA_LIGHT: {
+        case (uint16_t)Command::COMMAND_GETFEAT_DATA_LIGHT: {
             uint16_t light = 0;
             if (light_data_cb)
                 light_data_cb(light);
             return std::vector<uint8_t>((uint8_t*)&light, (uint8_t*)&light + sizeof(light));
         }
 
-        case Command::COMMAND_SHELL_MODTOPP_DATA_SIZE: {
+        case (uint16_t)Command::COMMAND_SHELL_MODTOPP_DATA_SIZE: {
             uint16_t size = 0;
             if (shell_data_size_cb)
                 size = shell_data_size_cb();
             return std::vector<uint8_t>((uint8_t*)&size, (uint8_t*)&size + sizeof(size));
         }
 
-        case Command::COMMAND_SHELL_MODTOPP_DATA: {
+        case (uint16_t)Command::COMMAND_SHELL_MODTOPP_DATA: {
             std::vector<uint8_t> data;
             if (send_shell_data_cb) {
                 bool hasmore = false;
@@ -290,7 +295,14 @@ std::vector<uint8_t> PPHandler::on_send_ISR() {
                         element.send_command(data);
                         return tmp;
                     }
+                    found = true;
                     break;
+                }
+            }
+            if (!found) {
+                std::vector<uint8_t> tmp;
+                if (AppManager::handlePPReqData(command_state, tmp)) {
+                    return tmp;
                 }
             }
             break;

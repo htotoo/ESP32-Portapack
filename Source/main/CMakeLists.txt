@@ -12,4 +12,7 @@ idf_component_register(SRCS "tir.cpp" "ppshellcomm.cpp" "wifim.cpp" "led.cpp" "c
 "display/displaymanager.cpp"
 "display/display_ssd1306.cpp"
 "display/display_ws.cpp"
+"apps/appmanager.cpp"
+"apps/ep_app_wifispam.cpp"
 INCLUDE_DIRS "." "./sgp4"  EMBED_FILES ../data/index.html ../data/ota.html ../data/setup.html ../data/setup.css)
+

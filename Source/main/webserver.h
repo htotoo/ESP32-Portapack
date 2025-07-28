@@ -334,27 +334,36 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
                 ws_notify_cc_i2c();
             else
                 ws_notify_dc();
+            free(buf);
             return ESP_OK;
         }
         if (strcmp((const char*)ws_pkt.payload, "#$##$$#DISABLEESPASYNC\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
             // disable async
             disable_esp_async = true;
+            free(buf);
             return ESP_OK;
         }
         if (strcmp((const char*)ws_pkt.payload, "#$##$$#ENABLEESPASYNC\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
             // enable async
             disable_esp_async = false;
+            free(buf);
             return ESP_OK;
         }
         if (strcmp((const char*)ws_pkt.payload, "#$##$$#GPSDEBUGON\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
             // enable async
             gpsDebug = true;
-            ESP_LOGW("WEB", "GPS_DEBUG enabled");
+            free(buf);
             return ESP_OK;
         }
         if (strcmp((const char*)ws_pkt.payload, "#$##$$#GPSDEBUGOFF\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
             // enable async
             gpsDebug = false;
+            free(buf);
+            return ESP_OK;
+        }
+        if (AppManager::handleWebData((const char*)ws_pkt.payload, ws_pkt.len)) {
+            // handled by app
+            free(buf);
             return ESP_OK;
         }
         PPShellComm::write(ws_pkt.payload, ws_pkt.len, false, true);

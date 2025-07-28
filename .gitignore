@@ -20,3 +20,4 @@ venv/
 
 # Other
 *.bak
+Source/.vscode/settings.json

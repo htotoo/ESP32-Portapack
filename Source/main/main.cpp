@@ -1,16 +1,20 @@
 /*
- * Copyright (C) 2024 HTotoo
+ * Copyright (C) 2025 HTotoo
  *
  * This file is part of ESP32-Portapack.
  *
  * For additional license information, see the LICENSE file.
  */
 
-// TODO CHECK NMEA PARSER. DATE BAD WHEN NO FIX
 // todo save hmc calibration, and load and use, and recalibrate on the fly
 
 // todo add an option to disable rtc set (bc utc only)
 // todo add +- time
+// todo move sattrack to EP_App format
+// todo add application start / stop commands to i2c app manager part
+// todo add custom wifi ap spam options
+// todo add wifispam app to pp.
+// todo add dyn pin configuration options, and save them to nvs. when not set, show the webpage to set it
 
 // rgb led: GPIO48 on ESP S3. set to -1 to disable
 #define RGB_LED_PIN 48
@@ -37,6 +41,7 @@
 #include "sensordb.h"
 
 #include <driver/temperature_sensor.h>
+#include "apps/appmanager.hpp"
 
 bool gpsDebug = false;  // set to false, and give it an ui to be able to turn it on / off
 uint8_t gps_debug_limiter = 0;
@@ -125,6 +130,10 @@ ir_data_t last_rcvd_ir{UNK, 0, 0};
 
 #include "led.h"
 
+void SetDisplayDirtyMain() {
+    displayManager.setDirty();
+}
+
 static void i2c_scan() {
     vTaskDelay(50 / portTICK_PERIOD_MS);  // wait till devs wake up
     esp_err_t res;
@@ -157,7 +166,8 @@ void update_features() {
     if (PPHandler::get_appCount() > 0)
         chipFeatures.enableFeature(SupportedFeatures::FEAT_EXT_APP);
     // uart is not present
-    // display is not present
+    if (displayManager.getDisplayCount() > 0)
+        chipFeatures.enableFeature(SupportedFeatures::FEAT_DISPLAY);
     chipFeatures.enableFeature(SupportedFeatures::FEAT_SHELL);
 }
 
@@ -216,7 +226,7 @@ esp_err_t init_spiffs(void) {
  * @param evt HTTP client event.
  * @return esp_err_t Returns ESP_OK to continue the operation, or an error code to abort.
  */
-esp_err_t http_event_handler(esp_http_client_event_t* evt) {
+esp_err_t http_event_handler_tledata(esp_http_client_event_t* evt) {
     static FILE* file = NULL;
 
     switch (evt->event_id) {
@@ -323,7 +333,7 @@ esp_err_t load_satellite_tle(const std::string& sat_to_track) {
  *
  * @return esp_err_t Returns ESP_OK if the download and save were successful, or an error code otherwise.
  */
-esp_err_t download_file_to_spiffs(void) {
+esp_err_t download_tle_file_to_spiffs(void) {
     esp_err_t ret;
 
     // Get the file information
@@ -350,7 +360,7 @@ esp_err_t download_file_to_spiffs(void) {
     // Configure the HTTP client
     esp_http_client_config_t config = {
         .url = "http://creativo.hu/sattrack/mini.tle",
-        .event_handler = http_event_handler,
+        .event_handler = http_event_handler_tledata,
     };
 #pragma GCC diagnostic pop
 
@@ -480,7 +490,7 @@ void app_main(void) {
                  "{\"protocol\":%d,\"data\":%" PRIu64
                  ",\"len\":%d}\r\n",
                  proto, rcode, len);
-        ws_sendall((uint8_t*)buff, strlen(buff), true);
+        ws_sendall((uint8_t*)buff, strlen(buff), true);  // todo web handler
     });
 
     init_orientation();  // it loads orientation data too
@@ -756,7 +766,7 @@ void app_main(void) {
 
         if (time_millis - last_millis[TimerEntry_SATDOWN] > timer_millis[TimerEntry_SATDOWN]) {
             if (!downloadedTLE && time_method && WifiM::getWifiStaStatus())  // not yet downloaded, and has valid time, and has wifi
-                download_file_to_spiffs();
+                download_tle_file_to_spiffs();
             last_millis[TimerEntry_SATDOWN] = time_millis;
         }
 
@@ -779,8 +789,9 @@ void app_main(void) {
 
         // try wifi client connect
         WifiM::wifi_loop(time_millis);
+        AppManager::loop(time_millis);
         displayManager.loop(time_millis);
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+        vTaskDelay(15 / portTICK_PERIOD_MS);
     }
 }
 

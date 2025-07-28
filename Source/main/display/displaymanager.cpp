@@ -3,6 +3,8 @@
 #include "display_ssd1306.hpp"
 #include "display_ws.hpp"
 
+#include "apps/appmanager.hpp"
+
 bool DisplayManager::init() {
     uint8_t i2caddr = 0;
 
@@ -179,7 +181,6 @@ void DisplayManager::DrawMeasurementInfo(DisplayGeneric* display) {
 void DisplayManager::DrawPPData(DisplayGeneric* display) {
     if (display == nullptr) return;
     display->clear();
-    display->showTitle("PP Data");
-    display->showMainTextMultiline("Not implemented yet.");
+    AppManager::handleDisplayRequest(display);
     display->draw();
 }
