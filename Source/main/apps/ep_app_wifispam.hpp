@@ -1,7 +1,7 @@
 #ifndef EP_APP_WIFISPAM_HPP
 #define EP_APP_WIFISPAM_HPP
 
-// Based on https://github.com/ubermood/UberMayhemESP32/blob/main/Source/lib/UberMayhem/UberPayload.cpp
+// Based on https://github.com/ubermood/UberMayhemESP32/blob/main/Source/lib/UberMayhem/UberPayload.cpp and  https://github.com/justcallmekoko/ESP32Marauder/blob/c16afc958b41881342fe810892988efb54d1a0de/esp32_marauder/WiFiScan.cpp#L6172
 
 #include "ep_app.hpp"
 #include "esp_random.h"
@@ -32,7 +32,6 @@ class EPAppWifiSpam : public EPApp {
     uint8_t ricknum = 0;
     uint32_t lastBeaconTime = 0;
 
-    // https://github.com/justcallmekoko/ESP32Marauder/blob/c16afc958b41881342fe810892988efb54d1a0de/esp32_marauder/WiFiScan.cpp#L6172
     uint8_t packet[128] = {0x80, 0x00, 0x00, 0x00,                                 // Frame Control, Duration
                            /*4*/ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,               // Destination address
                            /*10*/ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,              // Source address - overwritten later

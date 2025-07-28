@@ -1,17 +1,20 @@
 /*
- * Copyright (C) 2024 HTotoo
+ * Copyright (C) 2025 HTotoo
  *
  * This file is part of ESP32-Portapack.
  *
  * For additional license information, see the LICENSE file.
  */
 
-// TODO CHECK NMEA PARSER. DATE BAD WHEN NO FIX
 // todo save hmc calibration, and load and use, and recalibrate on the fly
 
 // todo add an option to disable rtc set (bc utc only)
 // todo add +- time
 // todo move sattrack to EP_App format
+// todo add application start / stop commands to i2c app manager part
+// todo add custom wifi ap spam options
+// todo add wifispam app to pp.
+// todo add dyn pin configuration options, and save them to nvs. when not set, show the webpage to set it
 
 // rgb led: GPIO48 on ESP S3. set to -1 to disable
 #define RGB_LED_PIN 48
