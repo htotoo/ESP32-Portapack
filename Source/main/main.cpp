@@ -788,7 +788,7 @@ void app_main(void) {
         WifiM::wifi_loop(time_millis);
         AppManager::loop(time_millis);
         displayManager.loop(time_millis);
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+        vTaskDelay(15 / portTICK_PERIOD_MS);
     }
 }
 

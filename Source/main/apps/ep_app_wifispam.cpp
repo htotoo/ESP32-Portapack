@@ -2,14 +2,16 @@
 #include <esp_wifi.h>
 // Bypass 802.11 RAW frames sanity check
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
-    return 0;
+    if (arg == 31337)
+        return 1;
+    else
+        return 0;
 }  // -Wl,-zmuldefs
 
 void EPAppWifiSpam::randomizeBeaconSrcMac(uint8_t* beacon_raw, uint8_t macid) {
     if (macid == 0) {
         uint8_t random_byte;
         random_byte = (esp_random() % 13) + 1;
-        beacon_raw[50] = random_byte;  // Channel
         for (int i = 0; i < 6; i++) {
             random_byte = esp_random() & 0xFF;
             beacon_raw[10 + i] = random_byte;  // Source Address (bytes 10–15)
@@ -29,21 +31,21 @@ void EPAppWifiSpam::randomizeBeaconSrcMac(uint8_t* beacon_raw, uint8_t macid) {
 }
 
 void EPAppWifiSpam::sendBeacon(std::string ssid, uint8_t macid) {
-    randomizeBeaconSrcMac(beacon_raw, macid);
+    randomizeBeaconSrcMac(packet, macid);
     // Build the beacon frame
-    memcpy(beacon, beacon_raw, OFFSET_BEACON_SSID - 1);
+    packet[37] = ssid.size();
+    memcpy(&packet[38], ssid.data(), ssid.size());
+    packet[50 + ssid.size()] = 3;  // set channel
 
-    beacon[OFFSET_BEACON_SSID - 1] = ssid.size();
-    memcpy(&beacon[OFFSET_BEACON_SSID], ssid.data(), ssid.size());
-    memcpy(&beacon[OFFSET_BEACON_SSID + ssid.size()], &beacon_raw[OFFSET_BEACON_SSID], 90 - OFFSET_BEACON_SSID);
-    // Send 12-bit random sequence number
-    uint16_t seq = esp_random() & 0xFFF;
-    beacon[OFFSET_BEACON_SEQNUM] = (seq << 4) & 0xF0;
-    beacon[OFFSET_BEACON_SEQNUM + 1] = (seq >> 4) & 0xFF;
+    uint8_t postSSID[13] = {0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,  // supported rate
+                            0x03, 0x01, 0x04 /*DSSS (Current Channel)*/};
 
-    // esp_wifi_80211_tx(WIFI_IF_AP, beacon, 90 + ssid.size(), false);
-    // vTaskDelay(1 / portTICK_PERIOD_MS);
-    esp_wifi_80211_tx(WIFI_IF_AP, beacon, 90 + ssid.size(), false);
+    // Add everything that goes after the SSID
+    for (int i = 0; i < 12; i++)
+        packet[38 + ssid.size() + i] = postSSID[i];
+
+    esp_wifi_80211_tx(WIFI_IF_AP, packet, 128, false);  // sizeof?!
+    esp_wifi_80211_tx(WIFI_IF_AP, packet, 128, false);  // sizeof?!
 }
 
 void EPAppWifiSpam::Loop(uint32_t currentMillis) {
