@@ -35,7 +35,7 @@ class WifiM {
    public:
     static bool getWifiStaStatus();
     static void wifi_loop(uint32_t millis);
-    static bool wifi_apsta();
+    static bool config_wifi_apsta();
     static void initialise_wifi(void);
     static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
     static void initialise_mdns(void);

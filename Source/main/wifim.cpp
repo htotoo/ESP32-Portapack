@@ -80,7 +80,7 @@ void WifiM::initialise_wifi(void) {
     initialized = true;
 }
 
-bool WifiM::wifi_apsta() {
+bool WifiM::config_wifi_apsta() {
     wifi_config_t ap_config = {};
     strcpy((char*)ap_config.ap.ssid, wifiAPSSID);
     strcpy((char*)ap_config.ap.password, wifiAPPASS);
@@ -157,6 +157,7 @@ void WifiM::load_config_wifi() {
         nvs_close(nvs_handle);
         ESP_LOGI("CONFIG", "load_config_wifi ok");
     }
+    // ESP_LOGI("CONFIG", "wifiHostName=[%s] wifiAPSSID=[%s] wifiAPPASS=[%s] wifiStaSSID=[%s] wifiStaPASS=[%s]", wifiHostName, wifiAPSSID, wifiAPPASS, wifiStaSSID, wifiStaPASS);
 }
 
 void WifiM::save_config_wifi() {

@@ -23,7 +23,6 @@
 #include "spi_flash_mmap.h"
 #include "wifim.h"
 #include "led.h"
-#include "wifim.h"
 #include "ppshellcomm.h"
 
 static httpd_handle_t server = NULL;
@@ -58,7 +57,7 @@ static int hex_to_int(char c) {
 }
 
 // Function to decode a URL-encoded string
-std::string url_decode(const std::string& encoded_string) {
+std::string url_decode(const std::string encoded_string) {
     std::string decoded_string;
     for (size_t i = 0; i < encoded_string.length(); ++i) {
         if (encoded_string[i] == '%' && i + 2 < encoded_string.length() && isxdigit(encoded_string[i + 1]) && isxdigit(encoded_string[i + 2])) {
@@ -149,16 +148,42 @@ static esp_err_t post_req_handler_setup(httpd_req_t* req) {
     char tmp[65] = {0};
     uint8_t changeMask = 1;  // wifi
 
-    if (find_post_value((char*)"wifiHostName=", buf, tmp) > 0)
-        strcpy(WifiM::wifiHostName, url_decode(tmp).c_str());
-    if (find_post_value((char*)"wifiAPSSID=", buf, tmp) > 0)
-        strcpy(WifiM::wifiAPSSID, url_decode(tmp).c_str());
-    if (find_post_value((char*)"wifiAPPASS=", buf, tmp) > 0)
-        strcpy(WifiM::wifiAPPASS, url_decode(tmp).c_str());
-    if (find_post_value((char*)"wifiStaSSID=", buf, tmp) > 0)
-        strcpy(WifiM::wifiStaSSID, url_decode(tmp).c_str());
-    if (find_post_value((char*)"wifiStaPASS=", buf, tmp) > 0)
-        strcpy(WifiM::wifiStaPASS, url_decode(tmp).c_str());
+    if (find_post_value((char*)"wifiHostName=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        if (tmp2.length() > 63) {
+            tmp2.resize(63);
+        }
+        strcpy(WifiM::wifiHostName, tmp2.data());
+    }
+    if (find_post_value((char*)"wifiAPSSID=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        if (tmp2.length() > 63) {
+            tmp2.resize(63);
+        }
+        strcpy(WifiM::wifiAPSSID, tmp2.data());
+    }
+    if (find_post_value((char*)"wifiAPPASS=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        if (tmp2.length() > 63) {
+            tmp2.resize(63);
+        }
+        strcpy(WifiM::wifiAPPASS, tmp2.data());
+    }
+    if (find_post_value((char*)"wifiStaSSID=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        if (tmp2.length() > 63) {
+            tmp2.resize(63);
+        }
+        strcpy(WifiM::wifiStaSSID, tmp2.data());
+    }
+    if (find_post_value((char*)"wifiStaPASS=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        if (tmp2.length() > 63) {
+            tmp2.resize(63);
+        }
+        strcpy(WifiM::wifiStaPASS, tmp2.data());
+    }
+    // ESP_LOGI("WEBS", "wifiHostName=[%s] wifiAPSSID=[%s] wifiAPPASS=[%s] wifiStaSSID=[%s] wifiStaPASS=[%s]", WifiM::wifiHostName, WifiM::wifiAPSSID, WifiM::wifiAPPASS, WifiM::wifiStaSSID, WifiM::wifiStaPASS);
 
     if (find_post_value((char*)"rgb_brightness=", buf, tmp) > 0) {
         uint8_t rgb_brightness = (uint8_t)atoi(tmp);

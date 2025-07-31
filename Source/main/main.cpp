@@ -457,7 +457,7 @@ void app_main(void) {
     PPShellComm::init();
 
     WifiM::initialise_wifi();
-    WifiM::wifi_apsta();
+    WifiM::config_wifi_apsta();
     esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);
     esp_sntp_setservername(0, "pool.ntp.org");
     esp_sntp_init();
