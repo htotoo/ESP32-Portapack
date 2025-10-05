@@ -96,8 +96,6 @@
         }
 
         #screen {
-            width: 240px;
-            height: 320px;
             border: 1px solid #bb86fc;
             border-radius: 10px;
             box-shadow: 0 0 15px rgba(187, 134, 252, 0.5);
@@ -682,7 +680,7 @@
             const canvas = document.getElementById("screen");
             const ctx = canvas.getContext("2d");
             ctx.fillStyle = "#000";
-            ctx.fillRect(0, 0, 240, 320);
+            ctx.fillRect(0, 0, 320, 480);
             let y = -1;
             if (respLinestp.length < 300 && respLinestp[respLinestp.length - 1].startsWith("ChibiOS")) {
                 await sendAndWait("");
@@ -691,11 +689,12 @@
                     return;
                 }
             }
+            let portarf = false;
             for (let i = 0; i < respLinestp.length; i++) {
                 if (respLinestp[i].length < 230) continue;
                 y++;
                 for (let x = 0; x < respLinestp[i].length; x++) {
-                    if (x > 240) break;
+                    if (x > 320) break;
                     try {
                         let by = respLinestp[i].charCodeAt(x) - 32;
                         let r = ((by >> 4) & 3) << 6;
@@ -705,8 +704,17 @@
                         ctx?.fillRect(x, y, 1, 1);
                     }
                     catch (err) { console.log(err); }
+                    if (x > 300) {
+                        portarf = true;
+                    }
+                }
+                if (y == 0 && portarf) {
+                    //this is portarf, so resize the screen
+                    canvas.height = 480;
+                    canvas.width = 320;
                 }
             }
+
         }
 
         function sendGps(lat, lon, alt) {
