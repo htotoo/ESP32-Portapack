@@ -448,7 +448,7 @@
             log("WS Connected");
             document.getElementById("connState").innerHTML = "WS Connected.";
             sendMessage("#$##$$#GETUSBSTATE\r\n");
-            sendMessage("#$##$$$99\r\n"); //get currenltly running esp app
+            //sendMessage("#$##$$$99\r\n"); //get currenltly running esp app //todo call on all loaded
         }
 
         function onClose(event) {
