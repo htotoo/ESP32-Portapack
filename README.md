@@ -27,7 +27,7 @@ For detailed info check Wiki
   - Meshtastic support. (functions not yet decided for it)
 
 ### Standalone apps
-If you connect this module to H4 / PortaRF via I2c, the module will supply additional apps for it. Check the list in the [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/I2C-apps-for-H4)
+If you connect this module to H4 / PortaRF via I2c, the module will supply additional apps for it. Check the list in the [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/Apps-over-I2C)
 
 Suggest in Issues if you get any ideas.
 
