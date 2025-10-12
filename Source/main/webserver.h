@@ -23,7 +23,6 @@
 #include "spi_flash_mmap.h"
 #include "wifim.h"
 #include "led.h"
-#include "wifim.h"
 #include "ppshellcomm.h"
 
 static httpd_handle_t server = NULL;

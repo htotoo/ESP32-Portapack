@@ -153,7 +153,7 @@ void WifiM::load_config_wifi() {
         if (strlen(wifiHostName) < 1) {
             strcpy(wifiHostName, DEFAULT_WIFI_HOSTNAME);
         }
-        nvs_commit(nvs_handle);
+        nvs_commit(nvs_handle);  // todo, needed?
         nvs_close(nvs_handle);
         ESP_LOGI("CONFIG", "load_config_wifi ok");
     }

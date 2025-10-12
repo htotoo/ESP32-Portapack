@@ -59,12 +59,16 @@ uint8_t gps_debug_limiter = 0;
 #define PPCMD_SATTRACK_SETMGPS 0xa002
 #define PPCMD_IRTX_SENDIR 0xa003
 #define PPCMD_IRTX_GETLASTRCVIR 0xa004
+#define PPCMD_WIFI_SET 0xa005
+#define PPCMD_WIFI_STARTSCAN 0xa006
+#define PPCMD_WIFI_STOPSCAN 0xa007
+#define PPCMD_WIFI_GETSCANRESULT 0xa008
 
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
-#include "../extapps/digitalrain.h"
+#include "../extapps/wifisettings.h"
 #include "../extapps/tirapp.h"
 
 #include "display/displaymanager.hpp"
@@ -124,6 +128,8 @@ std::string sat_to_track_new = "";
 bool sat_data_loaded = false;
 
 ir_data_t last_rcvd_ir{UNK, 0, 0};
+
+bool wifi_config_changed = false;  // if wifi config changed from pp. (irq, so need to save and apply elsewhere)
 
 #include "led.h"
 
@@ -504,7 +510,7 @@ void app_main(void) {
     PPHandler::set_module_name("ESP32PP");
     PPHandler::set_module_version(1);
     PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
-    PPHandler::add_app((uint8_t*)digitalrain, sizeof(digitalrain));
+    PPHandler::add_app((uint8_t*)wifisettings, sizeof(wifisettings));
     PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));
     PPHandler::set_get_features_CB([](uint64_t& feat) {
                                         i2c_pp_last_comm_time = time_millis;
@@ -560,6 +566,19 @@ void app_main(void) {
         *(ir_data_t*)(*data.data).data() = last_rcvd_ir;
         last_rcvd_ir.protocol = UNK;
     });
+
+    PPHandler::add_custom_command(PPCMD_WIFI_SET, [](pp_command_data_t data) {
+                                        if (data.data->size() != sizeof(wifi_config_data_t)) {
+                                            return;
+                                        }
+                                        wifi_config_data_t tmp;
+                                        memcpy(&tmp, data.data->data(), sizeof(wifi_config_data_t));
+                                        ESP_DRAM_LOGW(TAG, "wifi: %s %s", tmp.ssid, tmp.password);
+                                        memcpy(WifiM::wifiStaSSID0, tmp.ssid, 30);
+                                        memcpy(WifiM::wifiStaPASS, tmp.password, 30);
+                                        WifiM::wifiStaSSID[30] = 0;
+                                        WifiM::wifiStaPASS[30] = 0;
+                                        wifi_config_changed= true; }, nullptr);
 
     PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
@@ -784,6 +803,11 @@ void app_main(void) {
             }
         }
 
+        if (wifi_config_changed) {
+            wifi_config_changed = false;
+            WifiM::save_config_wifi();
+            WifiM::wifi_apsta();
+        }
         // try wifi client connect
         WifiM::wifi_loop(time_millis);
         AppManager::loop(time_millis);

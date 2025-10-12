@@ -31,6 +31,12 @@
 #define CONFIG_AP_MAX_STA_CONN 4
 #define WIFI_CLIENR_RC_TIME 35000
 
+// wifi config from companion app
+typedef struct wifi_config_t {
+    char ssid[30];
+    char password[30];
+} wifi_config_data_t;
+
 class WifiM {
    public:
     static bool getWifiStaStatus();
