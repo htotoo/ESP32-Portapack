@@ -212,8 +212,10 @@ static esp_err_t post_req_handler_setup(httpd_req_t* req) {
         changeMask |= 4;
     }
 
-    if ((changeMask & 1) == 1)
+    if ((changeMask & 1) == 1) {
         WifiM::save_config_wifi();
+        WifiM::config_wifi_apsta();
+    }
     if ((changeMask & 2) == 2)
         save_config_misc();
     if ((changeMask & 4) == 4)

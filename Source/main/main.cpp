@@ -62,10 +62,13 @@ uint8_t gps_debug_limiter = 0;
 #define PPCMD_SATTRACK_SETMGPS 0xa002
 #define PPCMD_IRTX_SENDIR 0xa003
 #define PPCMD_IRTX_GETLASTRCVIR 0xa004
-#define PPCMD_WIFI_SET 0xa005
-#define PPCMD_WIFI_STARTSCAN 0xa006
-#define PPCMD_WIFI_STOPSCAN 0xa007
-#define PPCMD_WIFI_GETSCANRESULT 0xa008
+// Wifi settings app
+#define PPCMD_WIFI_SET_STA 0xa005
+#define PPCMD_WIFI_SET_AP 0xa006
+#define PPCMD_WIFI_GET_CONFIG 0xa007
+#define PPCMD_WIFI_STARTSCAN 0xa008
+#define PPCMD_WIFI_STOPSCAN 0xa009
+#define PPCMD_WIFI_GETSCANRESULT 0xa00a
 
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 
@@ -126,7 +129,7 @@ typedef struct
 sattrackdata_t sattrackdata;
 uint8_t sattrack_task = 0;  // this will set to the main thread what is the current task. 0 = none, 1 = update db, 2 = change sat. each task needs to reset it.
 uint8_t sattrack_task_last_error = 0;
-std::string sat_to_track = "NOAA 15";
+std::string sat_to_track = "ISS";
 std::string sat_to_track_new = "";
 bool sat_data_loaded = false;
 
@@ -570,18 +573,43 @@ void app_main(void) {
         last_rcvd_ir.protocol = UNK;
     });
 
-    PPHandler::add_custom_command(PPCMD_WIFI_SET, [](pp_command_data_t data) {
-                                        if (data.data->size() != sizeof(wifi_config_data_t)) {
+    PPHandler::add_custom_command(PPCMD_WIFI_SET_STA, [](pp_command_data_t data) {
+                                        if (data.data->size() != sizeof(wifi_config_comp_t)) {
+                                            ESP_DRAM_LOGW(TAG, "wifi: wrong size");
                                             return;
                                         }
-                                        wifi_config_data_t tmp;
-                                        memcpy(&tmp, data.data->data(), sizeof(wifi_config_data_t));
+                                        wifi_config_comp_t tmp;
+                                        memcpy(&tmp, data.data->data(), sizeof(wifi_config_comp_t));
                                         ESP_DRAM_LOGW(TAG, "wifi: %s %s", tmp.ssid, tmp.password);
-                                        memcpy(WifiM::wifiStaSSID0, tmp.ssid, 30);
+                                        memcpy(WifiM::wifiStaSSID, tmp.ssid, 30);
                                         memcpy(WifiM::wifiStaPASS, tmp.password, 30);
                                         WifiM::wifiStaSSID[30] = 0;
                                         WifiM::wifiStaPASS[30] = 0;
                                         wifi_config_changed= true; }, nullptr);
+
+    PPHandler::add_custom_command(PPCMD_WIFI_SET_AP, [](pp_command_data_t data) {
+                                        if (data.data->size() != sizeof(wifi_config_comp_t)) {
+                                            ESP_DRAM_LOGW(TAG, "wifi: wrong size");
+                                            return;
+                                        }
+                                        wifi_config_comp_t tmp;
+                                        memcpy(&tmp, data.data->data(), sizeof(wifi_config_comp_t));
+                                        ESP_DRAM_LOGW(TAG, "wifiap: %s %s", tmp.ssid, tmp.password);
+                                        memcpy(WifiM::wifiAPSSID, tmp.ssid, 30);
+                                        memcpy(WifiM::wifiAPPASS, tmp.password, 30);
+                                        WifiM::wifiAPSSID[30] = 0;
+                                        WifiM::wifiAPPASS[30] = 0;
+                                        wifi_config_changed= true; }, nullptr);
+
+    PPHandler::add_custom_command(PPCMD_WIFI_GET_CONFIG, nullptr, [](pp_command_data_t data) {
+        data.data->resize(sizeof(wifi_current_data_t));
+        wifi_current_data_t tmp;
+        memcpy(tmp.sta_ssid, WifiM::wifiStaSSID, 30); 
+        memcpy(tmp.sta_password, WifiM::wifiStaPASS, 30);
+        memcpy(tmp.ap_ssid, WifiM::wifiAPSSID, 30);
+        memcpy(tmp.ap_password, WifiM::wifiAPPASS, 30);
+        WifiM::copyIpToArray(tmp.ip);
+        memcpy((*data.data).data(), &tmp, sizeof(wifi_current_data_t)); });
 
     PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
@@ -591,7 +619,7 @@ void app_main(void) {
                                            size_t size = data.size();
                                            if (size > 64)
                                            {
-                                             size = 64;
+                                               size = 64;
                                            }
                                            memcpy(msg.data, data.data(), size);
                                            auto ttt = pdFALSE;
@@ -616,6 +644,7 @@ void app_main(void) {
                                                     return true; });
 
     PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
+
     while (true) {
         time_millis = esp_timer_get_time() / 1000;
         if (sat_to_track_new != "") {
@@ -808,8 +837,9 @@ void app_main(void) {
 
         if (wifi_config_changed) {
             wifi_config_changed = false;
+            ESP_LOGI(TAG, "Saving new wifi config, and applying");
             WifiM::save_config_wifi();
-            WifiM::wifi_apsta();
+            WifiM::config_wifi_apsta();
         }
         // try wifi client connect
         WifiM::wifi_loop(time_millis);
