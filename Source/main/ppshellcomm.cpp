@@ -60,7 +60,7 @@ bool PPShellComm::write_blocking(const uint8_t* data, size_t len, bool mute, boo
             ESP_LOGE(TAG, "Data too big for I2C");
             return false;
         }
-        memcpy(tx.data, data, len);  // todo fix for real duffered blocking write
+        memcpy(tx.data, data, len);  // todo fix for real buffered blocking write
         return true;
     }
     return false;
@@ -70,7 +70,7 @@ bool PPShellComm::wait_till_sending(uint32_t timeoutMs) {
     if (usb_connected) {
         return wait_till_usb_sending(timeoutMs);
     }
-    // todo i2c send wait
+    // todo i2c send wait, but hey, we should not send to i2c!!! check this
     return false;
 }
 

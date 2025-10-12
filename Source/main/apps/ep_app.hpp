@@ -25,7 +25,7 @@ class EPApp {
         return ws_sendall((uint8_t*)data.c_str(), data.size(), true);
     }
     bool SendDataToPPShell(const std::string& data) {
-        if (PPShellComm::wait_till_sending(50)) {
+        if (PPShellComm::wait_till_sending(50)) {  // todo remember, this won't work with i2c!!
             PPShellComm::write_blocking((uint8_t*)data.c_str(), data.size(), true, false);
         }
         return false;

@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>ESP32PP v0.30</title>
+    <title>ESP32PP v0.31</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * {
@@ -263,7 +263,7 @@
 
 <body>
     <header>
-        <h1>ESP32 PP v0.30</h1>
+        <h1>ESP32 PP v0.31</h1>
         <div class="status">
             <div id="connState">WS Connecting...</div>
             <div id="connStatePP">PP not connected to ESP</div>
@@ -447,8 +447,7 @@
         function onOpen(event) {
             log("WS Connected");
             document.getElementById("connState").innerHTML = "WS Connected.";
-            sendMessage("#$##$$#GETUSBSTATE\r\n");
-            //sendMessage("#$##$$$99\r\n"); //get currenltly running esp app //todo call on all loaded
+            sendMessage("#$##$$#GETINITDATA\r\n");
         }
 
         function onClose(event) {
