@@ -1,5 +1,5 @@
 # ESP32-Portapack (ESP32PP)
-An addon module for Portapack H1 / H2 / H4 to add GPS and extra sensors to it for more fun.
+An addon module for Portapack H1 / H2 / H4 / PortaRF to add GPS and extra sensors to it for more fun.
 
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
 
@@ -13,27 +13,21 @@ If you got the MDK hardware, it has a different pinout, so check the correspondi
 - **GPS**
 - **Compass**
 - **Temperature + humidity + pressure + light**
-- Portapack H4 I2C interface support! Can run unique apps, while plugged in!
+- Portapack H4 / PortaRF I2C interface support! Can run unique apps, while plugged in!
 - On system apps! The ESP can handle it's own apps built into it. For example Wifi SSID spoofer. (see Wiki for it)
 
 For detailed info check Wiki
 
 ### Features not yet ready: 
 
-- **Bluetooth connection**
-  - Remote controller from a phone.
-  - File exchange with phone.
-  - Share sensor data with the phone too, for more advanced usage.
-  - ** May not fit in the firmware, so it's not determined yet. **
-
 - **IR blaster**
-  - To add IR remote functions to PP. May be available only for H4 + I2C (or modded H2). Now only experimental RX.
+  - To add IR remote functions to PP. May be available only over I2C connection. Now only experimental RX.
 
 - **LoRa**
   - Meshtastic support. (functions not yet decided for it)
 
 ### Standalone apps
-If you connect this module to H4 via I2c, the module will supply additional apps for H4. Check the list in the [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/I2C-apps-for-H4)
+If you connect this module to H4 / PortaRF via I2c, the module will supply additional apps for it. Check the list in the [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/I2C-apps-for-H4)
 
 Suggest in Issues if you get any ideas.
 
