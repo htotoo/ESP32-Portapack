@@ -17,6 +17,7 @@
 // - MPU925X ( 0x68 ) + 280  ( 0x76 )
 // - LSM303  -  0x18 0x1e?!
 // - SSD1306 - 0x3c 0x3d
+// - SHT4X - 0x44
 
 #include <inttypes.h>
 
@@ -30,6 +31,7 @@ typedef enum {
     LSM303_ACCEL,
     LSM303_MAG,
     SSD1306,
+    SHT4x
 } SENSORS;
 
 #if __cplusplus

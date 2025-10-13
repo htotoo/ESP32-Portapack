@@ -64,7 +64,7 @@
     "board/esp32s3-builtin.cfg"
   ],
   "C_Cpp.default.compilerPath": "",
-  "idf.espIdfPathWin": "C:\\Users\\ttoto\\esp\\v5.4.1\\esp-idf",
+  "idf.espIdfPathWin": "C:\\Users\\gyorg\\esp\\v5.5.1\\esp-idf",
   "idf.toolsPathWin": "C:\\Users\\gyorg\\.espressif",
   "idf.pythonInstallPath": "C:\\Users\\gyorg\\.espressif\\tools\\idf-python\\3.11.2\\python.exe"
 }
