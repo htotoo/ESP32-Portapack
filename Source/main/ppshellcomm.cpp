@@ -6,14 +6,14 @@
 
 void ws_notify_cc();
 void ws_notify_dc();
-bool ws_sendall(uint8_t *data, size_t len);
+bool ws_sendall(uint8_t* data, size_t len);
 
-bool (*PPShellComm::data_rx_callback)(const uint8_t *data, size_t data_len) = nullptr;
+bool (*PPShellComm::data_rx_callback)(const uint8_t* data, size_t data_len) = nullptr;
 
 bool PPShellComm::usb_connected = false;
 bool PPShellComm::i2c_connected = false;
 
-char *PPShellComm::PROMPT = (char *)"ch> ";
+char* PPShellComm::PROMPT = (char*)"ch> ";
 char PPShellComm::searchPrompt[5] = {0};
 bool PPShellComm::inCommand = false;
 bool PPShellComm::isMuted = false;
@@ -26,74 +26,59 @@ cdc_acm_dev_hdl_t PPShellComm::cdc_dev = NULL;
 QueueHandle_t PPShellComm::datain_queue;
 I2CQueueMessage_t PPShellComm::tx;
 
-void PPShellComm::init()
-{
+void PPShellComm::init() {
     datain_queue = xQueueCreate(QUEUE_SIZE, sizeof(I2CQueueMessage_t));
     usb_init();
     // i2c rx handler init
     xTaskCreate(processi2c_queuein_task, "i2crxinth", 4096, xTaskGetCurrentTaskHandle(), 20, NULL);
 }
 
-bool PPShellComm::write(const uint8_t *data, size_t len, bool mute, bool buffer)
-{
-    if (usb_connected)
-    {
+bool PPShellComm::write(const uint8_t* data, size_t len, bool mute, bool buffer) {
+    if (usb_connected) {
         return write_usb(data, len, mute, buffer);
     }
-    if (i2c_connected)
-    {
+    if (i2c_connected) {
         tx.size = len;
         ESP_LOGE(TAG, "i2c write");
-        if (len > 64)
-        {
+        if (len > 64) {
             ESP_LOGE(TAG, "Data too big for I2C");
             return false;
         }
-        memcpy(tx.data, data, len); // todo fix for real, buffered write
+        memcpy(tx.data, data, len);  // todo fix for real, buffered write
         inCommand = true;
         return true;
     }
     return false;
 }
-bool PPShellComm::write_blocking(const uint8_t *data, size_t len, bool mute, bool buffer)
-{
-    if (usb_connected)
-    {
+bool PPShellComm::write_blocking(const uint8_t* data, size_t len, bool mute, bool buffer) {
+    if (usb_connected) {
         return write_usb_blocking(data, len, mute, buffer);
     }
-    if (i2c_connected)
-    {
+    if (i2c_connected) {
         tx.size = len;
-        if (len > 64)
-        {
+        if (len > 64) {
             ESP_LOGE(TAG, "Data too big for I2C");
             return false;
         }
-        memcpy(tx.data, data, len); // todo fix for real duffered blocking write
+        memcpy(tx.data, data, len);  // todo fix for real buffered blocking write
         return true;
     }
     return false;
 }
 
-bool PPShellComm::wait_till_sending(uint32_t timeoutMs)
-{
-    if (usb_connected)
-    {
+bool PPShellComm::wait_till_sending(uint32_t timeoutMs) {
+    if (usb_connected) {
         return wait_till_usb_sending(timeoutMs);
     }
-    // todo i2c send wait
+    // todo i2c send wait, but hey, we should not send to i2c!!! check this
     return false;
 }
 
-void PPShellComm::processi2c_queuein_task(void *pvParameters)
-{
+void PPShellComm::processi2c_queuein_task(void* pvParameters) {
     I2CQueueMessage_t rx;
-    while (1)
-    {
-        if (xQueueReceive(datain_queue, &rx, portMAX_DELAY))
-        {
-            for (size_t i = 0; i < rx.size; ++i)
-            {
+    while (1) {
+        if (xQueueReceive(datain_queue, &rx, portMAX_DELAY)) {
+            for (size_t i = 0; i < rx.size; ++i) {
                 searchPromptAdd(rx.data[i]);
             }
             if (data_rx_callback)
@@ -102,8 +87,7 @@ void PPShellComm::processi2c_queuein_task(void *pvParameters)
     }
 }
 
-void PPShellComm::usb_init()
-{
+void PPShellComm::usb_init() {
     device_disconnected_sem = xSemaphoreCreateBinary();
     send_block_sem = xSemaphoreCreateBinary();
     send_buffer_sem = xSemaphoreCreateBinary();
@@ -128,50 +112,40 @@ void PPShellComm::usb_init()
     assert(task_created2 == pdTRUE);
 }
 
-void PPShellComm::usb_lib_task(void *arg)
-{
-    while (1)
-    {
+void PPShellComm::usb_lib_task(void* arg) {
+    while (1) {
         // Start handling system events
         uint32_t event_flags;
         usb_host_lib_handle_events(portMAX_DELAY, &event_flags);
-        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS)
-        {
+        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
             ESP_ERROR_CHECK(usb_host_device_free_all());
         }
-        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE)
-        {
+        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE) {
             // ESP_LOGI(TAG, "USB: All devices freed");
             //  Continue handling USB events to allow device reconnection
         }
     }
 }
 
-void PPShellComm::usb_buffer_task(void *arg)
-{
-    while (1)
-    {
+void PPShellComm::usb_buffer_task(void* arg) {
+    while (1) {
         xSemaphoreTake(send_buffer_sem, portMAX_DELAY);
-        if (send_buffer.len >= 1)
-        {
+        if (send_buffer.len >= 1) {
             // copy
             SendBuffer send_buffer_tmp = send_buffer;
             send_buffer.len = 0;
             xSemaphoreGive(send_buffer_sem);
             // send it to
             wait_till_usb_sending(5000);
-            write_usb_blocking((const uint8_t *)(send_buffer_tmp.buffer), send_buffer_tmp.len, send_buffer_tmp.muted, false);
-        }
-        else
-        {
+            write_usb_blocking((const uint8_t*)(send_buffer_tmp.buffer), send_buffer_tmp.len, send_buffer_tmp.muted, false);
+        } else {
             xSemaphoreGive(send_buffer_sem);
         }
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 
-void PPShellComm::tryconnectUsb(void *arg)
-{
+void PPShellComm::tryconnectUsb(void* arg) {
     const cdc_acm_host_device_config_t dev_config = {
         .connection_timeout_ms = 1000,
         .out_buffer_size = 512,
@@ -180,14 +154,12 @@ void PPShellComm::tryconnectUsb(void *arg)
         .data_cb = handle_usb_rx,
         .user_arg = NULL,
     };
-    while (true)
-    {
+    while (true) {
         // ESP_LOGI(TAG, "Opening CDC ACM device 0x%04X:0x%04X...", USB_DEVICE_VID,
         // USB_DEVICE_PID);
         esp_err_t err = cdc_acm_host_open(USB_DEVICE_VID, USB_DEVICE_PID, 0,
                                           &dev_config, &cdc_dev);
-        if (ESP_OK != err)
-        {
+        if (ESP_OK != err) {
             // ESP_LOGI(TAG, "Failed to open device");
             continue;
         }
@@ -211,38 +183,34 @@ void PPShellComm::tryconnectUsb(void *arg)
     }
 }
 
-void PPShellComm::handle_usb_event(const cdc_acm_host_dev_event_data_t *event, void *user_ctx)
-{
-    switch (event->type)
-    {
-    case CDC_ACM_HOST_ERROR:
-        ESP_LOGE(TAG, "CDC-ACM error has occurred, err_no = %i",
-                 event->data.error);
-        break;
-    case CDC_ACM_HOST_DEVICE_DISCONNECTED:
-        ESP_LOGI(TAG, "Device suddenly disconnected");
-        ESP_ERROR_CHECK(cdc_acm_host_close(event->data.cdc_hdl));
-        xSemaphoreGive(device_disconnected_sem);
-        inCommand = false;
-        usb_connected = false;
-        ws_notify_dc();
-        break;
-    case CDC_ACM_HOST_SERIAL_STATE:
-        ESP_LOGI(TAG, "Serial state notif 0x%04X", event->data.serial_state.val);
-        break;
-    case CDC_ACM_HOST_NETWORK_CONNECTION:
-    default:
-        ESP_LOGW(TAG, "Unsupported CDC event: %i", event->type);
-        break;
+void PPShellComm::handle_usb_event(const cdc_acm_host_dev_event_data_t* event, void* user_ctx) {
+    switch (event->type) {
+        case CDC_ACM_HOST_ERROR:
+            ESP_LOGE(TAG, "CDC-ACM error has occurred, err_no = %i",
+                     event->data.error);
+            break;
+        case CDC_ACM_HOST_DEVICE_DISCONNECTED:
+            ESP_LOGI(TAG, "Device suddenly disconnected");
+            ESP_ERROR_CHECK(cdc_acm_host_close(event->data.cdc_hdl));
+            xSemaphoreGive(device_disconnected_sem);
+            inCommand = false;
+            usb_connected = false;
+            ws_notify_dc();
+            break;
+        case CDC_ACM_HOST_SERIAL_STATE:
+            ESP_LOGI(TAG, "Serial state notif 0x%04X", event->data.serial_state.val);
+            break;
+        case CDC_ACM_HOST_NETWORK_CONNECTION:
+        default:
+            ESP_LOGW(TAG, "Unsupported CDC event: %i", event->type);
+            break;
     }
 }
 
-bool PPShellComm::handle_usb_rx(const uint8_t *data, size_t data_len, void *arg)
-{
+bool PPShellComm::handle_usb_rx(const uint8_t* data, size_t data_len, void* arg) {
     // ESP_LOGI(TAG, "Data received");
     // ESP_LOG_BUFFER_HEXDUMP(TAG, data, data_len, ESP_LOG_INFO);
-    for (size_t i = 0; i < data_len; ++i)
-    {
+    for (size_t i = 0; i < data_len; ++i) {
         searchPromptAdd(data[i]);
     }
     if (!isMuted)
@@ -251,27 +219,22 @@ bool PPShellComm::handle_usb_rx(const uint8_t *data, size_t data_len, void *arg)
     return true;
 }
 
-void PPShellComm::searchPromptAdd(uint8_t ch)
-{
+void PPShellComm::searchPromptAdd(uint8_t ch) {
     // shift
-    for (uint8_t i = 0; i < 3; ++i)
-    {
+    for (uint8_t i = 0; i < 3; ++i) {
         searchPrompt[i] = searchPrompt[i + 1];
     }
     searchPrompt[3] = ch;
-    if (strncmp(PROMPT, searchPrompt, 4) == 0)
-    {
+    if (strncmp(PROMPT, searchPrompt, 4) == 0) {
         inCommand = false;
         xSemaphoreGive(send_block_sem);
     }
 }
 
-bool PPShellComm::write_usb(const uint8_t *data, size_t len, bool mute, bool buffer)
-{
+bool PPShellComm::write_usb(const uint8_t* data, size_t len, bool mute, bool buffer) {
     if (cdc_dev == NULL)
         return false;
-    if (inCommand && buffer)
-    {
+    if (inCommand && buffer) {
         xSemaphoreTake(send_buffer_sem, 5000 / portTICK_PERIOD_MS);
         memcpy(send_buffer.buffer, data, len < 1024 ? len : 1024);
         xSemaphoreGive(send_buffer_sem);
@@ -281,15 +244,13 @@ bool PPShellComm::write_usb(const uint8_t *data, size_t len, bool mute, bool buf
     return cdc_acm_host_data_tx_blocking(cdc_dev, data, len, 30000) == ESP_OK;
 }
 
-bool PPShellComm::write_usb_blocking(const uint8_t *data, size_t len, bool mute, bool buffer)
-{
+bool PPShellComm::write_usb_blocking(const uint8_t* data, size_t len, bool mute, bool buffer) {
     if (!write_usb(data, len, mute, buffer))
         return false;
     return xSemaphoreTake(send_block_sem, 4000 / portTICK_PERIOD_MS);
 }
 
-bool PPShellComm::wait_till_usb_sending(uint32_t timeoutMs)
-{
+bool PPShellComm::wait_till_usb_sending(uint32_t timeoutMs) {
     if (!inCommand)
         return true;
     return xSemaphoreTake(send_block_sem, timeoutMs / portTICK_PERIOD_MS) == pdTRUE;

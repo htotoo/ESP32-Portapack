@@ -7,6 +7,7 @@ char WifiM::wifiAPPASS[64] = {0};
 char WifiM::wifiStaSSID[64] = {0};
 char WifiM::wifiStaPASS[64] = {0};
 char WifiM::wifiHostName[64] = {0};
+uint8_t WifiM::currIp[4] = {0};
 
 int WifiM::ap_client_num = 0;
 
@@ -34,11 +35,19 @@ void WifiM::event_handler(void* arg, esp_event_base_t event_base, int32_t event_
         ESP_LOGI(TAG, "WIFI_EVENT_STA_DISCONNECTED");
         if (ap_client_num <= 0) {
             wifi_sta_ok = false;
+            currIp[0] = 0;
+            currIp[1] = 0;
+            currIp[2] = 0;
+            currIp[3] = 0;
             // esp_wifi_connect(); // only when no ap clients presents
         }
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED) {
         // count ap client number
         ap_client_num++;
+        currIp[0] = 192;
+        currIp[1] = 168;
+        currIp[2] = 4;
+        currIp[3] = 1;
         ESP_LOGI(TAG, "WIFI_EVENT_AP_STACONNECTED");
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STADISCONNECTED) {
         // count ap client number
@@ -46,11 +55,23 @@ void WifiM::event_handler(void* arg, esp_event_base_t event_base, int32_t event_
         ESP_LOGI(TAG, "WIFI_EVENT_AP_STADISCONNECTED");
         if (ap_client_num <= 0) {
             last_wifi_conntry = 0;  // do it now!
+            currIp[0] = 0;
+            currIp[1] = 0;
+            currIp[2] = 0;
+            currIp[3] = 0;
         }
     }
 
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         wifi_sta_ok = true;
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
+        esp_netif_ip_info_t* ip_info = &event->ip_info;
+
+        currIp[0] = (ip_info->ip.addr >> 0) & 0xFF;
+        currIp[1] = (ip_info->ip.addr >> 8) & 0xFF;
+        currIp[2] = (ip_info->ip.addr >> 16) & 0xFF;
+        currIp[3] = (ip_info->ip.addr >> 24) & 0xFF;
+
         ESP_LOGI(TAG, "IP_EVENT_STA_GOT_IP");
     }
 }
@@ -81,6 +102,7 @@ void WifiM::initialise_wifi(void) {
 }
 
 bool WifiM::config_wifi_apsta() {
+    esp_wifi_stop();
     wifi_config_t ap_config = {};
     strcpy((char*)ap_config.ap.ssid, wifiAPSSID);
     strcpy((char*)ap_config.ap.password, wifiAPPASS);
@@ -197,4 +219,11 @@ std::string WifiM::getApIp() {
         return std::string(ip_str);
     }
     return std::string("-");
+}
+
+void WifiM::copyIpToArray(uint8_t* arr) {
+    arr[0] = currIp[0];
+    arr[1] = currIp[1];
+    arr[2] = currIp[2];
+    arr[3] = currIp[3];
 }

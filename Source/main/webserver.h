@@ -212,8 +212,10 @@ static esp_err_t post_req_handler_setup(httpd_req_t* req) {
         changeMask |= 4;
     }
 
-    if ((changeMask & 1) == 1)
+    if ((changeMask & 1) == 1) {
         WifiM::save_config_wifi();
+        WifiM::config_wifi_apsta();
+    }
     if ((changeMask & 2) == 2)
         save_config_misc();
     if ((changeMask & 4) == 4)
@@ -352,6 +354,20 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
             free(buf);
             return ret;
         }
+        if (strcmp((const char*)ws_pkt.payload, "#$##$$#GETINITDATA\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
+            // get currently running esp app
+            AppManager::sendCurrentAppToWeb();
+            // lastly: send the pp connection data
+            if ((PPShellComm::getAnyConnected() & 1) == 1)
+                ws_notify_cc();
+            else if ((PPShellComm::getAnyConnected() & 2) == 2)
+                ws_notify_cc_i2c();
+            else
+                ws_notify_dc();
+            free(buf);
+            return ESP_OK;
+        }
+
         if (strcmp((const char*)ws_pkt.payload, "#$##$$#GETUSBSTATE\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
             if ((PPShellComm::getAnyConnected() & 1) == 1)
                 ws_notify_cc();

@@ -29,6 +29,7 @@ void Display_Ws::showMainTextMultiline(const std::string& text) {
 }
 
 void Display_Ws::draw() {
+    if (PPShellComm::getInCommand()) return;  // skip this frame
     char buff[400];
     snprintf(buff, 400, "#$##$$#GOTDISPLAYTITLE%s\r\n", (char*)title.c_str());
     ws_sendall((uint8_t*)buff, strlen(buff), true);

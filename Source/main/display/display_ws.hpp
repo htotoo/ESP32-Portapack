@@ -2,6 +2,7 @@
 #define DISPLAY_WS_HPP
 
 #include "displayskeleton.hpp"
+#include "ppshellcomm.h"
 
 bool ws_sendall(uint8_t* data, size_t len, bool asyncmsg);
 
