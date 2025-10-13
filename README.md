@@ -1,5 +1,5 @@
 # ESP32-Portapack (ESP32PP)
-An addon module for Portapack H1 / H2 / H4 / PortaRF to add GPS and extra sensors to it for more fun.
+An addon module for Portapack H4 / PortaRF to add GPS and extra sensors to it for more fun. (H2 too, but needs HW mod)
 
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
 
@@ -13,7 +13,7 @@ If you got the MDK hardware, it has a different pinout, so check the correspondi
 - **GPS**
 - **Compass**
 - **Temperature + humidity + pressure + light**
-- Portapack H4 / PortaRF I2C interface support! Can run unique apps, while plugged in!
+- Portapack / PortaRF I2C interface support! Can add unique apps to PortaX!
 - On system apps! The ESP can handle it's own apps built into it. For example Wifi SSID spoofer. (see Wiki for it)
 
 For detailed info check Wiki
@@ -27,7 +27,7 @@ For detailed info check Wiki
   - Meshtastic support. (functions not yet decided for it)
 
 ### Standalone apps
-If you connect this module to H4 / PortaRF via I2c, the module will supply additional apps for it. Check the list in the [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/Apps-over-I2C)
+The module will supply additional apps for PortaX devices. Check the list in the [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/Apps-over-I2C)
 
 Suggest in Issues if you get any ideas.
 
