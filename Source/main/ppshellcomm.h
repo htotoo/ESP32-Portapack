@@ -86,9 +86,6 @@ class PPShellComm {
     static bool isMuted;    // reply not needed to ws until next prompt
 
     static SendBuffer send_buffer;
-    static SemaphoreHandle_t send_block_sem;
-    static SemaphoreHandle_t send_buffer_sem;
-    static SemaphoreHandle_t device_disconnected_sem;
 
     static I2CQueueMessage_t tx;
 };

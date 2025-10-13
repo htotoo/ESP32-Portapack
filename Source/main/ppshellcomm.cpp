@@ -18,9 +18,6 @@ bool PPShellComm::inCommand = false;
 bool PPShellComm::isMuted = false;
 
 SendBuffer PPShellComm::send_buffer;
-SemaphoreHandle_t PPShellComm::send_block_sem;
-SemaphoreHandle_t PPShellComm::send_buffer_sem;
-SemaphoreHandle_t PPShellComm::device_disconnected_sem;
 QueueHandle_t PPShellComm::datain_queue;
 I2CQueueMessage_t PPShellComm::tx;
 
@@ -83,6 +80,5 @@ void PPShellComm::searchPromptAdd(uint8_t ch) {
     searchPrompt[3] = ch;
     if (strncmp(PROMPT, searchPrompt, 4) == 0) {
         inCommand = false;
-        xSemaphoreGive(send_block_sem);
     }
 }

@@ -8,7 +8,7 @@ uint8_t BMx280_addr = 0;
 uint8_t SHT3x_addr = 0;
 uint8_t LSM303_addr_mag = 0;
 uint8_t LSM303_addr_acc = 0;
-
+uint8_t SHT4x_addr = 0;
 uint8_t SSD1306_addr = 0;
 
 void foundI2CDev(uint8_t addr) {
@@ -46,6 +46,10 @@ void foundI2CDev(uint8_t addr) {
         SSD1306_addr = 0x3c;  // OLED display address
     if (addr == 0x3d)
         SSD1306_addr = 0x3d;  // OLED display address
+    if (addr == 0x44)
+        SHT4x_addr = 0x44;
+    if (addr == 0x45)
+        SHT4x_addr = 0x45;
 }
 
 uint8_t getDevAddr(SENSORS sensor) {
@@ -68,6 +72,8 @@ uint8_t getDevAddr(SENSORS sensor) {
             return LSM303_addr_mag;
         case SSD1306:
             return SSD1306_addr;
+        case SHT4x:
+            return SHT4x_addr;
         default:
             return 0;
             break;
