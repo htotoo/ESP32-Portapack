@@ -45,12 +45,11 @@ void EPAppWifiSpam::sendBeacon(std::string ssid, uint8_t macid) {
         packet[38 + ssid.size() + i] = postSSID[i];
 
     esp_wifi_80211_tx(WIFI_IF_AP, packet, 128, false);  // sizeof?!
-    esp_wifi_80211_tx(WIFI_IF_AP, packet, 128, false);  // sizeof?!
 }
 
 void EPAppWifiSpam::Loop(uint32_t currentMillis) {
     if (current_mode == 0) return;  // Standby mode, do nothing
-    if (currentMillis - lastBeaconTime > 10) {
+    if (currentMillis - lastBeaconTime > 5) {
         if (current_mode == 1) {  // Random characters mode
             std::string ssid;
             uint8_t len = esp_random() % 31 + 1;

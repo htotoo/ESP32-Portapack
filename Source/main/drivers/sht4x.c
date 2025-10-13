@@ -194,6 +194,8 @@ static inline bool is_measuring(sht4x_t* dev) {
 esp_err_t sht4x_init_desc(sht4x_t* dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio) {
     CHECK_ARG(dev);
 
+    if (addr != 0x44 && addr != 0x45) return ESP_ERR_INVALID_ARG;
+
     dev->i2c_dev.port = port;
     dev->i2c_dev.addr = addr;
     dev->i2c_dev.cfg.sda_io_num = sda_gpio;

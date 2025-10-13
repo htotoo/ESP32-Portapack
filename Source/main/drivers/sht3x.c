@@ -46,9 +46,9 @@
 #include "esp_idf_lib_helpers.h"
 #include "sht3x.h"
 
-#define I2C_FREQ_HZ 1000000 // 1MHz
+#define I2C_FREQ_HZ 1000000  // 1MHz
 
-const char *TAG = "sht3x";
+const char* TAG = "sht3x";
 
 #define SHT3X_STATUS_CMD 0xF32D
 #define SHT3X_CLEAR_STATUS_CMD 0x3041
@@ -59,12 +59,12 @@ const char *TAG = "sht3x";
 #define SHT3X_HEATER_OFF_CMD 0x3066
 
 static const uint16_t SHT3X_MEASURE_CMD[6][3] = {
-    {0x2400, 0x240b, 0x2416}, // [SINGLE_SHOT][H,M,L] without clock stretching
-    {0x2032, 0x2024, 0x202f}, // [PERIODIC_05][H,M,L]
-    {0x2130, 0x2126, 0x212d}, // [PERIODIC_1 ][H,M,L]
-    {0x2236, 0x2220, 0x222b}, // [PERIODIC_2 ][H,M,L]
-    {0x2334, 0x2322, 0x2329}, // [PERIODIC_4 ][H,M,L]
-    {0x2737, 0x2721, 0x272a}  // [PERIODIC_10][H,M,L]
+    {0x2400, 0x240b, 0x2416},  // [SINGLE_SHOT][H,M,L] without clock stretching
+    {0x2032, 0x2024, 0x202f},  // [PERIODIC_05][H,M,L]
+    {0x2130, 0x2126, 0x212d},  // [PERIODIC_1 ][H,M,L]
+    {0x2236, 0x2220, 0x222b},  // [PERIODIC_2 ][H,M,L]
+    {0x2334, 0x2322, 0x2329},  // [PERIODIC_4 ][H,M,L]
+    {0x2737, 0x2721, 0x272a}   // [PERIODIC_10][H,M,L]
 };
 
 // due to the fact that ticks can be smaller than portTICK_PERIOD_MS, one and
@@ -89,54 +89,46 @@ static const uint8_t SHT3X_MEAS_DURATION_TICKS[3] = {
     TIME_TO_TICKS(SHT3X_MEAS_DURATION_REP_LOW)};
 
 #define CHECK(x)                \
-    do                          \
-    {                           \
+    do {                        \
         esp_err_t __;           \
         if ((__ = x) != ESP_OK) \
             return __;          \
     } while (0)
 #define CHECK_ARG(VAL)                  \
-    do                                  \
-    {                                   \
+    do {                                \
         if (!(VAL))                     \
             return ESP_ERR_INVALID_ARG; \
     } while (0)
 
 #define G_POLYNOM 0x31
 
-static inline uint16_t shuffle(uint16_t val)
-{
+static inline uint16_t shuffle(uint16_t val) {
     return (val >> 8) | (val << 8);
 }
 
-static uint8_t crc8(uint8_t data[], int len)
-{
+static uint8_t crc8(uint8_t data[], int len) {
     // initialization value
     uint8_t crc = 0xff;
 
     // iterate over all bytes
-    for (int i = 0; i < len; i++)
-    {
+    for (int i = 0; i < len; i++) {
         crc ^= data[i];
-        for (int i = 0; i < 8; i++)
-        {
+        for (int i = 0; i < 8; i++) {
             bool xor = crc & 0x80;
             crc = crc << 1;
-            crc = xor? crc ^ G_POLYNOM : crc;
+            crc = xor ? crc ^ G_POLYNOM : crc;
         }
     }
     return crc;
 }
 
-static esp_err_t send_cmd_nolock(sht3x_t *dev, uint16_t cmd)
-{
+static esp_err_t send_cmd_nolock(sht3x_t* dev, uint16_t cmd) {
     cmd = shuffle(cmd);
 
     return i2c_dev_write(&dev->i2c_dev, NULL, 0, &cmd, 2);
 }
 
-static esp_err_t send_cmd(sht3x_t *dev, uint16_t cmd)
-{
+static esp_err_t send_cmd(sht3x_t* dev, uint16_t cmd) {
     I2C_DEV_TAKE_MUTEX(&dev->i2c_dev);
     I2C_DEV_CHECK(&dev->i2c_dev, send_cmd_nolock(dev, cmd));
     I2C_DEV_GIVE_MUTEX(&dev->i2c_dev);
@@ -144,8 +136,7 @@ static esp_err_t send_cmd(sht3x_t *dev, uint16_t cmd)
     return ESP_OK;
 }
 
-static esp_err_t start_nolock(sht3x_t *dev, sht3x_mode_t mode, sht3x_repeat_t repeat)
-{
+static esp_err_t start_nolock(sht3x_t* dev, sht3x_mode_t mode, sht3x_repeat_t repeat) {
     dev->mode = mode;
     dev->repeatability = repeat;
     CHECK(send_cmd_nolock(dev, SHT3X_MEASURE_CMD[mode][repeat]));
@@ -156,8 +147,7 @@ static esp_err_t start_nolock(sht3x_t *dev, sht3x_mode_t mode, sht3x_repeat_t re
     return ESP_OK;
 }
 
-static inline bool is_measuring(sht3x_t *dev)
-{
+static inline bool is_measuring(sht3x_t* dev) {
     // not running if measurement is not started at all or
     // it is not the first measurement in periodic mode
     if (!dev->meas_started || !dev->meas_first)
@@ -169,15 +159,12 @@ static inline bool is_measuring(sht3x_t *dev)
     return elapsed < SHT3X_MEAS_DURATION_US[dev->repeatability];
 }
 
-static esp_err_t get_raw_data_nolock(sht3x_t *dev, sht3x_raw_data_t raw_data)
-{
-    if (!dev->meas_started)
-    {
+static esp_err_t get_raw_data_nolock(sht3x_t* dev, sht3x_raw_data_t raw_data) {
+    if (!dev->meas_started) {
         ESP_LOGE(TAG, "Measurement is not started");
         return ESP_ERR_INVALID_STATE;
     }
-    if (is_measuring(dev))
-    {
+    if (is_measuring(dev)) {
         ESP_LOGE(TAG, "Measurement is still running");
         return ESP_ERR_INVALID_STATE;
     }
@@ -194,15 +181,13 @@ static esp_err_t get_raw_data_nolock(sht3x_t *dev, sht3x_raw_data_t raw_data)
         dev->meas_started = false;
 
     // check temperature crc
-    if (crc8(raw_data, 2) != raw_data[2])
-    {
+    if (crc8(raw_data, 2) != raw_data[2]) {
         ESP_LOGE(TAG, "CRC check for temperature data failed");
         return ESP_ERR_INVALID_CRC;
     }
 
     // check humidity crc
-    if (crc8(raw_data + 3, 2) != raw_data[5])
-    {
+    if (crc8(raw_data + 3, 2) != raw_data[5]) {
         ESP_LOGE(TAG, "CRC check for humidity data failed");
         return ESP_ERR_INVALID_CRC;
     }
@@ -212,12 +197,10 @@ static esp_err_t get_raw_data_nolock(sht3x_t *dev, sht3x_raw_data_t raw_data)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-esp_err_t sht3x_init_desc(sht3x_t *dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
-{
+esp_err_t sht3x_init_desc(sht3x_t* dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio) {
     CHECK_ARG(dev);
 
-    if (addr != 0x44 && addr != 0x45)
-    {
+    if (addr != 0x44 && addr != 0x45) {
         return ESP_ERR_INVALID_ARG;
     }
     dev->i2c_dev.port = port;
@@ -231,15 +214,13 @@ esp_err_t sht3x_init_desc(sht3x_t *dev, uint8_t addr, i2c_port_t port, gpio_num_
     return i2c_dev_create_mutex(&dev->i2c_dev);
 }
 
-esp_err_t sht3x_free_desc(sht3x_t *dev)
-{
+esp_err_t sht3x_free_desc(sht3x_t* dev) {
     CHECK_ARG(dev);
 
     return i2c_dev_delete_mutex(&dev->i2c_dev);
 }
 
-esp_err_t sht3x_init(sht3x_t *dev)
-{
+esp_err_t sht3x_init(sht3x_t* dev) {
     CHECK_ARG(dev);
 
     dev->mode = SHT3X_PERIODIC_1MPS;
@@ -250,15 +231,13 @@ esp_err_t sht3x_init(sht3x_t *dev)
     return send_cmd(dev, SHT3X_CLEAR_STATUS_CMD);
 }
 
-esp_err_t sht3x_set_heater(sht3x_t *dev, bool enable)
-{
+esp_err_t sht3x_set_heater(sht3x_t* dev, bool enable) {
     CHECK_ARG(dev);
 
     return send_cmd(dev, enable ? SHT3X_HEATER_ON_CMD : SHT3X_HEATER_OFF_CMD);
 }
 
-esp_err_t sht3x_compute_values(sht3x_raw_data_t raw_data, float *temperature, float *humidity)
-{
+esp_err_t sht3x_compute_values(sht3x_raw_data_t raw_data, float* temperature, float* humidity) {
     CHECK_ARG(raw_data && (temperature || humidity));
 
     if (temperature)
@@ -270,8 +249,7 @@ esp_err_t sht3x_compute_values(sht3x_raw_data_t raw_data, float *temperature, fl
     return ESP_OK;
 }
 
-esp_err_t sht3x_measure(sht3x_t *dev, float *temperature, float *humidity)
-{
+esp_err_t sht3x_measure(sht3x_t* dev, float* temperature, float* humidity) {
     CHECK_ARG(dev && (temperature || humidity));
 
     sht3x_raw_data_t raw_data;
@@ -285,13 +263,11 @@ esp_err_t sht3x_measure(sht3x_t *dev, float *temperature, float *humidity)
     return sht3x_compute_values(raw_data, temperature, humidity);
 }
 
-uint8_t sht3x_get_measurement_duration(sht3x_repeat_t repeat)
-{
-    return SHT3X_MEAS_DURATION_TICKS[repeat]; // in RTOS ticks
+uint8_t sht3x_get_measurement_duration(sht3x_repeat_t repeat) {
+    return SHT3X_MEAS_DURATION_TICKS[repeat];  // in RTOS ticks
 }
 
-esp_err_t sht3x_start_measurement(sht3x_t *dev, sht3x_mode_t mode, sht3x_repeat_t repeat)
-{
+esp_err_t sht3x_start_measurement(sht3x_t* dev, sht3x_mode_t mode, sht3x_repeat_t repeat) {
     CHECK_ARG(dev);
 
     I2C_DEV_TAKE_MUTEX(&dev->i2c_dev);
@@ -301,8 +277,7 @@ esp_err_t sht3x_start_measurement(sht3x_t *dev, sht3x_mode_t mode, sht3x_repeat_
     return ESP_OK;
 }
 
-esp_err_t sht3x_stop_periodic_measurement(sht3x_t *dev)
-{
+esp_err_t sht3x_stop_periodic_measurement(sht3x_t* dev) {
     CHECK_ARG(dev);
 
     CHECK(send_cmd(dev, SHT3X_STOP_PERIODIC_MEAS_CMD));
@@ -314,8 +289,7 @@ esp_err_t sht3x_stop_periodic_measurement(sht3x_t *dev)
     return ESP_OK;
 }
 
-esp_err_t sht3x_get_raw_data(sht3x_t *dev, sht3x_raw_data_t raw_data)
-{
+esp_err_t sht3x_get_raw_data(sht3x_t* dev, sht3x_raw_data_t raw_data) {
     CHECK_ARG(dev && raw_data);
 
     I2C_DEV_TAKE_MUTEX(&dev->i2c_dev);
@@ -325,8 +299,7 @@ esp_err_t sht3x_get_raw_data(sht3x_t *dev, sht3x_raw_data_t raw_data)
     return ESP_OK;
 }
 
-esp_err_t sht3x_get_results(sht3x_t *dev, float *temperature, float *humidity)
-{
+esp_err_t sht3x_get_results(sht3x_t* dev, float* temperature, float* humidity) {
     CHECK_ARG(dev && (temperature || humidity));
 
     sht3x_raw_data_t raw_data;
