@@ -95,7 +95,8 @@ extern "C" {
     .i2c_clock_speed = I2C_SSD1306_DEV_CLK_SPD, \
     .panel_size = SSD1306_PANEL_128x64,         \
     .offset_x = 0,                              \
-    .flip_enabled = false}
+    .flip_enabled = false,                      \
+    .display_enabled = true}
 
 /**
  * @brief Macro that initializes `ssd1306_config_t` to default configuration settings for a 128x128 display.

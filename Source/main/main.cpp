@@ -9,12 +9,13 @@
 // todo save hmc calibration, and load and use, and recalibrate on the fly
 
 // todo add an option to disable rtc set (bc utc only)
-// todo add +- time
+// todo add +- time (timezones)
 // todo move sattrack to EP_App format
 // todo add application start / stop commands to i2c app manager part
 // todo add custom wifi ap spam options
-// todo add wifispam app to pp.
-// todo add dyn pin configuration options, and save them to nvs. when not set, show the webpage to set it
+// todo add wifispam + app to pp.
+// todo add dyn pin configuration options, and save them to nvs. when not set, show the webpage to set it. allow vendor preset on compile, to default to that, not to not set
+// add: https://github.com/esp-idf-lib/sht4x/blob/main/sht4x.h
 
 // rgb led: GPIO48 on ESP S3. set to -1 to disable
 #define RGB_LED_PIN 48
