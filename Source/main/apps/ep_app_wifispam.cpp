@@ -49,7 +49,7 @@ void EPAppWifiSpam::sendBeacon(std::string ssid, uint8_t macid) {
 
 void EPAppWifiSpam::Loop(uint32_t currentMillis) {
     if (current_mode == 0) return;  // Standby mode, do nothing
-    if (currentMillis - lastBeaconTime > 5) {
+    if (currentMillis - lastBeaconTime > 10) {
         if (current_mode == 1) {  // Random characters mode
             std::string ssid;
             uint8_t len = esp_random() % 31 + 1;

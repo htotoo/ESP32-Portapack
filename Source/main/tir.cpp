@@ -30,11 +30,11 @@ void TIR::init(gpio_num_t tx, gpio_num_t rx) {
     tx_pin = tx;
     rx_pin = rx;
     // init rx
-    if (rx != 0) {
+    if (rx > 0) {
         xTaskCreate(recvIRTask, "processIRRxTask", 4096, NULL, 5, NULL);
     }
 
-    if (tx_pin != 0) {
+    if (tx_pin > 0) {
         sendQueue = xQueueCreate(5, sizeof(ir_data_t));
         xTaskCreate(processSendTask, "processIRSendTask", 4096, NULL, 5, NULL);
     }

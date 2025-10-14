@@ -15,6 +15,7 @@
 // todo add custom wifi ap spam options
 // todo add wifispam + app to pp.
 // todo add dyn pin configuration options, and save them to nvs. when not set, show the webpage to set it. allow vendor preset on compile, to default to that, not to not set
+// todo wifi spam rework. send multiple different at once, so it is faster, and needs less frequent caling
 
 // rgb led: GPIO48 on ESP S3. set to -1 to disable
 #define RGB_LED_PIN 48
@@ -72,6 +73,8 @@ uint8_t gps_debug_limiter = 0;
 
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 
+#include "pinconfig.h"
+
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
 #include "../extapps/wifisettings.h"
@@ -80,6 +83,8 @@ uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 #include "display/displaymanager.hpp"
 
 #define TAG "ESP32PP"
+
+PinConfig pinConfig;
 
 DisplayManager displayManager;
 
@@ -143,13 +148,17 @@ void SetDisplayDirtyMain() {
     displayManager.setDirty();
 }
 
-static void i2c_scan() {
+static void i2c_scan(int sda, int scl) {
+    if (sda < 0 || scl < 0) {
+        ESP_LOGW(TAG, "I2C pins not set. Skipping I2C scan.");
+        return;
+    }
     vTaskDelay(50 / portTICK_PERIOD_MS);  // wait till devs wake up
     esp_err_t res;
     printf("i2c scan: \n");
     i2c_dev_t dev = {};
-    dev.cfg.sda_io_num = CONFIG_IC2SDAPIN;
-    dev.cfg.scl_io_num = CONFIG_IC2SCLPIN;
+    dev.cfg.sda_io_num = sda;
+    dev.cfg.scl_io_num = scl;
     dev.cfg.master.clk_speed = 400000;
     for (uint8_t i = 1; i < 127; i++) {
         dev.addr = i;
@@ -460,7 +469,7 @@ void app_main(void) {
     // end config load
     i2cdev_init();
     // i2c scanner
-    i2c_scan();
+    i2c_scan(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     PPShellComm::init();
@@ -475,8 +484,13 @@ void app_main(void) {
     init_httpd();
     nmea_parser_config_t nmeaconfig = NMEA_PARSER_CONFIG_DEFAULT();
     nmeaconfig.uart.baud_rate = gps_baud;
-    nmea_parser_handle_t nmea_hdl = nmea_parser_init(&nmeaconfig);
-    nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+    nmeaconfig.uart.rx_pin = pinConfig.GpsRxPin();
+    if (nmeaconfig.uart.rx_pin == 256) {
+        ESP_LOGW(TAG, "GPS Rx pin not set. GPS disabled.");
+    } else {
+        nmea_parser_handle_t nmea_hdl = nmea_parser_init(&nmeaconfig);
+        nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+    }
     esp_task_wdt_deinit();
 
     temperature_sensor_handle_t temp_sensor = NULL;
@@ -485,10 +499,10 @@ void app_main(void) {
     ESP_LOGI(TAG, "Enable temperature sensor");
     ESP_ERROR_CHECK(temperature_sensor_enable(temp_sensor));
 
-    LedFeedback::init(RGB_LED_PIN);
+    LedFeedback::init(pinConfig.LedRgbPin());
     LedFeedback::rgb_set(255, 255, 255);
 
-    tir.init((gpio_num_t)CONFIG_IR_TX_PIN, (gpio_num_t)CONFIG_IR_RX_PIN);
+    tir.init((gpio_num_t)pinConfig.IrTxPin(), (gpio_num_t)pinConfig.IrRxPin());
     tir.set_on_ir_received([](irproto proto, uint64_t rcode, size_t len) {
         if (proto == UNK) return;
         last_rcvd_ir.protocol = proto;
@@ -511,7 +525,7 @@ void app_main(void) {
     displayManager.setEnvironmentDataSource(&environment);
     displayManager.setLightDataSource(&light);
     displayManager.setSatTrackDataSource(&sattrackdata, &sat_to_track);
-    i2c_scan();
+    i2c_scan(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());  // scan again, after sensors initialized
 
     PPHandler::set_module_name("ESP32PP");
     PPHandler::set_module_version(1);
