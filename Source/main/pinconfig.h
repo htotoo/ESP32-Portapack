@@ -14,7 +14,7 @@ class PinConfig {
      * @brief Construct a new Pin Config object from a fixed list of pin numbers.
      * This is highly efficient for embedded systems as it involves no templates or dynamic allocation.
      * @param ledRgb Pin for the RGB LED.
-     * @param gpsRx Pin for the GPS RX.
+     * @param gpsRx Pin for the GPS.
      * @param i2cSda Pin for the I2C SDA (Master).
      * @param i2cScl Pin for the I2C SCL (Master).
      * @param irRx Pin for the IR Receiver.

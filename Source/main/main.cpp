@@ -19,7 +19,7 @@
 
 #include <inttypes.h>
 #include "pinconfig.h"
-
+#ifndef HW_VARIANT_SELECTED
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // YOU CAN SET HERE THE DEFAULT PINS FOR YOUR BUILD! IF you don't select any, the pin configiguration webpage will be shown to you. (NIY, SO SELECT ONE!)
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -34,7 +34,7 @@
 // #define HW_VARIANT_SELECTED HW_VARIANT_MDK_BOARD
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
