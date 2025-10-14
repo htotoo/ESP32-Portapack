@@ -17,10 +17,24 @@
 // todo add dyn pin configuration options, and save them to nvs. when not set, show the webpage to set it. allow vendor preset on compile, to default to that, not to not set
 // todo wifi spam rework. send multiple different at once, so it is faster, and needs less frequent caling
 
-// rgb led: GPIO48 on ESP S3. set to -1 to disable
-#define RGB_LED_PIN 48
-
 #include <inttypes.h>
+#include "pinconfig.h"
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// YOU CAN SET HERE THE DEFAULT PINS FOR YOUR BUILD! IF you don't select any, the pin configiguration webpage will be shown to you. (NIY, SO SELECT ONE!)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// select this if you have OSDR AI EXTENSION BOARD
+#define HW_VARIANT_SELECTED HW_VARIANT_PRFAI
+
+// select this if you have built yourself one based on this project's first pinout config (from the wiki)
+// #define HW_VARIANT_SELECTED HW_VARIANT_ESP32PP
+
+// select this, if you have MDK board
+// #define HW_VARIANT_SELECTED HW_VARIANT_MDK_BOARD
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
@@ -73,8 +87,6 @@ uint8_t gps_debug_limiter = 0;
 
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 
-#include "pinconfig.h"
-
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
 #include "../extapps/wifisettings.h"
@@ -84,12 +96,13 @@ uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 
 #define TAG "ESP32PP"
 
-PinConfig pinConfig;
+#ifndef HW_VARIANT_SELECTED
+#define HW_VARIANT_SELECTED HW_VARIANT_CUSTOM
+#endif
+PinConfig pinConfig(HW_VARIANT_SELECTED);
 
 DisplayManager displayManager;
-
 Sgp4 sat;
-
 TIR tir;
 
 typedef enum TimerEntry {
@@ -104,24 +117,24 @@ typedef enum TimerEntry {
     TimerEntry_SATDOWN,
     TimerEntry_MAX
 } TimerEntry;
-
 uint32_t time_millis = 0;  // current time in millis
-
 uint32_t last_millis[TimerEntry_MAX] = {0};
 // ______________________________________SEN    GPS  ORI    ENV   TIME        WEB   RGB   SAT    DOWN
 uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000, 2000, 20000};
 
+// default sensor values and declaration
 orientation_t orientation{400.0, 0.0};
 environment_t environment{0.0, 0.0, 0.0};  // temperature, humidity, pressure
-
 float temperatureEsp = 0.0;
 uint16_t light = 0;
 ppgpssmall_t gpsdata{200, 200, 0, 0, 0, 0, {}, {}};
+ir_data_t last_rcvd_ir{UNK, 0, 0};
+
 bool gotAnyGps = false;
+
 bool downloadedTLE = false;
 uint16_t lastReportedMxS = 0;  // gps last reported gps time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
 uint32_t gps_baud = 9600;
-
 uint32_t i2c_pp_last_comm_time = 0;  // when is it connected last time (last query from pp).
 bool i2p_pp_conn_state = false;      // to save and check if i need to send a message to web
 
@@ -137,8 +150,6 @@ uint8_t sattrack_task_last_error = 0;
 std::string sat_to_track = "ISS";
 std::string sat_to_track_new = "";
 bool sat_data_loaded = false;
-
-ir_data_t last_rcvd_ir{UNK, 0, 0};
 
 bool wifi_config_changed = false;  // if wifi config changed from pp. (irq, so need to save and apply elsewhere)
 
@@ -516,10 +527,10 @@ void app_main(void) {
         ws_sendall((uint8_t*)buff, strlen(buff), true);  // todo web handler
     });
 
-    init_orientation();  // it loads orientation data too
-    init_environment();
+    init_orientation(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());  // it loads orientation data too
+    init_environment(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());
 
-    displayManager.init();
+    displayManager.init(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());
     displayManager.setGpsDataSource(&gpsdata);
     displayManager.setOrientationDataSource(&orientation);
     displayManager.setEnvironmentDataSource(&environment);
@@ -657,7 +668,7 @@ void app_main(void) {
                                                     vTaskDelay(1 / portTICK_PERIOD_MS);
                                                     return true; });
 
-    PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
+    PPHandler::init((gpio_num_t)pinConfig.I2cSclSlavePin(), (gpio_num_t)pinConfig.I2cSdaSlavePin(), 0x51);
 
     while (true) {
         time_millis = esp_timer_get_time() / 1000;

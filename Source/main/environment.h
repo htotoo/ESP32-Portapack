@@ -36,8 +36,8 @@ typedef enum EnvironmentLightSensors {
 extern "C" {
 #endif
 
-void init_environment();
-void init_environment_light();
+void init_environment(int sda, int scl);
+void init_environment_light(int sda, int scl);
 
 void get_environment_meas(float* temperature, float* pressure, float* humidity);
 void get_environment_light(uint16_t* light);

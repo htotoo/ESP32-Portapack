@@ -5,12 +5,15 @@
 
 #include "apps/appmanager.hpp"
 
-bool DisplayManager::init() {
+bool DisplayManager::init(int sda, int scl) {
     uint8_t i2caddr = 0;
+
+    sda_pin = sda;
+    scl_pin = scl;
 
     // init ws display
     displayWs = new Display_Ws();
-    displayWs->init(254);
+    displayWs->init(254, -1, -1);
 
     // init any main displays
 
@@ -19,7 +22,7 @@ bool DisplayManager::init() {
     if (i2caddr != 0) {
         ESP_LOGI("DisplayManager", "SSD1306 display found!");
         displayMain = new Display_Ssd1306();
-        if (displayMain->init(i2caddr)) {
+        if (displayMain->init(i2caddr, sda, scl)) {
             ESP_LOGI("DisplayManager", "SSD1306 display initialized successfully.");
             return true;
         } else {

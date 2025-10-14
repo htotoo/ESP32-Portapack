@@ -23,7 +23,7 @@ enum ScreenType : uint8_t {
 class DisplayManager {
    public:
     // Initialize the display manager
-    bool init();
+    bool init(int sda, int scl);
     void loop(uint32_t currentMillis);
     void setDirty();
     void setGpsDataSource(ppgpssmall_t* gpsdata) {
@@ -118,6 +118,9 @@ class DisplayManager {
     uint16_t* lightdata = nullptr;
     sattrackdata_t* sattrackdata = nullptr;
     std::string* sattrackname = nullptr;
+
+    int sda_pin = -1;
+    int scl_pin = -1;
 };
 
 #endif  // DISPLAYMANAGER_HPP

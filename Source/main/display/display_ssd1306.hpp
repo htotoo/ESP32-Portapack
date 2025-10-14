@@ -6,7 +6,7 @@
 
 class Display_Ssd1306 : public DisplayGeneric {
    public:
-    bool init(uint8_t addr) override;
+    bool init(uint8_t addr, int sda, int scl) override;
     void clear() override;
     void showTitle(const std::string& title) override;
     void showMainText(const std::string& text) override;
