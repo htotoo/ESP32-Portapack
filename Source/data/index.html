@@ -501,7 +501,7 @@
             try {
                 console.log(msg);
                 if (msg.startsWith("#$##$$#")) {
-                    if (msg == "#$##$$#USB_DC\r\n") {
+                    if (msg == "#$##$$#I2C_DC\r\n") {
                         log("PP Disconnected");
                         enadisaControls(false);
                         const canvas = document.getElementById("screen");
@@ -511,29 +511,11 @@
                         document.getElementById("connStatePP").innerHTML = "PP NOT connected to ESP";
                         return false;
                     }
-                    if (msg == "#$##$$#I2C_DC\r\n") {
-                        log("PP Disconnected (I2C)");
-                        enadisaControls(false);
-                        const canvas = document.getElementById("screen");
-                        const ctx = canvas.getContext("2d");
-                        ctx.fillStyle = "#000";
-                        ctx.fillRect(0, 0, 240, 320);
-                        document.getElementById("connStatePP").innerHTML = "PP NOT connected to ESP";
-                        return false;
-                    }
-                    if (msg == "#$##$$#USB_CC\r\n") {
+                    if (msg == "#$##$$#I2C_CC\r\n") {
                         log("PP Connected");
                         enadisaControls(true);
                         fileManClose();
                         document.getElementById("connStatePP").innerHTML = "PP connected to ESP";
-                        autoScreenRefresh();
-                        return false;
-                    }
-                    if (msg == "#$##$$#I2C_CC\r\n") {
-                        log("PP Connected (I2C)");
-                        enadisaControls(true);
-                        fileManClose();
-                        document.getElementById("connStatePP").innerHTML = "PP connected to ESP (I2C)";
                         autoScreenRefresh();
                         return false;
                     }

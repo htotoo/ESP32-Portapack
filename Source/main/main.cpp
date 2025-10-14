@@ -15,7 +15,6 @@
 // todo add custom wifi ap spam options
 // todo add wifispam + app to pp.
 // todo add dyn pin configuration options, and save them to nvs. when not set, show the webpage to set it. allow vendor preset on compile, to default to that, not to not set
-// add: https://github.com/esp-idf-lib/sht4x/blob/main/sht4x.h
 
 // rgb led: GPIO48 on ESP S3. set to -1 to disable
 #define RGB_LED_PIN 48
@@ -683,60 +682,6 @@ void app_main(void) {
                      temperatureEsp, environment.temperature, environment.humidity, environment.pressure, light);
             ws_sendall((uint8_t*)buff, strlen(buff), true);
             last_millis[TimerEntry_REPORTWEB] = time_millis;
-        }
-
-        // REPORT SENSOR DATA TO PP. EACH HAS OWN TIMER!
-        char gotusb[300];
-        if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPGPS] > timer_millis[TimerEntry_REPORTPPGPS])) {
-            if (gpsdata.latitude != 200 || gpsdata.longitude != 200) {
-                snprintf(gotusb, 290, "gotgps %.06f %.06f %.02f %.01f %d\r\n", gpsdata.latitude, gpsdata.longitude, gpsdata.altitude, gpsdata.speed, gpsdata.sats_in_use);
-                ESP_LOGI(TAG, "%s", gotusb);
-                if (PPShellComm::wait_till_sending(1)) {
-                    PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
-                    ESP_LOGI(TAG, "gotgps sent");
-                }
-                last_millis[TimerEntry_REPORTPPGPS] = time_millis;
-            }
-        }
-        if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPORI] > timer_millis[TimerEntry_REPORTPPORI])) {
-            if (orientation.angle < 400)  // got orientation data
-            {
-                snprintf(gotusb, 290, "gotorientation %.01f %.01f\r\n", orientation.angle, orientation.tilt);
-                ESP_LOGI(TAG, "%s", gotusb);
-                if (PPShellComm::wait_till_sending(1)) {
-                    PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
-                    ESP_LOGI(TAG, "gotorientation sent");
-                }
-                displayManager.setOrientationDataSource(&orientation);  // to update screen is that screen is selected
-                last_millis[TimerEntry_REPORTPPORI] = time_millis;
-            }
-        }
-        if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPENVI] > timer_millis[TimerEntry_REPORTPPENVI])) {
-            if (environment.temperature != 0 || environment.humidity != 0 || environment.pressure != 0 || light != 0)  // got env data
-            {
-                snprintf(gotusb, 290, "gotenv %.02f %.01f %.02f %d\r\n", environment.temperature, environment.humidity, environment.pressure, light);
-                ESP_LOGI(TAG, "%s", gotusb);
-                if (PPShellComm::wait_till_sending(1)) {
-                    PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
-                    ESP_LOGI(TAG, "gotenv sent");
-                }
-                displayManager.setEnvironmentDataSource(&environment);  // to update screen is that screen is selected
-                last_millis[TimerEntry_REPORTPPENVI] = time_millis;
-            }
-        }
-        if (PPShellComm::getAnyConnected() == 1 && !PPShellComm::getInCommand() && (time_millis - last_millis[TimerEntry_REPORTPPTIME] > timer_millis[TimerEntry_REPORTPPTIME])) {
-            uint16_t cmxs = gpsdata.tim.minute * gpsdata.tim.second + gpsdata.tim.second + gpsdata.tim.hour;
-            if (gpsdata.date.year < 44 && gpsdata.date.year >= 23 && lastReportedMxS != cmxs)  // got a valid time, and ti is not the last
-            {
-                snprintf(gotusb, 290, "rtcset %d %d %d %d %d %d\r\n", gpsdata.date.year, gpsdata.date.month, gpsdata.date.day, gpsdata.tim.hour, gpsdata.tim.minute, gpsdata.tim.second);
-                ESP_LOGI(TAG, "%s", gotusb);
-                if (PPShellComm::wait_till_sending(1)) {
-                    PPShellComm::write_blocking((uint8_t*)gotusb, strnlen(gotusb, 290), true, false);
-                    ESP_LOGI(TAG, "settime sent");
-                    lastReportedMxS = cmxs;
-                }
-                last_millis[TimerEntry_REPORTPPTIME] = time_millis;
-            }
         }
 
         if (time_millis - last_millis[TimerEntry_REPORTSTATES] > timer_millis[TimerEntry_REPORTSTATES]) {

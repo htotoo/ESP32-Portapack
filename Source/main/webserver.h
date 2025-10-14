@@ -306,15 +306,6 @@ esp_err_t update_post_handler(httpd_req_t* req) {
 }
 
 // send to ws clients, the pp disconnected
-void ws_notify_dc() {
-    char* data = (char*)"#$##$$#USB_DC\r\n";
-    ws_sendall((uint8_t*)data, 15);
-}
-// send to ws clients, the pp connected
-void ws_notify_cc() {
-    char* data = (char*)"#$##$$#USB_CC\r\n";
-    ws_sendall((uint8_t*)data, 15);
-}
 void ws_notify_dc_i2c() {
     char* data = (char*)"#$##$$#I2C_DC\r\n";
     ws_sendall((uint8_t*)data, 15);
@@ -358,23 +349,17 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
             // get currently running esp app
             AppManager::sendCurrentAppToWeb();
             // lastly: send the pp connection data
-            if ((PPShellComm::getAnyConnected() & 1) == 1)
-                ws_notify_cc();
-            else if ((PPShellComm::getAnyConnected() & 2) == 2)
+            if ((PPShellComm::getAnyConnected() & 2) == 2) {
                 ws_notify_cc_i2c();
-            else
-                ws_notify_dc();
+            }
             free(buf);
             return ESP_OK;
         }
 
         if (strcmp((const char*)ws_pkt.payload, "#$##$$#GETUSBSTATE\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
-            if ((PPShellComm::getAnyConnected() & 1) == 1)
-                ws_notify_cc();
-            else if ((PPShellComm::getAnyConnected() & 2) == 2)
+            if ((PPShellComm::getAnyConnected() & 2) == 2) {
                 ws_notify_cc_i2c();
-            else
-                ws_notify_dc();
+            }
             free(buf);
             return ESP_OK;
         }

@@ -4,8 +4,6 @@
 #define USB_DEVICE_PID (0x6018)
 #define TAG "PPShellComm"
 
-void ws_notify_cc();
-void ws_notify_dc();
 bool ws_sendall(uint8_t* data, size_t len);
 
 bool (*PPShellComm::data_rx_callback)(const uint8_t* data, size_t data_len) = nullptr;
