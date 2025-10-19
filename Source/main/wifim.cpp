@@ -8,6 +8,7 @@ char WifiM::wifiStaSSID[64] = {0};
 char WifiM::wifiStaPASS[64] = {0};
 char WifiM::wifiHostName[64] = {0};
 uint8_t WifiM::currIp[4] = {0};
+uint8_t WifiM::mode = 1;  // 1 off, 2 on //airplane mode
 
 int WifiM::ap_client_num = 0;
 
@@ -132,6 +133,9 @@ bool WifiM::config_wifi_apsta() {
 }
 
 void WifiM::wifi_loop(uint32_t millis) {
+    if (mode == 2) {
+        return;
+    }
     if (ap_client_num > 0 || wifi_sta_ok)
         return;
     if (millis - last_wifi_conntry > WIFI_CLIENR_RC_TIME) {
@@ -226,4 +230,20 @@ void WifiM::copyIpToArray(uint8_t* arr) {
     arr[1] = currIp[1];
     arr[2] = currIp[2];
     arr[3] = currIp[3];
+}
+
+void WifiM::set_airplane_mode(uint8_t mode) {
+    if (mode == 0) return;  // no change
+    if (mode == 2) {
+        // enable airplane mode
+        WifiM::mode = 2;
+        esp_wifi_stop();
+        ESP_LOGI(TAG, "Airplane mode enabled, wifi stopped.");
+    } else if (mode == 1) {
+        // disable airplane mode
+        initialise_wifi();
+        config_wifi_apsta();
+        ESP_LOGI(TAG, "Airplane mode disabled, wifi started.");
+        WifiM::mode = 1;
+    }
 }

@@ -50,6 +50,7 @@ typedef struct wifi_current_data_t {
 
 class WifiM {
    public:
+    static void set_airplane_mode(uint8_t mode);
     static bool getWifiStaStatus();
     static void wifi_loop(uint32_t millis);
     static bool config_wifi_apsta();
@@ -75,6 +76,8 @@ class WifiM {
 
     static uint32_t last_wifi_conntry;
     static bool wifi_sta_ok;
+
+    static uint8_t mode;  // 1 off, 2 on //airplane mode
 };
 
 #endif
