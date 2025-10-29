@@ -87,13 +87,18 @@ uint8_t gps_debug_limiter = 0;
 #define PPCMD_WIFI_STARTSCAN 0xa008
 #define PPCMD_WIFI_STOPSCAN 0xa009
 #define PPCMD_WIFI_GETSCANRESULT 0xa00a
+#define PPCMD_AIRPLANE_MODE 0xa00b
 
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
+
+uint8_t airplane_mode = 1;      // 1 off, 2 on. 0 query
+uint8_t airplane_mode_new = 0;  // 0 no change, other: new value
 
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
 #include "../extapps/wifisettings.h"
 #include "../extapps/tirapp.h"
+#include "../extapps/espmanager.h"
 
 #include "display/displaymanager.hpp"
 
@@ -554,6 +559,7 @@ void app_main(void) {
     PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
     PPHandler::add_app((uint8_t*)wifisettings, sizeof(wifisettings));
     PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));
+    PPHandler::add_app((uint8_t*)espmanager, sizeof(espmanager));
     PPHandler::set_get_features_CB([](uint64_t& feat) {
                                         i2c_pp_last_comm_time = time_millis;
                                     update_features();
@@ -647,6 +653,15 @@ void app_main(void) {
         WifiM::copyIpToArray(tmp.ip);
         memcpy((*data.data).data(), &tmp, sizeof(wifi_current_data_t)); });
 
+    PPHandler::add_custom_command(PPCMD_AIRPLANE_MODE, [](pp_command_data_t data) {
+                if (data.data->size() != sizeof(uint8_t)) {
+                    return;
+                }
+                memcpy(&airplane_mode_new, data.data->data(), sizeof(uint8_t));
+                ESP_DRAM_LOGW(TAG, "apmode: %d", airplane_mode_new); }, [](pp_command_data_t data) {
+        data.data->resize(sizeof(uint8_t));
+        memcpy((*data.data).data(), &airplane_mode, sizeof(uint8_t)); });
+
     PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
     PPHandler::set_got_shell_data_CB([](std::vector<uint8_t>& data) { I2CQueueMessage_t msg;
@@ -691,6 +706,13 @@ void app_main(void) {
             last_millis[TimerEntry_SATTRACK] = 10;  // force update
             sat_to_track_new = "";
         }
+
+        if (airplane_mode_new != 0) {
+            airplane_mode = airplane_mode_new;
+            airplane_mode_new = 0;
+            WifiM::set_airplane_mode(airplane_mode);
+        }
+
         // GET ALL SENSOR DATA
         if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET]) {
             // GPS IS AUTO
