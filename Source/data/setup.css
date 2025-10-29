@@ -16,6 +16,13 @@ h1 {
     color: #bb86fc;
 }
 
+h2 {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 5px;
+    color: #bb86fc;
+}
+
 form {
     background-color: #1e1e1e;
     padding: 20px;

@@ -22,7 +22,18 @@ class PinConfig {
      * @param i2cSdaSlave Pin for the I2C SDA (Slave).
      * @param i2cSclSlave Pin for the I2C SCL (Slave).
      */
-    PinConfig(int ledRgb, int gpsRx, int i2cSda, int i2cScl, int irRx, int irTx, int i2cSdaSlave, int i2cSclSlave) {
+    PinConfig(int32_t ledRgb, int32_t gpsRx, int32_t i2cSda, int32_t i2cScl, int32_t irRx, int32_t irTx, int32_t i2cSdaSlave, int32_t i2cSclSlave) {
+        ledRgbPin = ledRgb;
+        gpsRxPin = gpsRx;
+        i2cSdaPin = i2cSda;
+        i2cSclPin = i2cScl;
+        irRxPin = irRx;
+        irTxPin = irTx;
+        i2cSdaSlavePin = i2cSdaSlave;
+        i2cSclSlavePin = i2cSclSlave;
+    };
+
+    void setPins(int32_t ledRgb, int32_t gpsRx, int32_t i2cSda, int32_t i2cScl, int32_t irRx, int32_t irTx, int32_t i2cSdaSlave, int32_t i2cSclSlave) {
         ledRgbPin = ledRgb;
         gpsRxPin = gpsRx;
         i2cSdaPin = i2cSda;
@@ -34,25 +45,30 @@ class PinConfig {
     };
     bool isPinsOk() { return (i2cSdaSlavePin != -1 && i2cSclSlavePin != -1); }  // the bare minimum
 
-    int LedRgbPin() { return ledRgbPin; }
-    int GpsRxPin() { return gpsRxPin; }
-    int I2cSdaPin() { return i2cSdaPin; }
-    int I2cSclPin() { return i2cSclPin; }
-    int IrRxPin() { return irRxPin; }
-    int IrTxPin() { return irTxPin; }
-    int I2cSdaSlavePin() { return i2cSdaSlavePin; }
-    int I2cSclSlavePin() { return i2cSclSlavePin; }
+    int32_t LedRgbPin() { return ledRgbPin; }
+    int32_t GpsRxPin() { return gpsRxPin; }
+    int32_t I2cSdaPin() { return i2cSdaPin; }
+    int32_t I2cSclPin() { return i2cSclPin; }
+    int32_t IrRxPin() { return irRxPin; }
+    int32_t IrTxPin() { return irTxPin; }
+    int32_t I2cSdaSlavePin() { return i2cSdaSlavePin; }
+    int32_t I2cSclSlavePin() { return i2cSclSlavePin; }
+
+    void saveToNvs();    // save current config to nvs
+    void loadFromNvs();  // load config from nvs
+
+    void debugPrint();  // print current config to log
 
    protected:
-    int ledRgbPin = -1;  // -1 = not used
-    int gpsRxPin = 256;  // 256 = not used
+    int32_t ledRgbPin = -1;  // -1 = not used. this is the rgb led pin. single pin, that uses ledstrip_controller
+    int32_t gpsRxPin = 256;  // 256 = not used this it the uart rx port of the esp, where the gps's tx pin is wired.
 
-    int i2cSdaPin = -1;  // -1 = not used
-    int i2cSclPin = -1;  // -1 = not used
+    int32_t i2cSdaPin = -1;  // -1 = not used this is the i2c sda pin (master). you'll wire the sda of the sensors here.
+    int32_t i2cSclPin = -1;  // -1 = not used this is the i2c scl pin (master). you'll wire the scl of the sensors here.
 
-    int irRxPin = -1;  // -1 = not used
-    int irTxPin = -1;  // -1 = not used
+    int32_t irRxPin = -1;  // -1 = not used this is the ir receiver pin.
+    int32_t irTxPin = -1;  // -1 = not used this is the ir transmitter pin.
 
-    int i2cSdaSlavePin = -1;  // -1 = not used
-    int i2cSclSlavePin = -1;  // -1 = not used
+    int32_t i2cSdaSlavePin = -1;  // -1 = not used this is the i2c sda pin (slave). this will be connected to portapack's i2c master sda pin.
+    int32_t i2cSclSlavePin = -1;  // -1 = not used this is the i2c scl pin (slave). this will be connected to portapack's i2c master scl pin.
 };

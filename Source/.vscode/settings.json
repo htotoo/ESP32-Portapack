@@ -77,7 +77,7 @@
     "thread": "cpp",
     "variant": "cpp"
   },
-  "idf.portWin": "COM10",
+  "idf.portWin": "COM14",
   "idf.flashType": "UART",
   "idf.openOcdConfigs": [
     "board/esp32s3-builtin.cfg"

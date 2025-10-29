@@ -24,6 +24,8 @@
 #include "wifim.h"
 #include "led.h"
 #include "ppshellcomm.h"
+#include "pinconfig.h"
+#include "pinconfig_html.h"
 
 static httpd_handle_t server = NULL;
 static bool disable_esp_async = false;  // for example while in file transfer mode, don't send anything else
@@ -42,6 +44,8 @@ extern const char setupcss_start[] asm("_binary_setup_css_start");
 extern const char setupcss_end[] asm("_binary_setup_css_end");
 extern const char ota_start[] asm("_binary_ota_html_start");
 extern const char ota_end[] asm("_binary_ota_html_end");
+
+extern PinConfig pinConfig;
 
 static int hex_to_int(char c) {
     if (c >= '0' && c <= '9') {
@@ -73,11 +77,86 @@ std::string url_decode(const std::string encoded_string) {
     return decoded_string;
 }
 
+/// pinconfig.html get handler
+static esp_err_t get_req_handler_pinconfig(httpd_req_t* req) {
+    // A single, small buffer for all variable-to-string conversions
+    char val_buf[20];  // Plenty for a 32-bit integer
+
+    // Send part 1
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART1, HTTPD_RESP_USE_STRLEN);
+
+    // Send variable 1 (ledRgbPin)
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.LedRgbPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // Send part 2
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART2, HTTPD_RESP_USE_STRLEN);
+
+    // Send variable 2 (gpsRxPin)
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.GpsRxPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // Send part 3
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART3, HTTPD_RESP_USE_STRLEN);
+
+    // Send variable 3 (i2cSdaPin)
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.I2cSdaPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // Send part 4
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART4, HTTPD_RESP_USE_STRLEN);
+
+    // Send variable 4 (i2cSclPin)
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.I2cSclPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // Send part 5
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART5, HTTPD_RESP_USE_STRLEN);
+
+    // Send variable 5 (irRxPin)
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.IrRxPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // Send part 6
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART6, HTTPD_RESP_USE_STRLEN);
+
+    // Send variable 6 (irTxPin)
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.IrTxPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // Send part 7
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART7, HTTPD_RESP_USE_STRLEN);
+
+    // Send variable 7 (i2cSdaSlavePin)
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.I2cSdaSlavePin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // Send part 8
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART8, HTTPD_RESP_USE_STRLEN);
+
+    // Send variable 8 (i2cSclSlavePin)
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.I2cSclSlavePin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // Send part 9 (the rest of the file)
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART9, HTTPD_RESP_USE_STRLEN);
+
+    // Send the final, empty chunk to finish the response
+    httpd_resp_send_chunk(req, NULL, 0);
+
+    return ESP_OK;
+}
+
 // root / get handler.
 static esp_err_t get_req_handler(httpd_req_t* req) {
-    const uint32_t index_len = index_end - index_start;
-    int response = httpd_resp_send(req, index_start, index_len);
-    return response;
+    pinConfig.debugPrint();
+    if (pinConfig.isPinsOk()) {
+        const uint32_t index_len = index_end - index_start;
+        int response = httpd_resp_send(req, index_start, index_len);
+        return response;
+    }
+    // pins not ok, show the pinconfig.html
+    return get_req_handler_pinconfig(req);
 }
 
 static esp_err_t get_req_handler_setupcss(httpd_req_t* req) {
@@ -93,7 +172,7 @@ static esp_err_t get_req_handler_setup(httpd_req_t* req) {
     int response = httpd_resp_send(req, setup_html_out, HTTPD_RESP_USE_STRLEN);
     return response;
 }
-/// setup.html get handler
+/// ota.html get handler
 static esp_err_t get_req_handler_ota(httpd_req_t* req) {
     const uint32_t ota_len = ota_end - ota_start;
     int response = httpd_resp_send(req, ota_start, ota_len);
@@ -228,6 +307,87 @@ static esp_err_t post_req_handler_setup(httpd_req_t* req) {
     httpd_resp_set_hdr(req, "Location", "/");
     httpd_resp_set_hdr(req, "Connection", "close");
     httpd_resp_sendstr(req, "post successfully");
+    return ESP_OK;
+}
+
+// pinconfig.html post handler. saves the config
+static esp_err_t post_req_handler_pinconfig(httpd_req_t* req) {
+    char* buf = (char*)malloc(req->content_len + 1);
+    if (buf == NULL) {
+        ESP_LOGE("WEBS", "Failed to malloc memory for POST buffer");
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+    size_t off = 0;
+    while (off < req->content_len) {
+        int ret = httpd_req_recv(req, buf + off, req->content_len - off);
+        if (ret <= 0) {
+            if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+                httpd_resp_send_408(req);
+            }
+            free(buf);
+            return ESP_FAIL;
+        }
+        off += ret;
+    }
+    buf[off] = '\0';
+    char tmp[65] = {0};
+    bool changed = false;
+    // Load the *current* pin values first.
+    // This ensures that if a field is missing from the POST, the old value is kept.
+    int32_t ledRgb = pinConfig.LedRgbPin();
+    int32_t gpsRx = pinConfig.GpsRxPin();
+    int32_t i2cSda = pinConfig.I2cSdaPin();
+    int32_t i2cScl = pinConfig.I2cSclPin();
+    int32_t irRx = pinConfig.IrRxPin();
+    int32_t irTx = pinConfig.IrTxPin();
+    int32_t i2cSdaSlave = pinConfig.I2cSdaSlavePin();
+    int32_t i2cSclSlave = pinConfig.I2cSclSlavePin();
+    if (find_post_value((char*)"ledRgbPin=", buf, tmp) > 0) {
+        ledRgb = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"gpsRxPin=", buf, tmp) > 0) {
+        gpsRx = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"i2cSdaPin=", buf, tmp) > 0) {
+        i2cSda = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"i2cSclPin=", buf, tmp) > 0) {
+        i2cScl = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"irRxPin=", buf, tmp) > 0) {
+        irRx = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"irTxPin=", buf, tmp) > 0) {
+        irTx = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"i2cSdaSlavePin=", buf, tmp) > 0) {
+        i2cSdaSlave = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"i2cSclSlavePin=", buf, tmp) > 0) {
+        i2cSclSlave = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (changed) {
+        ESP_LOGI("WEBS", "Saving new PinConfig to NVS.");
+        pinConfig.setPins(ledRgb, gpsRx, i2cSda, i2cScl, irRx, irTx, i2cSdaSlave, i2cSclSlave);
+        pinConfig.saveToNvs();
+    } else {
+        ESP_LOGI("WEBS", "No pin changes detected.");
+    }
+    free(buf);
+    // Redirect back to the root page, just like the setup handler
+    httpd_resp_set_status(req, "303 See Other");
+    httpd_resp_set_hdr(req, "Location", "/");  // Redirects to root
+    httpd_resp_set_hdr(req, "Connection", "close");
+    httpd_resp_sendstr(req, "Pin config saved successfully");
     return ESP_OK;
 }
 
@@ -401,6 +561,7 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
 // config web server part
 static httpd_handle_t setup_websocket_server(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.max_uri_handlers = 10;
     config.max_open_sockets = 10;
 
     httpd_uri_t uri_get = {.uri = "/",
@@ -424,6 +585,20 @@ static httpd_handle_t setup_websocket_server(void) {
                                 .is_websocket = false,
                                 .handle_ws_control_frames = false,
                                 .supported_subprotocol = NULL};
+    httpd_uri_t uri_getpinconfig = {.uri = "/pinconfig.html",
+                                    .method = HTTP_GET,
+                                    .handler = get_req_handler_pinconfig,
+                                    .user_ctx = NULL,
+                                    .is_websocket = false,
+                                    .handle_ws_control_frames = false,
+                                    .supported_subprotocol = NULL};
+    httpd_uri_t uri_postpinconfig = {.uri = "/pinconfig.html",
+                                     .method = HTTP_POST,
+                                     .handler = post_req_handler_pinconfig,
+                                     .user_ctx = NULL,
+                                     .is_websocket = false,
+                                     .handle_ws_control_frames = false,
+                                     .supported_subprotocol = NULL};
     httpd_uri_t uri_getsetupcss = {.uri = "/setup.css",
                                    .method = HTTP_GET,
                                    .handler = get_req_handler_setupcss,
@@ -457,6 +632,8 @@ static httpd_handle_t setup_websocket_server(void) {
         httpd_register_uri_handler(server, &uri_get);
         httpd_register_uri_handler(server, &uri_getsetup);
         httpd_register_uri_handler(server, &uri_postsetup);
+        httpd_register_uri_handler(server, &uri_getpinconfig);
+        httpd_register_uri_handler(server, &uri_postpinconfig);
         httpd_register_uri_handler(server, &uri_getsetupcss);
         httpd_register_uri_handler(server, &uri_getota);
         httpd_register_uri_handler(server, &update_post);

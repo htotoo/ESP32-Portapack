@@ -24,8 +24,11 @@
 // YOU CAN SET HERE THE DEFAULT PINS FOR YOUR BUILD! IF you don't select any, the pin configiguration webpage will be shown to you. (NIY, SO SELECT ONE!)
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+// select this if you want to let user choose pin config from the web ui
+#define HW_VARIANT_SELECTED HW_VARIANT_CUSTOM
+
 // select this if you have OSDR AI EXTENSION BOARD
-#define HW_VARIANT_SELECTED HW_VARIANT_PRFAI
+// #define HW_VARIANT_SELECTED HW_VARIANT_PRFAI
 
 // select this if you have built yourself one based on this project's first pinout config (from the wiki)
 // #define HW_VARIANT_SELECTED HW_VARIANT_ESP32PP
@@ -471,6 +474,14 @@ void app_main(void) {
     ESP_ERROR_CHECK(err);
     // load prev settings
     WifiM::load_config_wifi();
+
+    pinConfig.debugPrint();
+    if (pinConfig.isPinsOk() == false) {
+        ESP_LOGI(TAG, "Loading saved PinConfig.");
+        pinConfig.loadFromNvs();
+        pinConfig.debugPrint();
+    }
+
     load_config_misc();
 
     init_spiffs();
