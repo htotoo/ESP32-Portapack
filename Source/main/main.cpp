@@ -480,11 +480,9 @@ void app_main(void) {
     // load prev settings
     WifiM::load_config_wifi();
 
-    // pinConfig.debugPrint();
     if (pinConfig.isPinsOk() == false) {
         ESP_LOGI(TAG, "Loading saved PinConfig.");
         pinConfig.loadFromNvs();
-        // pinConfig.debugPrint();
     }
 
     load_config_misc();
