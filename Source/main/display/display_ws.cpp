@@ -1,7 +1,7 @@
 #include "display_ws.hpp"
 #include <algorithm>
 
-bool Display_Ws::init(uint8_t addr) {
+bool Display_Ws::init(uint8_t addr, int sda, int scl) {
     return true;
 };
 

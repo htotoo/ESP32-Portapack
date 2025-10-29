@@ -25,6 +25,10 @@ uint32_t PPHandler::module_version = 1;
 char PPHandler::module_name[20] = "ESP32MODULE";
 
 void PPHandler::init(gpio_num_t scl, gpio_num_t sda, uint8_t addr_) {
+    if (scl < 0 || sda < 0) {
+        esp_rom_printf("PPHandler: Invalid pins for I2C Slave init\n");
+        return;
+    }
     addr = addr_;
     i2c_slave_config_t i2c_slave_config = {
         i2c_slave_callback_ISR,

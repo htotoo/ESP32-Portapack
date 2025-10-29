@@ -7,7 +7,7 @@
 
 class DisplayGeneric {
    public:
-    virtual bool init(uint8_t addr) = 0;  // Initialize the display
+    virtual bool init(uint8_t addr, int sda, int scl) = 0;  // Initialize the display
     virtual ~DisplayGeneric() = default;
     virtual void clear() = 0;                              // Clear the display
     virtual void showTitle(const std::string& title) = 0;  // Show a title on the display

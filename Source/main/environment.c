@@ -11,9 +11,13 @@ sht4x_t sht4x;
 EnvironmentSensors environment_inited = Environment_none;
 EnvironmentLightSensors environment_light_inited = Environment_light_none;
 
-void init_environment() {
+void init_environment(int sda, int scl) {
+    if (sda < 0 || scl < 0) {
+        ESP_LOGI("Environment", "I2C pins not set, skipping environment sensor init");
+        return;
+    }
     // init extras
-    init_environment_light();
+    init_environment_light(sda, scl);
 
     // init temp hum pressure
 
@@ -23,7 +27,7 @@ void init_environment() {
     bmp280_params_t params_bmp280;
     bmp280_init_default_params(&params_bmp280);
     memset(&dev_bmp280, 0, sizeof(bmp280_t));
-    if (bmp280_init_desc(&dev_bmp280, getDevAddr(BMx280), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN) == ESP_OK && bmp280_init(&dev_bmp280, &params_bmp280) == ESP_OK) {
+    if (bmp280_init_desc(&dev_bmp280, getDevAddr(BMx280), 0, sda, scl) == ESP_OK && bmp280_init(&dev_bmp280, &params_bmp280) == ESP_OK) {
         if ((dev_bmp280.id == BME280_CHIP_ID)) {
             ESP_LOGI("Environment", "bme280 OK");
         } else {
@@ -38,7 +42,7 @@ void init_environment() {
 
     // sht3x
     memset(&sht3x, 0, sizeof(sht3x_t));
-    if (sht3x_init_desc(&sht3x, getDevAddr(SHT3x), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN) == ESP_OK && sht3x_init(&sht3x) == ESP_OK) {
+    if (sht3x_init_desc(&sht3x, getDevAddr(SHT3x), 0, sda, scl) == ESP_OK && sht3x_init(&sht3x) == ESP_OK) {
         vTaskDelay(50 / portTICK_PERIOD_MS);
         sht3x_start_measurement(&sht3x, SHT3X_PERIODIC_1MPS, SHT3X_HIGH);
         environment_inited = environment_inited | Environment_sht3x;
@@ -51,7 +55,7 @@ void init_environment() {
 
     // sht4x
     memset(&sht4x, 0, sizeof(sht4x_t));
-    if (sht4x_init_desc(&sht4x, getDevAddr(SHT4x), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN) == ESP_OK && sht4x_init(&sht4x) == ESP_OK) {
+    if (sht4x_init_desc(&sht4x, getDevAddr(SHT4x), 0, sda, scl) == ESP_OK && sht4x_init(&sht4x) == ESP_OK) {
         vTaskDelay(50 / portTICK_PERIOD_MS);
         sht4x_start_measurement(&sht4x);
         environment_inited = environment_inited | Environment_sht4x;
@@ -88,12 +92,16 @@ void get_environment_light(uint16_t* light) {
     }
 }
 
-void init_environment_light() {
+void init_environment_light(int sda, int scl) {
+    if (sda < 0 || scl < 0) {
+        ESP_LOGI("EnvironmentLight", "I2C pins not set, skipping environment light sensor init");
+        return;
+    }
     environment_light_inited = Environment_light_none;
 
     // bh1750
     memset(&bh1750, 0, sizeof(i2c_dev_t));
-    if (bh1750_init_desc(&bh1750, getDevAddr(BH1750), 0, CONFIG_IC2SDAPIN, CONFIG_IC2SCLPIN) == ESP_OK && bh1750_setup(&bh1750, BH1750_MODE_CONTINUOUS, BH1750_RES_HIGH) == ESP_OK) {
+    if (bh1750_init_desc(&bh1750, getDevAddr(BH1750), 0, sda, scl) == ESP_OK && bh1750_setup(&bh1750, BH1750_MODE_CONTINUOUS, BH1750_RES_HIGH) == ESP_OK) {
         bh1750_power_on(&bh1750);
         ESP_LOGI("EnvironmentLight", "bh1750 OK");
         environment_light_inited = environment_light_inited | Environment_light_bh1750;

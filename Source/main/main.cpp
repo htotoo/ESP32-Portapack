@@ -15,11 +15,29 @@
 // todo add custom wifi ap spam options
 // todo add wifispam + app to pp.
 // todo add dyn pin configuration options, and save them to nvs. when not set, show the webpage to set it. allow vendor preset on compile, to default to that, not to not set
-
-// rgb led: GPIO48 on ESP S3. set to -1 to disable
-#define RGB_LED_PIN 48
+// todo wifi spam rework. send multiple different at once, so it is faster, and needs less frequent caling
 
 #include <inttypes.h>
+#include "pinconfig.h"
+#ifndef HW_VARIANT_SELECTED
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// YOU CAN SET HERE THE DEFAULT PINS FOR YOUR BUILD! IF you don't select any, the pin configiguration webpage will be shown to you. (NIY, SO SELECT ONE!)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// select this if you want to let user choose pin config from the web ui
+#define HW_VARIANT_SELECTED HW_VARIANT_CUSTOM
+
+// select this if you have OSDR AI EXTENSION BOARD
+// #define HW_VARIANT_SELECTED HW_VARIANT_PRFAI
+
+// select this if you have built yourself one based on this project's first pinout config (from the wiki)
+// #define HW_VARIANT_SELECTED HW_VARIANT_ESP32PP
+
+// select this, if you have MDK board
+// #define HW_VARIANT_SELECTED HW_VARIANT_MDK_BOARD
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
@@ -69,22 +87,30 @@ uint8_t gps_debug_limiter = 0;
 #define PPCMD_WIFI_STARTSCAN 0xa008
 #define PPCMD_WIFI_STOPSCAN 0xa009
 #define PPCMD_WIFI_GETSCANRESULT 0xa00a
+#define PPCMD_AIRPLANE_MODE 0xa00b
 
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
+
+uint8_t airplane_mode = 1;      // 1 off, 2 on. 0 query
+uint8_t airplane_mode_new = 0;  // 0 no change, other: new value
 
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
 #include "../extapps/wifisettings.h"
 #include "../extapps/tirapp.h"
+#include "../extapps/espmanager.h"
 
 #include "display/displaymanager.hpp"
 
 #define TAG "ESP32PP"
 
+#ifndef HW_VARIANT_SELECTED
+#define HW_VARIANT_SELECTED HW_VARIANT_CUSTOM
+#endif
+PinConfig pinConfig(HW_VARIANT_SELECTED);
+
 DisplayManager displayManager;
-
 Sgp4 sat;
-
 TIR tir;
 
 typedef enum TimerEntry {
@@ -99,24 +125,24 @@ typedef enum TimerEntry {
     TimerEntry_SATDOWN,
     TimerEntry_MAX
 } TimerEntry;
-
 uint32_t time_millis = 0;  // current time in millis
-
 uint32_t last_millis[TimerEntry_MAX] = {0};
 // ______________________________________SEN    GPS  ORI    ENV   TIME        WEB   RGB   SAT    DOWN
 uint32_t timer_millis[TimerEntry_MAX] = {2000, 2000, 1000, 2000, 60000 * 10, 2000, 1000, 2000, 20000};
 
+// default sensor values and declaration
 orientation_t orientation{400.0, 0.0};
 environment_t environment{0.0, 0.0, 0.0};  // temperature, humidity, pressure
-
 float temperatureEsp = 0.0;
 uint16_t light = 0;
 ppgpssmall_t gpsdata{200, 200, 0, 0, 0, 0, {}, {}};
+ir_data_t last_rcvd_ir{UNK, 0, 0};
+
 bool gotAnyGps = false;
+
 bool downloadedTLE = false;
 uint16_t lastReportedMxS = 0;  // gps last reported gps time mix to see if it is changed. if not changes, it stuck (bad signal, no update), so won't update PP based on it
 uint32_t gps_baud = 9600;
-
 uint32_t i2c_pp_last_comm_time = 0;  // when is it connected last time (last query from pp).
 bool i2p_pp_conn_state = false;      // to save and check if i need to send a message to web
 
@@ -133,8 +159,6 @@ std::string sat_to_track = "ISS";
 std::string sat_to_track_new = "";
 bool sat_data_loaded = false;
 
-ir_data_t last_rcvd_ir{UNK, 0, 0};
-
 bool wifi_config_changed = false;  // if wifi config changed from pp. (irq, so need to save and apply elsewhere)
 
 #include "led.h"
@@ -143,13 +167,17 @@ void SetDisplayDirtyMain() {
     displayManager.setDirty();
 }
 
-static void i2c_scan() {
+static void i2c_scan(int sda, int scl) {
+    if (sda < 0 || scl < 0) {
+        ESP_LOGW(TAG, "I2C pins not set. Skipping I2C scan.");
+        return;
+    }
     vTaskDelay(50 / portTICK_PERIOD_MS);  // wait till devs wake up
     esp_err_t res;
     printf("i2c scan: \n");
     i2c_dev_t dev = {};
-    dev.cfg.sda_io_num = CONFIG_IC2SDAPIN;
-    dev.cfg.scl_io_num = CONFIG_IC2SCLPIN;
+    dev.cfg.sda_io_num = sda;
+    dev.cfg.scl_io_num = scl;
     dev.cfg.master.clk_speed = 400000;
     for (uint8_t i = 1; i < 127; i++) {
         dev.addr = i;
@@ -451,6 +479,14 @@ void app_main(void) {
     ESP_ERROR_CHECK(err);
     // load prev settings
     WifiM::load_config_wifi();
+
+    pinConfig.debugPrint();
+    if (pinConfig.isPinsOk() == false) {
+        ESP_LOGI(TAG, "Loading saved PinConfig.");
+        pinConfig.loadFromNvs();
+        pinConfig.debugPrint();
+    }
+
     load_config_misc();
 
     init_spiffs();
@@ -460,7 +496,7 @@ void app_main(void) {
     // end config load
     i2cdev_init();
     // i2c scanner
-    i2c_scan();
+    i2c_scan(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     PPShellComm::init();
@@ -475,8 +511,13 @@ void app_main(void) {
     init_httpd();
     nmea_parser_config_t nmeaconfig = NMEA_PARSER_CONFIG_DEFAULT();
     nmeaconfig.uart.baud_rate = gps_baud;
-    nmea_parser_handle_t nmea_hdl = nmea_parser_init(&nmeaconfig);
-    nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+    nmeaconfig.uart.rx_pin = pinConfig.GpsRxPin();
+    if (nmeaconfig.uart.rx_pin == 256) {
+        ESP_LOGW(TAG, "GPS Rx pin not set. GPS disabled.");
+    } else {
+        nmea_parser_handle_t nmea_hdl = nmea_parser_init(&nmeaconfig);
+        nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+    }
     esp_task_wdt_deinit();
 
     temperature_sensor_handle_t temp_sensor = NULL;
@@ -485,10 +526,10 @@ void app_main(void) {
     ESP_LOGI(TAG, "Enable temperature sensor");
     ESP_ERROR_CHECK(temperature_sensor_enable(temp_sensor));
 
-    LedFeedback::init(RGB_LED_PIN);
+    LedFeedback::init(pinConfig.LedRgbPin());
     LedFeedback::rgb_set(255, 255, 255);
 
-    tir.init((gpio_num_t)CONFIG_IR_TX_PIN, (gpio_num_t)CONFIG_IR_RX_PIN);
+    tir.init((gpio_num_t)pinConfig.IrTxPin(), (gpio_num_t)pinConfig.IrRxPin());
     tir.set_on_ir_received([](irproto proto, uint64_t rcode, size_t len) {
         if (proto == UNK) return;
         last_rcvd_ir.protocol = proto;
@@ -502,22 +543,23 @@ void app_main(void) {
         ws_sendall((uint8_t*)buff, strlen(buff), true);  // todo web handler
     });
 
-    init_orientation();  // it loads orientation data too
-    init_environment();
+    init_orientation(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());  // it loads orientation data too
+    init_environment(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());
 
-    displayManager.init();
+    displayManager.init(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());
     displayManager.setGpsDataSource(&gpsdata);
     displayManager.setOrientationDataSource(&orientation);
     displayManager.setEnvironmentDataSource(&environment);
     displayManager.setLightDataSource(&light);
     displayManager.setSatTrackDataSource(&sattrackdata, &sat_to_track);
-    i2c_scan();
+    i2c_scan(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());  // scan again, after sensors initialized
 
     PPHandler::set_module_name("ESP32PP");
     PPHandler::set_module_version(1);
     PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
     PPHandler::add_app((uint8_t*)wifisettings, sizeof(wifisettings));
     PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));
+    PPHandler::add_app((uint8_t*)espmanager, sizeof(espmanager));
     PPHandler::set_get_features_CB([](uint64_t& feat) {
                                         i2c_pp_last_comm_time = time_millis;
                                     update_features();
@@ -611,6 +653,15 @@ void app_main(void) {
         WifiM::copyIpToArray(tmp.ip);
         memcpy((*data.data).data(), &tmp, sizeof(wifi_current_data_t)); });
 
+    PPHandler::add_custom_command(PPCMD_AIRPLANE_MODE, [](pp_command_data_t data) {
+                if (data.data->size() != sizeof(uint8_t)) {
+                    return;
+                }
+                memcpy(&airplane_mode_new, data.data->data(), sizeof(uint8_t));
+                ESP_DRAM_LOGW(TAG, "apmode: %d", airplane_mode_new); }, [](pp_command_data_t data) {
+        data.data->resize(sizeof(uint8_t));
+        memcpy((*data.data).data(), &airplane_mode, sizeof(uint8_t)); });
+
     PPHandler::set_get_shell_data_size_CB([]() -> uint16_t {i2c_pp_last_comm_time = time_millis; return PPShellComm::get_i2c_tx_queue_size(); });
 
     PPHandler::set_got_shell_data_CB([](std::vector<uint8_t>& data) { I2CQueueMessage_t msg;
@@ -643,7 +694,7 @@ void app_main(void) {
                                                     vTaskDelay(1 / portTICK_PERIOD_MS);
                                                     return true; });
 
-    PPHandler::init((gpio_num_t)CONFIG_I2C_SLAVE_SCL_IO, (gpio_num_t)CONFIG_I2C_SLAVE_SDA_IO, 0x51);
+    PPHandler::init((gpio_num_t)pinConfig.I2cSclSlavePin(), (gpio_num_t)pinConfig.I2cSdaSlavePin(), 0x51);
 
     while (true) {
         time_millis = esp_timer_get_time() / 1000;
@@ -655,6 +706,13 @@ void app_main(void) {
             last_millis[TimerEntry_SATTRACK] = 10;  // force update
             sat_to_track_new = "";
         }
+
+        if (airplane_mode_new != 0) {
+            airplane_mode = airplane_mode_new;
+            airplane_mode_new = 0;
+            WifiM::set_airplane_mode(airplane_mode);
+        }
+
         // GET ALL SENSOR DATA
         if (time_millis - last_millis[TimerEntry_SENSORGET] > timer_millis[TimerEntry_SENSORGET]) {
             // GPS IS AUTO
