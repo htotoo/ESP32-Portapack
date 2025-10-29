@@ -149,7 +149,7 @@ static esp_err_t get_req_handler_pinconfig(httpd_req_t* req) {
 
 // root / get handler.
 static esp_err_t get_req_handler(httpd_req_t* req) {
-    pinConfig.debugPrint();
+    // pinConfig.debugPrint();
     if (pinConfig.isPinsOk()) {
         const uint32_t index_len = index_end - index_start;
         int response = httpd_resp_send(req, index_start, index_len);
