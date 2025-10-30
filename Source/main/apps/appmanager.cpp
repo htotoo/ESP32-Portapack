@@ -34,6 +34,22 @@ void AppManager::loop(uint32_t currentMillis) {
 }
 
 // IRQ CALLBACK!!!!!
+bool AppManager::handlePPAppmgrCommands(std::vector<uint8_t>& data) {
+    if (data.size() < 2) return false;
+    uint16_t appcmd = (data[0] << 8) | data[1];
+    startApp((AppList)appcmd);
+    return true;
+}
+
+// IRQ CALLBACK!!!!!
+bool AppManager::handlePPReqAppmgrCommands(std::vector<uint8_t>& data) {
+    data.resize(2);
+    data[0] = (uint8_t)currentAppId >> 8;
+    data[1] = (uint8_t)currentAppId;
+    return true;
+}
+
+// IRQ CALLBACK!!!!!
 bool AppManager::handlePPData(uint16_t command, std::vector<uint8_t>& data) {
     // todo check if the data is for me
     if (currentApp) {

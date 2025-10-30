@@ -1,12 +1,6 @@
 #include "ep_app_wifispam.hpp"
+#include "pp_commands.hpp"
 #include <esp_wifi.h>
-// Bypass 802.11 RAW frames sanity check
-extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
-    if (arg == 31337)
-        return 1;
-    else
-        return 0;
-}  // -Wl,-zmuldefs
 
 void EPAppWifiSpam::randomizeBeaconSrcMac(uint8_t* beacon_raw, uint8_t macid) {
     if (macid == 0) {
@@ -166,6 +160,30 @@ bool EPAppWifiSpam::OnWebData(std::string& data) {
     if (data.compare(APP_1_PRE_STR "3\r\n") == 0) {
         current_mode = 3;
         SetDisplayDirty();
+        return true;
+    }
+    return false;
+}
+
+bool EPAppWifiSpam::OnPPData(uint16_t command, std::vector<uint8_t>& data) {
+    if (command == PPCMD_APPMGR_APPCMD) {
+        if (data.size() >= 2) {
+            uint16_t new_mode = data[0] << 8 | data[1];
+            if (new_mode <= 3) {
+                current_mode = static_cast<uint8_t>(new_mode);
+                SetDisplayDirty();
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool EPAppWifiSpam::OnPPReqData(uint16_t command, std::vector<uint8_t>& data) {
+    if (command == PPCMD_APPMGR_APPCMD) {
+        data.resize(2);
+        data[0] = 0;
+        data[1] = current_mode;
         return true;
     }
     return false;

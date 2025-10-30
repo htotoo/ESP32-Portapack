@@ -43,6 +43,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include "wifihack.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -74,20 +75,7 @@ uint8_t gps_debug_limiter = 0;
 #include "tir.h"
 
 #include "ppi2c/pp_handler.hpp"
-
-#define PPCMD_SATTRACK_DATA 0xa000
-#define PPCMD_SATTRACK_SETSAT 0xa001
-#define PPCMD_SATTRACK_SETMGPS 0xa002
-#define PPCMD_IRTX_SENDIR 0xa003
-#define PPCMD_IRTX_GETLASTRCVIR 0xa004
-// Wifi settings app
-#define PPCMD_WIFI_SET_STA 0xa005
-#define PPCMD_WIFI_SET_AP 0xa006
-#define PPCMD_WIFI_GET_CONFIG 0xa007
-#define PPCMD_WIFI_STARTSCAN 0xa008
-#define PPCMD_WIFI_STOPSCAN 0xa009
-#define PPCMD_WIFI_GETSCANRESULT 0xa00a
-#define PPCMD_AIRPLANE_MODE 0xa00b
+#include "pp_commands.hpp"
 
 uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 

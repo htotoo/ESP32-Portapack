@@ -10,15 +10,8 @@
 
 class EPAppWifiSpam : public EPApp {
    public:
-    bool OnPPData(uint16_t command, std::vector<uint8_t>& data) override {
-        // Handle PP data specific to WiFi spam app
-        return false;
-    }
-
-    bool OnPPReqData(uint16_t command, std::vector<uint8_t>& data) override {
-        // Handle PP request data specific to WiFi spam app
-        return false;
-    }
+    bool OnPPData(uint16_t command, std::vector<uint8_t>& data) override;
+    bool OnPPReqData(uint16_t command, std::vector<uint8_t>& data) override;
 
     bool OnWebData(std::string& data) override;
 

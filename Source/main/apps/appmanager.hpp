@@ -28,6 +28,9 @@ class AppManager {
 
     static EPApp* getCurrentApp() { return currentApp; }
 
+    static bool handlePPAppmgrCommands(std::vector<uint8_t>& data);  // this starts the given app. uint16_t appid. if nothing is given (0 bytes, not 0 value!) it is a "what is running" request. 0 value == stop app
+    static bool handlePPReqAppmgrCommands(std::vector<uint8_t>& data);
+
     static bool handlePPData(uint16_t command, std::vector<uint8_t>& data);
     static bool handlePPReqData(uint16_t command, std::vector<uint8_t>& data);
 

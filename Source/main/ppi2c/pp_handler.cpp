@@ -2,6 +2,7 @@
 #include "pp_handler.hpp"
 #include <cstring>
 #include "apps/appmanager.hpp"
+#include "pp_commands.hpp"  //for some subcommands
 
 uint8_t PPHandler::addr = 0;
 i2c_slave_device_t* PPHandler::slave_device;
@@ -132,6 +133,10 @@ void PPHandler::on_command_ISR(uint16_t command, std::vector<uint8_t> additional
         case (uint16_t)Command::COMMAND_SHELL_PPTOMOD_DATA:
             if (got_shell_data_cb)
                 got_shell_data_cb(additional_data);
+            break;
+
+        case (uint16_t)PPCMD_APPMGR_APPMGR:
+            AppManager::handlePPAppmgrCommands(additional_data);
             break;
         default:
             for (auto element : custom_command_list) {
@@ -290,6 +295,11 @@ std::vector<uint8_t> PPHandler::on_send_ISR() {
             return data;
         }
 
+        case (uint16_t)PPCMD_APPMGR_APPMGR: {
+            std::vector<uint8_t> data;
+            AppManager::handlePPReqAppmgrCommands(data);
+            return data;
+        }
         default:
             for (auto element : custom_command_list) {
                 if (element.command == (uint16_t)command_state) {
