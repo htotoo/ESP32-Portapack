@@ -87,6 +87,7 @@ uint8_t airplane_mode_new = 0;  // 0 no change, other: new value
 #include "../extapps/wifisettings.h"
 #include "../extapps/tirapp.h"
 #include "../extapps/espmanager.h"
+#include "../extapps/espapps.h"
 
 #include "display/displaymanager.hpp"
 
@@ -542,6 +543,7 @@ void app_main(void) {
     PPHandler::set_module_version(1);
     PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));  // no neet to pinfor gps, since it can handle manual input
     PPHandler::add_app((uint8_t*)wifisettings, sizeof(wifisettings));
+    PPHandler::add_app((uint8_t*)espapps, sizeof(espapps));
     if (pinConfig.hasIRrx() || pinConfig.hasIRrx()) PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));  // only add this app, if the user has ir tx or rx
     PPHandler::add_app((uint8_t*)espmanager, sizeof(espmanager));
     PPHandler::set_get_features_CB([](uint64_t& feat) {
@@ -588,7 +590,7 @@ void app_main(void) {
                                         if (data.data->size() != sizeof(ir_data_t)) {
                                             return;
                                         }
-                                        ir_data_t tmp;
+                                        ir_data_t tmp; 
                                         memcpy(&tmp, data.data->data(), sizeof(ir_data_t)); 
                                         ESP_DRAM_LOGW(TAG, "irp: %d %d %d", tmp.protocol, tmp.data, tmp.repeat);
                                         tir.send_from_irq(tmp); }, nullptr);

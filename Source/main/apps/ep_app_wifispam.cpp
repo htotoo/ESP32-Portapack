@@ -168,7 +168,7 @@ bool EPAppWifiSpam::OnWebData(std::string& data) {
 bool EPAppWifiSpam::OnPPData(uint16_t command, std::vector<uint8_t>& data) {
     if (command == PPCMD_APPMGR_APPCMD) {
         if (data.size() >= 2) {
-            uint16_t new_mode = data[0] << 8 | data[1];
+            uint16_t new_mode = *reinterpret_cast<uint16_t*>(data.data());
             if (new_mode <= 3) {
                 current_mode = static_cast<uint8_t>(new_mode);
                 SetDisplayDirty();
@@ -182,8 +182,7 @@ bool EPAppWifiSpam::OnPPData(uint16_t command, std::vector<uint8_t>& data) {
 bool EPAppWifiSpam::OnPPReqData(uint16_t command, std::vector<uint8_t>& data) {
     if (command == PPCMD_APPMGR_APPCMD) {
         data.resize(2);
-        data[0] = 0;
-        data[1] = current_mode;
+        *reinterpret_cast<uint16_t*>(data.data()) = current_mode;
         return true;
     }
     return false;

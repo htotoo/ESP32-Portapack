@@ -35,17 +35,19 @@ void AppManager::loop(uint32_t currentMillis) {
 
 // IRQ CALLBACK!!!!!
 bool AppManager::handlePPAppmgrCommands(std::vector<uint8_t>& data) {
+    // ESP_DRAM_LOGW("Appmgr", "appmgrcmd");
     if (data.size() < 2) return false;
-    uint16_t appcmd = (data[0] << 8) | data[1];
+    uint16_t appcmd = *(uint16_t*)data.data();
     startApp((AppList)appcmd);
+    // ESP_DRAM_LOGW("Appmgr", "appmgrcmd: %u", appcmd);
     return true;
 }
 
 // IRQ CALLBACK!!!!!
 bool AppManager::handlePPReqAppmgrCommands(std::vector<uint8_t>& data) {
     data.resize(2);
-    data[0] = (uint8_t)currentAppId >> 8;
-    data[1] = (uint8_t)currentAppId;
+    *(uint16_t*)data.data() = currentAppId;
+    // ESP_DRAM_LOGW("Appmgr", "get appmgrcmd: %u", currentAppId);
     return true;
 }
 
