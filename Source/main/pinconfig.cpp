@@ -37,6 +37,9 @@ void PinConfig::loadFromNvs() {
         nvs_close(nvsHandle);
     } else {
         ESP_LOGE("PinConfig", "Failed to open NVS for reading: %s", esp_err_to_name(err));
+        if (isPinsOk()) {
+            saveToNvs();  // save current config as default
+        }
     }
 }
 

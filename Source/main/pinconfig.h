@@ -59,6 +59,10 @@ class PinConfig {
 
     void debugPrint();  // print current config to log
 
+    bool hasGPS() { return (gpsRxPin < 200); }
+    bool hasIRrx() { return (irRxPin != -1); }
+    bool hasIRtx() { return (irTxPin != -1); }
+
    protected:
     int32_t ledRgbPin = -1;  // -1 = not used. this is the rgb led pin. single pin, that uses ledstrip_controller
     int32_t gpsRxPin = 256;  // 256 = not used this it the uart rx port of the esp, where the gps's tx pin is wired.

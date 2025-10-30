@@ -198,7 +198,7 @@ void update_features() {
         chipFeatures.enableFeature(SupportedFeatures::FEAT_ENVIRONMENT);
     if (is_orientation_sensor_present())
         chipFeatures.enableFeature(SupportedFeatures::FEAT_ORIENTATION);
-    if (gotAnyGps || true)
+    if (gotAnyGps || pinConfig.hasGPS())
         chipFeatures.enableFeature(SupportedFeatures::FEAT_GPS);
     if (PPHandler::get_appCount() > 0)
         chipFeatures.enableFeature(SupportedFeatures::FEAT_EXT_APP);
@@ -480,10 +480,8 @@ void app_main(void) {
     // load prev settings
     WifiM::load_config_wifi();
 
-    if (pinConfig.isPinsOk() == false) {
-        ESP_LOGI(TAG, "Loading saved PinConfig.");
-        pinConfig.loadFromNvs();
-    }
+    ESP_LOGI(TAG, "Loading saved PinConfig.");
+    pinConfig.loadFromNvs();
 
     load_config_misc();
 
@@ -554,9 +552,9 @@ void app_main(void) {
 
     PPHandler::set_module_name("ESP32PP");
     PPHandler::set_module_version(1);
-    PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));
+    PPHandler::add_app((uint8_t*)sattrack, sizeof(sattrack));  // no neet to pinfor gps, since it can handle manual input
     PPHandler::add_app((uint8_t*)wifisettings, sizeof(wifisettings));
-    PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));
+    if (pinConfig.hasIRrx() || pinConfig.hasIRrx()) PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));  // only add this app, if the user has ir tx or rx
     PPHandler::add_app((uint8_t*)espmanager, sizeof(espmanager));
     PPHandler::set_get_features_CB([](uint64_t& feat) {
                                         i2c_pp_last_comm_time = time_millis;
