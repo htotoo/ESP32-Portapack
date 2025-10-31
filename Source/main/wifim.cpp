@@ -11,6 +11,8 @@ uint8_t WifiM::currIp[4] = {0};
 uint8_t WifiM::mode = 1;  // 1 off, 2 on //airplane mode
 
 int WifiM::ap_client_num = 0;
+esp_netif_t* WifiM::esp_netif_ap = nullptr;
+esp_netif_t* WifiM::esp_netif_sta = nullptr;
 
 uint32_t WifiM::last_wifi_conntry = 0;
 bool WifiM::wifi_sta_ok = false;
@@ -83,21 +85,18 @@ void WifiM::initialise_wifi(void) {
         return;
     }
     ESP_ERROR_CHECK(esp_netif_init());
-    esp_netif_t* ap_netif = esp_netif_create_default_wifi_ap();
-    assert(ap_netif);
-    esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
-    assert(sta_netif);
+    esp_netif_ap = esp_netif_create_default_wifi_ap();
+    assert(esp_netif_ap);
+    esp_netif_sta = esp_netif_create_default_wifi_sta();
+    assert(esp_netif_sta);
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_AP_STACONNECTED, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_AP_STADISCONNECTED, &event_handler, NULL));
-
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
-
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
     initialise_mdns();
     initialized = true;
 }
@@ -110,8 +109,7 @@ bool WifiM::config_wifi_apsta() {
     ap_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
     ap_config.ap.ssid_len = strlen(wifiAPSSID);
     ap_config.ap.max_connection = CONFIG_AP_MAX_STA_CONN;
-    ap_config.ap.channel = 0;  // CONFIG_AP_WIFI_CHANNEL;
-
+    ap_config.ap.channel = 2;  // CONFIG_AP_WIFI_CHANNEL;
     if (strlen(wifiAPPASS) == 0) {
         ap_config.ap.authmode = WIFI_AUTH_OPEN;
     }
@@ -119,16 +117,15 @@ bool WifiM::config_wifi_apsta() {
     wifi_config_t sta_config = {};
     strcpy((char*)sta_config.sta.ssid, wifiStaSSID);
     strcpy((char*)sta_config.sta.password, wifiStaPASS);
+    sta_config.sta.scan_method = WIFI_FAST_SCAN;
+    sta_config.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
     sta_config.sta.failure_retry_cnt = 4;
-
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
-    ESP_ERROR_CHECK(esp_wifi_set_config((wifi_interface_t)ESP_IF_WIFI_AP, &ap_config));
-    ESP_ERROR_CHECK(esp_wifi_set_config((wifi_interface_t)ESP_IF_WIFI_STA, &sta_config));
+    sta_config.sta.sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_LOGI(TAG, "WIFI_MODE_AP started. SSID:%s password:%s", wifiAPSSID, wifiAPPASS);
-
     ESP_ERROR_CHECK(esp_wifi_connect());
-
     return true;
 }
 

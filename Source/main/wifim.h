@@ -78,6 +78,8 @@ class WifiM {
     static bool wifi_sta_ok;
 
     static uint8_t mode;  // 1 off, 2 on //airplane mode
+    static esp_netif_t* esp_netif_ap;
+    static esp_netif_t* esp_netif_sta;
 };
 
 #endif
