@@ -1,103 +1,277 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>ESP32PP installer</title>
-    <meta
-      name="description"
-      content="ESP32PP web installer"
-    />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="color-scheme" content="dark light" />
-    <style>
-      body {
-        font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
-          Roboto, Ubuntu, sans-serif;
-        padding: 0;
-        margin: 0;
-        line-height: 1.4;
-      }
-      .content {
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 12px;
-      }
-      h2 {
-        margin-top: 2em;
-      }
-      h3 {
-        margin-top: 1.5em;
-      }
-      a {
-        color: #03a9f4;
-      }
-      .invisible {
-        visibility: hidden;
-      }
-      .hidden {
-        display: none;
-      }
-      esp-web-install-button[install-unsupported] {
-        visibility: inherit;
-      }
-      .content pre {
-        max-width: 100%;
-        overflow-y: scroll;
-      }
-      .footer {
-        margin-top: 24px;
-        border-top: 1px solid #ccc;
-        padding-top: 24px;
-        text-align: center;
-      }
-      .footer .initiative {
-        font-style: italic;
-        margin-top: 16px;
-      }
-      table {
-        border-spacing: 0;
-      }
-      td {
-        padding: 8px;
-        border-bottom: 1px solid #ccc;
-      }
-      .radios li {
-        list-style: none;
-        line-height: 2em;
-      }
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #333;
-          color: #fff;
-        }
-        a {
-          color: #58a6ff;
-        }
-      }
-    </style>
-    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
-  </head>
-  <body>
-    <div class="content">
-      <h1>ESP32PP web installer</h1>
-      <p>This module is in early development.</p>
-      <p>After flashing the device, you may need to wait for some minutes for it to shown up over wifi or in the PP. Give it some time.</p>
-	  <p><a href='https://github.com/htotoo/ESP32-Portapack/' target='_blank'>Source</a> &nbsp; &nbsp;<a href='https://github.com/htotoo/ESP32-Portapack/wiki'>Help</a> &nbsp; &nbsp;<a href='https://discord.gg/Kn6sMPDVrH'>Discord</a></p>
-	  <p><i>This will erease all data and settings!</i></p>
-      <p class="button-row" align="center">
-        ESP32PP HW: <esp-web-install-button  manifest="./manifest.json"></esp-web-install-button> <BR/><BR/><BR/>
-        MDK HW: <esp-web-install-button  manifest="./manifest2.json"></esp-web-install-button> <BR/>
-      </p>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ESP32PP Installer</title>
+  <meta name="description" content="ESP32PP web installer" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
 
-    </div>
-    <script>
-         /* const button = document.querySelector('esp-web-install-button');
-          button.manifest = `./manifest.json`;
-          button.classList.remove('invisible');
-		  
-		  const button2 = document.querySelector('esp-web-install-button2');
-          button2.manifest = `./manifest2.json`;
-          button2.classList.remove('invisible');*/
-    </script>
-  </body>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #f4f7f6;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --heading-color: #111111;
+      --link-color: #007bff;
+      --link-hover: #0056b3;
+      --border-color: #e0e0e0;
+      --shadow-color: rgba(0, 0, 0, 0.05);
+      
+      --alert-warning-bg: #fffbeb;
+      --alert-warning-border: #fde68a;
+      --alert-warning-text: #92400e;
+      
+      --alert-danger-bg: #fef2f2;
+      --alert-danger-border: #fecaca;
+      --alert-danger-text: #b91c1c;
+
+      --code-bg: #f3f4f6;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #1a1a1a;
+        --card-bg: #2c2c2c;
+        --text-color: #e0e0e0;
+        --heading-color: #ffffff;
+        --link-color: #58a6ff;
+        --link-hover: #80bfff;
+        --border-color: #444444;
+        --shadow-color: rgba(0, 0, 0, 0.2);
+
+        --alert-warning-bg: #4d2d00;
+        --alert-warning-border: #92400e;
+        --alert-warning-text: #fde68a;
+
+        --alert-danger-bg: #4d0a0a;
+        --alert-danger-border: #b91c1c;
+        --alert-danger-text: #fecaca;
+        
+        --code-bg: #374151;
+      }
+    }
+
+    /* Basic Reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Ubuntu, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      padding: 1rem;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 650px;
+      margin: 2rem auto;
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px var(--shadow-color);
+      overflow: hidden;
+    }
+
+    header {
+      padding: 2rem 2rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    h1 {
+      color: var(--heading-color);
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      font-size: 1rem;
+      color: var(--text-color);
+    }
+
+    main {
+      padding: 2rem;
+    }
+
+    section {
+      margin-bottom: 2rem;
+    }
+    
+    section:last-child {
+      margin-bottom: 0;
+    }
+
+    h2 {
+      color: var(--heading-color);
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+
+    p, ul {
+      margin-bottom: 1rem;
+    }
+
+    a {
+      color: var(--link-color);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      color: var(--link-hover);
+      text-decoration: underline;
+    }
+
+    /* Flasher Section */
+    .flasher-container {
+      background-color: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .button-row {
+      margin-top: 1.5rem;
+    }
+
+    esp-web-install-button {
+      /* The button itself is a web component, but we can give it margin */
+      margin: 0.5rem 0;
+    }
+
+    /* Alert Boxes */
+    .alert {
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .alert-warning {
+      background-color: var(--alert-warning-bg);
+      border-color: var(--alert-warning-border);
+      color: var(--alert-warning-text);
+    }
+    
+    .alert-danger {
+      background-color: var(--alert-danger-bg);
+      border-color: var(--alert-danger-border);
+      color: var(--alert-danger-text);
+    }
+    
+    /* Info/Settings List */
+    .settings-list {
+      list-style-type: none;
+      background: var(--code-bg);
+      border-radius: 6px;
+      padding: 1rem 1.5rem;
+    }
+    
+    .settings-list li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin: 0.5rem 0;
+    }
+    
+    .settings-list li::before {
+      content: '»';
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--link-color);
+      font-weight: 700;
+    }
+    
+    .settings-list li strong {
+      color: var(--heading-color);
+    }
+
+    /* Resources Links */
+    .resource-links {
+      list-style-type: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      justify-content: center;
+      padding: 0;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      opacity: 0.7;
+      border-top: 1px solid var(--border-color);
+    }
+
+  </style>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>ESP32PP Web Installer</h1>
+      <p>Flash your ESP32PP Portapack add-on board.</p>
+    </header>
+
+    <main>
+      <section class="flasher-container">
+        <h2>Flash Firmware</h2>
+        <p class="alert alert-warning">
+          <strong>Warning:</strong> This process will erase all data and settings on the ESP32PP!
+        </p>
+        <p>After flashing, you may need to wait a few minutes for the device to show up on Wi-Fi or the PortaPack. Please be patient.</p>
+        <div class="button-row">
+          <esp-web-install-button manifest="./manifest.json"></esp-web-install-button>
+        </div>
+      </section>
+
+      <section class="setup-info">
+        <h2>First-Time Setup</h2>
+        <p class="alert alert-danger">
+          <strong>Important:</strong> On the first run, you MUST open the Web UI to set up your pin configuration. You can choose a template or enter pins manually. If you make a mistake, just come back here and re-flash.
+        </p>
+
+        <h3>Default Settings</h3>
+        <ul class="settings-list">
+          <li><strong>Wi-Fi AP:</strong> <span>ESP32PP</span></li>
+          <li><strong>Password:</strong> <span>12345678</span></li>
+          <li><strong>AP IP Address:</strong> <span>192.168.4.1</span></li>
+        </ul>
+      </section>
+
+      <section class="resources">
+        <h2>Resources</h2>
+        <ul class="resource-links">
+          <li><a href='https://github.com/htotoo/ESP32-Portapack/' target='_blank'>Source Code (GitHub)</a></li>
+          <li><a href='https://github.com/htotoo/ESP32-Portapack/wiki' target='_blank'>Help / Wiki</a></li>
+          <li><a href='https://discord.gg/Kn6sMPDVrH' target='_blank'>Discord Community</a></li>
+        </ul>
+      </section>
+    </main>
+    
+    <footer>
+      <p>ESP32PP Project</p>
+    </footer>
+  </div>
+</body>
 </html>
