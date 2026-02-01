@@ -4,3 +4,5 @@ dependencies:
   idf: ">=4.4"
   espressif/mdns: "1.*"
   espressif/led_strip: "2.*"
+  EspMeshCompact:
+    git: https://github.com/htotoo/EspMeshCompact
