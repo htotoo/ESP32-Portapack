@@ -110,6 +110,40 @@ static esp_err_t get_req_handler_pinconfig(httpd_req_t* req) {
     snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.I2cSclPin());
     httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
 
+    // SPI Section
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_SPI_START, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.SpiSckPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_SPI_1, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.SpiMisoPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_SPI_2, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.SpiMosiPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // LoRa Section
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_START, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%d", (int)pinConfig.LoraChipType());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_1, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.LoraNssPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_2, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.LoraResetPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_3, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.LoraDio0Pin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_4, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.LoraDio1Pin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
     // Send part 5
     httpd_resp_send_chunk(req, PINCONFIG_HTML_PART5, HTTPD_RESP_USE_STRLEN);
 
@@ -343,6 +377,17 @@ static esp_err_t post_req_handler_pinconfig(httpd_req_t* req) {
     int32_t irTx = pinConfig.IrTxPin();
     int32_t i2cSdaSlave = pinConfig.I2cSdaSlavePin();
     int32_t i2cSclSlave = pinConfig.I2cSclSlavePin();
+
+    int32_t spiSck = pinConfig.SpiSckPin();
+    int32_t spiMiso = pinConfig.SpiMisoPin();
+    int32_t spiMosi = pinConfig.SpiMosiPin();
+
+    int32_t loraChip = (int32_t)pinConfig.LoraChipType();
+    int32_t loraNss = pinConfig.LoraNssPin();
+    int32_t loraReset = pinConfig.LoraResetPin();
+    int32_t loraDio0 = pinConfig.LoraDio0Pin();
+    int32_t loraDio1 = pinConfig.LoraDio1Pin();
+
     if (find_post_value((char*)"ledRgbPin=", buf, tmp) > 0) {
         ledRgb = (int32_t)atoi(tmp);
         changed = true;
@@ -359,6 +404,41 @@ static esp_err_t post_req_handler_pinconfig(httpd_req_t* req) {
         i2cScl = (int32_t)atoi(tmp);
         changed = true;
     }
+    // SPI
+    if (find_post_value((char*)"spiSckPin=", buf, tmp) > 0) {
+        spiSck = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"spiMisoPin=", buf, tmp) > 0) {
+        spiMiso = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"spiMosiPin=", buf, tmp) > 0) {
+        spiMosi = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    // LoRa
+    if (find_post_value((char*)"loraChipType=", buf, tmp) > 0) {
+        loraChip = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"loraNssPin=", buf, tmp) > 0) {
+        loraNss = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"loraResetPin=", buf, tmp) > 0) {
+        loraReset = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"loraDio0Pin=", buf, tmp) > 0) {
+        loraDio0 = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"loraDio1Pin=", buf, tmp) > 0) {
+        loraDio1 = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    // IR
     if (find_post_value((char*)"irRxPin=", buf, tmp) > 0) {
         irRx = (int32_t)atoi(tmp);
         changed = true;
@@ -377,7 +457,7 @@ static esp_err_t post_req_handler_pinconfig(httpd_req_t* req) {
     }
     if (changed) {
         ESP_LOGI("WEBS", "Saving new PinConfig to NVS.");
-        pinConfig.setPins(ledRgb, gpsRx, i2cSda, i2cScl, irRx, irTx, i2cSdaSlave, i2cSclSlave);
+        pinConfig.setPins(ledRgb, gpsRx, i2cSda, i2cScl, irRx, irTx, i2cSdaSlave, i2cSclSlave, spiSck, spiMiso, spiMosi, loraChip, loraNss, loraReset, loraDio0, loraDio1);
         pinConfig.saveToNvs();
     } else {
         ESP_LOGI("WEBS", "No pin changes detected.");

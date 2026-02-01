@@ -21,6 +21,7 @@
             </select>
             <i>Select a preset or "Custom" to enter pins manually.</i>
         </div>
+
         <div class="form-section">
             <p>Core Pins</p>
             <label for="ledRgbPin">RGB LED Pin:</label>
@@ -28,6 +29,7 @@
             <label for="gpsRxPin">GPS RX Pin:</label>
             <input type="number" min="-1" name="gpsRxPin" id="gpsRxPin" value="" />
         </div>
+
         <div class="form-section">
             <p>I2C Master (Sensors)</p>
             <label for="i2cSdaPin">SDA Pin:</label>
@@ -35,6 +37,40 @@
             <label for="i2cSclPin">SCL Pin:</label>
             <input type="number" min="-1" name="i2cSclPin" id="i2cSclPin" value="" />
         </div>
+
+        <div class="form-section">
+            <p>SPI Master</p>
+            <label for="spiSckPin">SCK Pin:</label>
+            <input type="number" min="-1" name="spiSckPin" id="spiSckPin" value="35" />
+            <label for="spiMisoPin">MISO Pin:</label>
+            <input type="number" min="-1" name="spiMisoPin" id="spiMisoPin" value="36" />
+            <label for="spiMosiPin">MOSI Pin:</label>
+            <input type="number" min="-1" name="spiMosiPin" id="spiMosiPin" value="37" />
+        </div>
+
+        <div class="form-section">
+            <p>LoRa Radio</p>
+            <label for="loraChipType">Radio Chip:</label>
+            <select id="loraChipType" name="loraChipType">
+                <option value="-1">None</option>
+                <option value="0">SX1262</option>
+                <option value="1">SX1261</option>
+                <option value="2">SX1268</option>
+                <option value="3">SX1276</option>
+                <option value="4">LR1121</option>
+                <option value="5">SX1278</option>
+            </select>
+
+            <label for="loraNssPin">NSS Pin:</label>
+            <input type="number" min="-1" name="loraNssPin" id="loraNssPin" value="38" />
+            <label for="loraResetPin">Reset Pin:</label>
+            <input type="number" min="-1" name="loraResetPin" id="loraResetPin" value="39" />
+            <label for="loraDio0Pin">DIO0 Pin:</label>
+            <input type="number" min="-1" name="loraDio0Pin" id="loraDio0Pin" value="40" />
+            <label for="loraDio1Pin">DIO1 Pin:</label>
+            <input type="number" min="-1" name="loraDio1Pin" id="loraDio1Pin" value="41" />
+        </div>
+
         <div class="form-section">
             <p>Infrared (IR)</p>
             <label for="irRxPin">IR RX Pin:</label>
@@ -42,6 +78,7 @@
             <label for="irTxPin">IR TX Pin:</label>
             <input type="number" min="-1" name="irTxPin" id="irTxPin" value="" />
         </div>
+
         <div class="form-section">
             <p>I2C Slave (to PortaPack)</p>
             <label for="i2cSdaSlavePin">SDA Pin:</label>
@@ -49,13 +86,16 @@
             <label for="i2cSclSlavePin">SCL Pin:</label>
             <input type="number" min="-1" name="i2cSclSlavePin" id="i2cSclSlavePin" value="" />
         </div>
+
         <script>
+            // Format: [RGB, GPS, SDA, SCL, IR_RX, IR_TX, SDA_S, SCL_S, SCK, MISO, MOSI, TYPE, NSS, RST, DIO0, DIO1]
             const pinPresets = {
-                'custom': [-1, 256, -1, -1, -1, -1, -1, -1],
-                'esp32pp': [48, 6, 5, 4, 12, 13, 11, 10],
-                'mdk': [-1, 4, 11, 10, 12, 13, 5, 6],
-                'prfai': [-1, 256, 11, 10, 12, 13, 1, 2]
+                'custom': [-1, 256, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+                'esp32pp': [48, 6, 5, 4, 12, 13, 11, 10, 35, 36, 37, -1, 38, 39, 40, 41],
+                'mdk': [-1, 4, 11, 10, 12, 13, 5, 6, 35, 36, 37, -1, 38, 39, 40, 41],
+                'prfai': [-1, 256, 11, 10, 12, 13, 1, 2, 35, 36, 37, -1, 38, 39, 40, 41]
             };
+
             const pinInputIds = [
                 'ledRgbPin',
                 'gpsRxPin',
@@ -64,37 +104,56 @@
                 'irRxPin',
                 'irTxPin',
                 'i2cSdaSlavePin',
-                'i2cSclSlavePin'
+                'i2cSclSlavePin',
+                'spiSckPin',
+                'spiMisoPin',
+                'spiMosiPin',
+                'loraChipType',
+                'loraNssPin',
+                'loraResetPin',
+                'loraDio0Pin',
+                'loraDio1Pin'
             ];
+
             document.addEventListener('DOMContentLoaded', () => {
                 const variantSelect = document.getElementById('hw_variant');
                 const pinInputs = pinInputIds.map(id => document.getElementById(id));
+
                 function updateFieldsFromDropdown() {
                     const selectedVariant = variantSelect.value;
                     const pins = pinPresets[selectedVariant];
                     if (!pins) return;
+
                     pinInputs.forEach((input, index) => {
                         if (input) {
                             input.value = pins[index];
                         }
                     });
                 }
+
                 function updateDropdownFromFields() {
-                    const currentPins = pinInputs.map(input => parseInt(input.value, 10) || 0);
+                    const currentPins = pinInputs.map(input => parseInt(input.value, 10) || 0); // Handles Select correctly too
                     let matchedVariant = 'custom';
+
                     for (const [variant, pins] of Object.entries(pinPresets)) {
                         if (pins.every((pin, index) => pin === currentPins[index])) {
                             matchedVariant = variant;
                             break;
                         }
                     }
+
                     if (variantSelect.value !== matchedVariant) {
                         variantSelect.value = matchedVariant;
                     }
                 }
+
                 variantSelect.addEventListener('change', updateFieldsFromDropdown);
+
                 pinInputs.forEach(input => {
-                    input.addEventListener('input', updateDropdownFromFields);
+                    if (input) {
+                        input.addEventListener('input', updateDropdownFromFields);
+                        input.addEventListener('change', updateDropdownFromFields); // For Select element
+                    }
                 });
                 updateDropdownFromFields();
             });
