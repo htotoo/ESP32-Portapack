@@ -24,18 +24,25 @@ LoraConfig lora_config = {
     /*.preamble_length = */ 16,
     /*.output_power = */ 12,  // config
     /*.tcxo_voltage = */ 3.0,
-    /*.use_regulator_ldo = */ true,
+    /*.use_regulator_ldo = */ false,
 };  // default LoRa configuration for EU MFFAST 868
 MtCompact mtCompact;
 
 using OnLoraMessageCallback = void (*)(std::string& sender, std::string& chan, std::string& message);
 OnLoraMessageCallback onLoraMessageCallback = nullptr;
 
+void lora_name_from_nodeinfo(const MCT_NodeInfo& nodeinfo, std::string& out) {
+    out = nodeinfo.short_name;
+    out += " (";
+    out += std::string_view(nodeinfo.long_name).substr(0, 20);
+    out += ")";
+}
+
 void on_message_int(MCT_Header& header, MCT_TextMessage& message) {
     MCT_NodeInfo* nodeinfo = mtCompact.nodeinfo_db.get(header.srcnode);
     std::string sender;
     if (nodeinfo) {
-        sender = nodeinfo->short_name;
+        lora_name_from_nodeinfo(*nodeinfo, sender);
     } else {
         char hexbuf[11];
         snprintf(hexbuf, sizeof(hexbuf), "0x%08" PRIx32, header.srcnode);
@@ -51,7 +58,9 @@ void on_message_int(MCT_Header& header, MCT_TextMessage& message) {
 void on_nodeinfo_int(MCT_Header& header, MCT_NodeInfo& nodeinfo, bool needReply, bool newNode) {
     std::string peers_json = "#$##$$#GOTLORAPEERS[";
     char buf[200];
-    snprintf(buf, sizeof(buf), "{\"name\":\"%s\",\"id\":\"0x%08" PRIx32 "\",\"hop\":%d,\"rssi\":%.1f,\"snr\":%.1f}", nodeinfo.short_name, nodeinfo.node_id, 0, 0.0, 0.0);
+    std::string name;
+    lora_name_from_nodeinfo(nodeinfo, name);
+    snprintf(buf, sizeof(buf), "{\"name\":\"%s\",\"id\":\"0x%08" PRIx32 "\",\"hop\":%d,\"rssi\":%.1f,\"snr\":%.1f}", name.c_str(), nodeinfo.node_id, 0, 0.0, 0.0);
     peers_json += buf;
     peers_json += "]\r\n";
     ws_sendall((uint8_t*)peers_json.c_str(), peers_json.length(), true);
@@ -99,7 +108,9 @@ void lora_send_init_data_to_web() {
     bool first = true;
     for (auto e : mtCompact.nodeinfo_db) {
         char buf[200];
-        snprintf(buf, sizeof(buf), "{\"name\":\"%s\",\"id\":\"0x%08" PRIx32 "\",\"hop\":%d,\"rssi\":%.1f,\"snr\":%.1f}", e.short_name, e.node_id, 0, 0.0, 0.0);
+        std::string name;
+        lora_name_from_nodeinfo(e, name);
+        snprintf(buf, sizeof(buf), "{\"name\":\"%s\",\"id\":\"0x%08" PRIx32 "\",\"hop\":%d,\"rssi\":%.1f,\"snr\":%.1f}", name.c_str(), e.node_id, 0, 0.0, 0.0);
         if (!first) {
             peers_json += ",";
         }
@@ -129,7 +140,7 @@ void lora_send_message_to_mesh(const char* msg, size_t len) {
         MCT_NodeInfo* nodeinfo = mtCompact.nodeinfo_db.get(dest_id);
         std::string s;
         if (nodeinfo) {
-            s = nodeinfo->short_name;
+            lora_name_from_nodeinfo(*nodeinfo, s);
         } else {
             char hexbuf[11];
             snprintf(hexbuf, sizeof(hexbuf), "0x%08" PRIx32, dest_id);
