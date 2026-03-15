@@ -122,12 +122,29 @@ void lora_send_message_to_mesh(const char* msg, size_t len) {
     std::string message = data["message"];
     std::string to_type = data["totype"];
     std::string dest = data["dest"];
+    std::string deststr = "TO: ";
+
     if (to_type == "private") {
         uint32_t dest_id = std::stoul(dest, nullptr, 16);
+        MCT_NodeInfo* nodeinfo = mtCompact.nodeinfo_db.get(dest_id);
+        std::string s;
+        if (nodeinfo) {
+            s = nodeinfo->short_name;
+        } else {
+            char hexbuf[11];
+            snprintf(hexbuf, sizeof(hexbuf), "0x%08" PRIx32, dest_id);
+            s = hexbuf;
+        }
+        deststr += s;
         mtCompact.sendTextMessage(message, dest_id);
     } else if (to_type == "chan") {
+        deststr += "CH: " + dest;
         uint8_t chan = std::stoi(dest);
         mtCompact.sendTextMessage(message, 0xffffffff, chan);
+    }
+
+    if (onLoraMessageCallback) {
+        onLoraMessageCallback(deststr, dest, message);
     }
 }
 
