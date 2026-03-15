@@ -57,6 +57,10 @@ bool initLora(PinConfig& pinConfig) {
     // todo load settings from mtCompact, like lora config
     if (!mtCompact.RadioInit((RadioType)5, radio_pins, lora_config)) return false;
     mtCompact.setMyNames("PP32", "PortaPack32");
+    uint8_t my_p_key[32] = {0xf0, 0x69, 0x3d, 0xfd, 0x3e, 0x2c, 0x68, 0xcb, 0xb3, 0xcc, 0x09, 0xe6, 0xdb, 0x6c, 0xe0, 0x6a, 0xf7, 0xea, 0x33, 0xaa, 0x3c, 0xdf, 0xde, 0xaf, 0xd3, 0xaa, 0xe5, 0x0c, 0x22, 0xba, 0x0b, 0x74};
+    memcpy(mtCompact.getMyNodeInfo()->private_key, my_p_key, 32);
+    MtCompactHelpers::RegenerateOrGeneratePrivateKey(*mtCompact.getMyNodeInfo());
+    // mtCompact.setPrimaryChanByHash(8);
     mtCompact.setDebugMode(true);
     mtCompact.loadNodeDb();
     mtCompact.setOkToMqtt(true);

@@ -449,13 +449,13 @@
                 </div>
             </div>
             <div class="chat-controls">
-                <select id="loraDest" class="uicontrols">
+                <select id="loraDest" class="loracontrols">
                     <option value="chan_8">LongFast</option>
                     <option value="chan_31">MediumFast</option>
                 </select>
-                <input type="text" id="loraMsgInput" class="uicontrols" placeholder="Type a message..."
+                <input type="text" id="loraMsgInput" class="loracontrols" placeholder="Type a message..."
                     autocomplete="off" />
-                <button id="btnSendLora" class="uicontrols bluebtn" onclick="sendLoraMsg()">Send</button>
+                <button id="btnSendLora" class="loracontrols bluebtn" onclick="sendLoraMsg()">Send</button>
             </div>
         </section>
 
@@ -536,13 +536,21 @@
         function onOpen(event) {
             log("WS Connected");
             document.getElementById("connState").innerHTML = "WS Connected.";
+            var loraEls = document.querySelectorAll('.loracontrols');
+            loraEls.forEach(function (e) { e.disabled = false; });
             sendMessage("#$##$$#GETINITDATA\r\n");
-            sendMessage("#$##$$#GETLORAPEERS\r\n");
-            sendMessage("#$##$$#GETLORAHISTORY\r\n");
+            try {
+                log("< #$##$$#GETLORAPEERS\r\n");
+                websocket.send("#$##$$#GETLORAPEERS\r\n");
+                log("< #$##$$#GETLORAHISTORY\r\n");
+                websocket.send("#$##$$#GETLORAHISTORY\r\n");
+            } catch (err) { console.log(err); }
         }
 
         function onClose(event) {
             enadisaControls(false);
+            var loraEls = document.querySelectorAll('.loracontrols');
+            loraEls.forEach(function (e) { e.disabled = true; });
             log("WS Closed");
             document.getElementById("connState").innerHTML = "WS Reconnecting...";
             setTimeout(initWebSocket, 1000);
@@ -837,6 +845,8 @@
         function onLoad(event) {
             initWebSocket();
             enadisaControls(false);
+            var loraEls = document.querySelectorAll('.loracontrols');
+            loraEls.forEach(function (e) { e.disabled = true; });
             var canvas = document.getElementById("screen");
             canvas.addEventListener('mousedown', function (e) {
                 gotCursorPosition(canvas, e);
