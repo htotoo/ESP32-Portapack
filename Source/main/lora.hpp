@@ -2,6 +2,8 @@
 #include "esp_err.h"
 #include "pinconfig.h"
 #include "MtCompact.hpp"
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 // todo do something with txco and ldo
 bool loraInited = false;
 
@@ -113,6 +115,20 @@ void lora_send_message_to_mesh(const char* msg, size_t len) {
     if (loraInited == false || len <= 3) return;
     //{"message":"teszt","totype":"private","dest":"0x050d5990"}
     //{"message":"sadfas","totype":"chan","dest":"8"}
+    std::string msg_str(msg, len);
+    ESP_LOGI("LORA", "Got message to send: %s", msg_str.c_str());
+    json data = json::parse(msg_str, nullptr, false);
+    ESP_LOGI("LORA", "Parsed JSON message");
+    std::string message = data["message"];
+    std::string to_type = data["totype"];
+    std::string dest = data["dest"];
+    if (to_type == "private") {
+        uint32_t dest_id = std::stoul(dest, nullptr, 16);
+        mtCompact.sendTextMessage(message, dest_id);
+    } else if (to_type == "chan") {
+        uint8_t chan = std::stoi(dest);
+        mtCompact.sendTextMessage(message, 0xffffffff, chan);
+    }
 }
 
 // add loop

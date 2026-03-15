@@ -1,8 +1,9 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  usb_host_cdc_acm: "2.*"
-  idf: ">=4.4"
-  espressif/mdns: "1.*"
-  espressif/led_strip: "2.*"
+  usb_host_cdc_acm: 2.*
+  idf: '>=4.4'
+  espressif/mdns: 1.*
+  espressif/led_strip: 2.*
   EspMeshCompact:
     git: https://github.com/htotoo/EspMeshCompact
+  johboh/nlohmann-json: ^3.12.0

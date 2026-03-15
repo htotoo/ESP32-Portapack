@@ -655,6 +655,7 @@ static httpd_handle_t setup_websocket_server(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 10;
     config.max_open_sockets = 10;
+    config.stack_size = 8192;
 
     httpd_uri_t uri_get = {.uri = "/",
                            .method = HTTP_GET,
