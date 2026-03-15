@@ -109,6 +109,12 @@ void lora_send_init_data_to_web() {
     // #$##$$#GOTLORAHISTORY[{"sender":"BaseStation","message":"Node online. Awaiting data."},{"sender":"MobileNode_1","message":"Checking in from the field!"}]
 }
 
+void lora_send_message_to_mesh(const char* msg, size_t len) {
+    if (loraInited == false || len <= 3) return;
+    //{"message":"teszt","totype":"private","dest":"0x050d5990"}
+    //{"message":"sadfas","totype":"chan","dest":"8"}
+}
+
 // add loop
 // add debug info (telemetry, .. to web)
 // add web interface stuff

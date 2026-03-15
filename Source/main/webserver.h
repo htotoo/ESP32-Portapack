@@ -47,6 +47,7 @@ extern const char ota_end[] asm("_binary_ota_html_end");
 
 extern PinConfig pinConfig;
 void lora_send_init_data_to_web();
+void lora_send_message_to_mesh(const char* msg, size_t len);
 
 static int hex_to_int(char c) {
     if (c >= '0' && c <= '9') {
@@ -628,6 +629,13 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
         if (strcmp((const char*)ws_pkt.payload, "#$##$$#GPSDEBUGOFF\r\n") == 0) {  // parse here, since we shouldn't sent it to pp
             // enable async
             gpsDebug = false;
+            free(buf);
+            return ESP_OK;
+        }
+
+        if (strncmp((const char*)ws_pkt.payload, "#$##$$#SENDLORAMSG", 18) == 0) {
+            // send lora message based on the json
+            lora_send_message_to_mesh((const char*)ws_pkt.payload + 18, ws_pkt.len - 18);
             free(buf);
             return ESP_OK;
         }
