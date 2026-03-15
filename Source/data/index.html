@@ -153,11 +153,11 @@
             background-color: #1976d2;
         }
 
-
         #espAppContainer,
         #devdatas,
         #wsDisplay,
-        #manualcommand {
+        #manualcommand,
+        #lorachat {
             display: flex;
             flex-direction: column;
             background-color: #1e1e1e;
@@ -176,7 +176,8 @@
 
         #btnManualSend,
         #btnOpenFlmgr,
-        #bntRefresh {
+        #bntRefresh,
+        #btnSendLora {
             background-color: #2196f3;
             color: white;
             padding: 10px 15px;
@@ -188,20 +189,23 @@
 
         #btnManualSend:hover,
         #btnOpenFlmgr:hover,
-        #bntRefresh:hover {
+        #bntRefresh:hover,
+        #btnSendLora:hover {
             background-color: #1976d2;
         }
 
         #btnManualSend:disabled,
         #btnOpenFlmgr:disabled,
         #bntRefresh:disabled,
-        #btnGps:disabled {
+        #btnGps:disabled,
+        #btnSendLora:disabled {
             background-color: #3a3a3a;
             color: #7a7a7a;
             cursor: not-allowed;
         }
 
-        #manualcommand input[type="text"] {
+        #manualcommand input[type="text"],
+        #loraMsgInput {
             padding: 10px;
             border: 1px solid #03dac6;
             border-radius: 5px;
@@ -210,7 +214,9 @@
             width: 80%;
         }
 
-        #manualcommand input[type="text"]:focus {
+        #manualcommand input[type="text"]:focus,
+        #loraMsgInput:focus,
+        #loraDest:focus {
             outline: none;
             border-color: #018786;
         }
@@ -226,7 +232,6 @@
             border-radius: 3px;
             cursor: pointer;
         }
-
 
         #fileList {
             min-width: 300px;
@@ -257,6 +262,75 @@
             border-radius: 5px;
             font-size: 1rem;
             cursor: pointer;
+        }
+
+        .chat-container {
+            display: flex;
+            gap: 15px;
+            height: 300px;
+        }
+
+        .chat-messages {
+            flex: 3;
+            background-color: #121212;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-y: auto;
+            user-select: text;
+            white-space: pre-wrap;
+        }
+
+        .chat-peers {
+            flex: 1;
+            background-color: #121212;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-y: auto;
+            min-width: 150px;
+        }
+
+        .peer-item {
+            padding: 8px 5px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .peer-item:hover {
+            background-color: #2a2a2a;
+        }
+
+        .peer-name {
+            font-weight: bold;
+            color: #bb86fc;
+        }
+
+        .peer-details {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-top: 3px;
+        }
+
+        .chat-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #loraDest {
+            padding: 10px;
+            border: 1px solid #03dac6;
+            border-radius: 5px;
+            background-color: #121212;
+            color: white;
+            flex: 0 0 auto;
+        }
+
+        #loraMsgInput {
+            flex: 1;
+            width: auto;
         }
     </style>
 </head>
@@ -366,6 +440,25 @@
             </div>
         </section>
 
+        <section id="lorachat">
+            <h2>Meshtastic Chat</h2>
+            <div class="chat-container">
+                <div id="loraMessages" class="chat-messages">
+                </div>
+                <div id="loraPeers" class="chat-peers">
+                </div>
+            </div>
+            <div class="chat-controls">
+                <select id="loraDest" class="uicontrols">
+                    <option value="chan_8">LongFast</option>
+                    <option value="chan_31">MediumFast</option>
+                </select>
+                <input type="text" id="loraMsgInput" class="uicontrols" placeholder="Type a message..."
+                    autocomplete="off" />
+                <button id="btnSendLora" class="uicontrols bluebtn" onclick="sendLoraMsg()">Send</button>
+            </div>
+        </section>
+
         <section id="manualcommand">
             <h2>Manual Commands</h2>
             <input type="text" id="manualtxt" />
@@ -390,6 +483,7 @@
         var resolveSt = null; //if wait for the resolve during send
         var screensupdState = 0; //0-not that cmd, 1 = begin, 2 = second line
         var gotbytes = 0; //for file download progress
+        var loraPeersCache = {};
         window.addEventListener('load', onLoad);
 
         function enadisaControls(ena) {
@@ -402,10 +496,7 @@
 
         function setProgress(prog) {
             var pb = document.getElementById("fileProgress");
-            if (prog < 0) //hide
-            {
-                pb.style.display = "none";
-            }
+            if (prog < 0) { pb.style.display = "none"; }
             else {
                 pb.style.display = "block";
                 pb.value = prog;
@@ -440,14 +531,14 @@
             websocket.error = onError;
         }
 
-        function onError(event) {
-            log("WS error");
-        }
+        function onError(event) { log("WS error"); }
 
         function onOpen(event) {
             log("WS Connected");
             document.getElementById("connState").innerHTML = "WS Connected.";
             sendMessage("#$##$$#GETINITDATA\r\n");
+            sendMessage("#$##$$#GETLORAPEERS\r\n");
+            sendMessage("#$##$$#GETLORAHISTORY\r\n");
         }
 
         function onClose(event) {
@@ -456,13 +547,13 @@
             document.getElementById("connState").innerHTML = "WS Reconnecting...";
             setTimeout(initWebSocket, 1000);
         }
+
         function gotSensor(data) {
             document.getElementById("devTemp").innerHTML = "Temp: " + data.env.temp + " &#8451;";
             if (data.gps.lat != 200 && data.gps.lon != 200) {
                 document.getElementById("devGpsLat").innerHTML = "Lat: " + data.gps.lat;
                 document.getElementById("devGpsLon").innerHTML = "Lon: " + data.gps.lon;
-            }
-            else {
+            } else {
                 document.getElementById("devGpsLat").innerHTML = "Lat: ? ";
                 document.getElementById("devGpsLon").innerHTML = "Lon: ? ";
             }
@@ -491,12 +582,90 @@
         }
 
         function escapeHTML(unsafe) {
-            return unsafe.replace(
+            if (!unsafe) return "";
+            return String(unsafe).replace(
                 /[\u0000-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u00FF]/g,
                 c => '&#' + ('000' + c.charCodeAt(0)).slice(-4) + ';'
             )
         }
-        //one line received
+
+        function appendLoraMessage(sender, message) {
+            const msgContainer = document.getElementById("loraMessages");
+            const msgLine = document.createElement("div");
+            msgLine.style.marginBottom = "5px";
+            msgLine.innerHTML = `<strong>[${escapeHTML(sender)}]:</strong> ${escapeHTML(message)}`;
+            msgContainer.appendChild(msgLine);
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+
+        function updateLoraPeers(peersArray) {
+            peersArray.forEach(p => {
+                loraPeersCache[p.id] = p;
+            });
+
+            const peersDiv = document.getElementById("loraPeers");
+            const destSelect = document.getElementById("loraDest");
+
+            peersDiv.innerHTML = "";
+
+            let currentDest = destSelect.value;
+
+            destSelect.innerHTML = `
+                <option value="chan_8">LongFast</option>
+                <option value="chan_31">MediumFast</option>
+            `;
+
+            Object.values(loraPeersCache).forEach(p => {
+                let formattedId = p.id;
+                let stats = "";
+                if (p.hop === 0) {
+                    stats = `RSSI: ${p.rssi} | SNR: ${p.snr}`;
+                } else {
+                    stats = `Hops: ${p.hop}`;
+                }
+
+                const pItem = document.createElement("div");
+                pItem.className = "peer-item";
+                pItem.onclick = () => { destSelect.value = `peer_${p.id}`; };
+
+                pItem.innerHTML = `
+                    <div class="peer-name">${escapeHTML(p.name)}</div>
+                    <div class="peer-details">${escapeHTML(formattedId)} | ${escapeHTML(stats)}</div>
+                `;
+                peersDiv.appendChild(pItem);
+
+                const opt = document.createElement("option");
+                opt.value = `peer_${p.id}`;
+                opt.text = p.name;
+                destSelect.appendChild(opt);
+            });
+
+            if (Array.from(destSelect.options).some(opt => opt.value === currentDest)) {
+                destSelect.value = currentDest;
+            }
+        }
+
+        function sendLoraMsg() {
+            const destVal = document.getElementById("loraDest").value;
+            const msgInput = document.getElementById("loraMsgInput");
+            const text = msgInput.value.trim();
+
+            if (!text) return;
+
+            let totype = "private";
+            let destId = destVal.replace("peer_", "");
+
+            if (destVal.startsWith("chan_")) {
+                totype = "chan";
+                destId = destVal.replace("chan_", "");
+            }
+
+            const outCmd = `#$##$$#SENDLORAMSG{"message":"${text}","totype":"${totype}","dest":"${destId}"}\r\n`;
+            sendMessage(outCmd);
+
+            msgInput.value = "";
+        }
+
         function onMessageLine(msg) {
             try {
                 console.log(msg);
@@ -527,6 +696,7 @@
                     }
                     if (msg.startsWith("#$##$$#GOTIRRX")) {
                         //{"protocol":1,"data":33438150,"len":34
+
                         var jsStr = msg.substring(14);
                         var irdata = JSON.parse(jsStr);
                         var protocol = "UNK";
@@ -552,7 +722,29 @@
                         document.getElementById("wsd_maintext").innerHTML = tmp;
                         return false;
                     }
+
+                    if (msg.startsWith("#$##$$#GOTLORAMSG")) {
+                        var jsStr = msg.substring(17);
+                        var loraData = JSON.parse(jsStr);
+                        appendLoraMessage(loraData.sender, loraData.message);
+                        return false;
+                    }
+
+                    if (msg.startsWith("#$##$$#GOTLORAPEERS")) {
+                        var jsStr = msg.substring(19);
+                        var peers = JSON.parse(jsStr);
+                        updateLoraPeers(peers);
+                        return false;
+                    }
+
+                    if (msg.startsWith("#$##$$#GOTLORAHISTORY")) {
+                        var jsStr = msg.substring(21);
+                        var history = JSON.parse(jsStr);
+                        history.forEach(m => appendLoraMessage(m.sender, m.message));
+                        return false;
+                    }
                 }
+
                 if (msg.startsWith("#$##$$$")) {
                     let tmp = msg.substring(7);
                     log("Got ESP app: " + tmp);
@@ -567,13 +759,13 @@
                 if (screensupdState >= 0) return true;
                 if (expectedFileSize > 0) return true;
                 log("> " + msg + "\r\n");
-            } catch (err) { console.log(err); };
+            } catch (err) { console.log("JSON Parsing Error: ", err); };
             return true;
         }
         //any ws message
         async function onMessage(event) {
             try {
-                var str = await event.data.text();//String(event.data);
+                var str = await event.data.text();
                 for (let i = 0; i < str.length; i++) {
                     var resetline = false;
                     respLastLine += str[i];
@@ -601,18 +793,11 @@
                     if (resetline) respLastLine = "";
                 }
             }
-            catch (err) {
-                console.log(err);
-            }
+            catch (err) { console.log(err); }
         }
 
-        function enterCritical() {
-            sendMessage("#$##$$#DISABLEESPASYNC\r\n");
-        }
-
-        function exitCritical() {
-            sendMessage("#$##$$#ENABLEESPASYNC\r\n");
-        }
+        function enterCritical() { sendMessage("#$##$$#DISABLEESPASYNC\r\n"); }
+        function exitCritical() { sendMessage("#$##$$#ENABLEESPASYNC\r\n"); }
 
         function sendMessage(data) {
             try {
@@ -655,8 +840,16 @@
             var canvas = document.getElementById("screen");
             canvas.addEventListener('mousedown', function (e) {
                 gotCursorPosition(canvas, e);
-            })
+            });
+
+            document.getElementById("loraMsgInput").addEventListener("keypress", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    sendLoraMsg();
+                }
+            });
         }
+
         async function screenUpdated() {
             const canvas = document.getElementById("screen");
             const ctx = canvas.getContext("2d");
@@ -691,11 +884,11 @@
                 }
                 if (y == 0 && portarf) {
                     //this is portarf, so resize the screen
+
                     canvas.height = 480;
                     canvas.width = 320;
                 }
             }
-
         }
 
         function sendGps(lat, lon, alt) {
@@ -705,6 +898,7 @@
             enadisaControls(false);
             sendMessage(tosend);
         }
+
         async function sendButton(btn) {
             var tosend = "button " + String(btn) + "\r\n";
             respWaiting = PROMPT;
@@ -712,6 +906,7 @@
             await sendAndWait(tosend);
             autoScreenRefresh();
         }
+
         async function sendTouch(x, y) {
             var tosend = "touch " + String(x) + " " + String(y) + "\r\n";
             respWaiting = PROMPT;
@@ -719,18 +914,21 @@
             await sendAndWait(tosend);
             autoScreenRefresh();
         }
+
         function sendReboot() {
             var tosend = "reboot\r\n";
             respWaiting = PROMPT;
             enadisaControls(false);
             sendMessage(tosend);
         }
+
         function autoScreenRefresh() {
             var checkbox = document.getElementById("screenRefresh");
             if (checkbox.checked) {
                 refreshScreen();
             }
         }
+
         function refreshScreen() {
             var tosend = "screenframeshort\r\n";
             respWaiting = PROMPT;
@@ -809,9 +1007,8 @@
                 let gotbytesAll = 0;
                 let concatenatedHexData = "";
                 while (gotbytesAll < expectedFileSize) {
-                    //var tosend = "fread " + expectedFileSize.toString() + "\r\n";
                     var tosend = "fread 512\r\n";
-                    respWaiting = PROMPT;//?!
+                    respWaiting = PROMPT;
                     await sendAndWait(tosend);
                     var beflen = concatenatedHexData.length;
                     concatenatedHexData += respLinestp.slice(1, -1).join('').replace(/\r\n/g, "");
@@ -823,7 +1020,6 @@
                     var progress = gotbytesAll / expectedFileSize * 100;
                     if (progress > 100) progress = 100;
                     setProgress(progress);
-                    //await new Promise(r => setTimeout(r, 150));
                     if (concatenatedHexData.length == beflen) {
                         break;
                     }
@@ -911,11 +1107,10 @@
                         if (offset < file.size) {
                             readSlice(offset);
                         } else {
-                            //SENT ALL
                             log("File sent");
                             setProgress(-1);
                             respWaiting = PROMPT;
-                            await sendAndWait(""); //wait for send end prompt
+                            await sendAndWait("");
                             tosend = "fclose\r\n";
                             enadisaControls(false);
                             await sendAndWait(tosend);
@@ -949,13 +1144,12 @@
             else {
                 if (confirm("Really flash " + target + " ?")) {
                     var tosend = "flash " + target + "\r\n";
-                    respWaiting = PROMPT; //not needed, since pp will reconnect
+                    respWaiting = PROMPT;
                     enadisaControls(false);
                     sendMessage(tosend);
                 }
             }
         }
-
 
         function filesLsArrived() {
             var fl = document.getElementById("fileList");
@@ -1061,7 +1255,6 @@
                 document.getElementById("devGPSDebugRes").style.display = "none";
             }
         }
-
     </script>
 </body>
 

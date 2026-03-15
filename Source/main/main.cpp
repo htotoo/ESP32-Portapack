@@ -25,7 +25,7 @@
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 // select this if you want to let user choose pin config from the web ui
-#define HW_VARIANT_SELECTED HW_VARIANT_CUSTOM
+#define HW_VARIANT_SELECTED HW_VARIANT_MDK_BOARD
 
 // select this if you have OSDR AI EXTENSION BOARD
 // #define HW_VARIANT_SELECTED HW_VARIANT_PRFAI
@@ -90,6 +90,8 @@ uint8_t airplane_mode_new = 0;  // 0 no change, other: new value
 #include "../extapps/espapps.h"
 
 #include "display/displaymanager.hpp"
+bool loraInited = false;
+#include "lora.hpp"
 
 #define TAG "ESP32PP"
 
@@ -544,7 +546,15 @@ void app_main(void) {
     displayManager.setEnvironmentDataSource(&environment);
     displayManager.setLightDataSource(&light);
     displayManager.setSatTrackDataSource(&sattrackdata, &sat_to_track);
-    i2c_scan(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());  // scan again, after sensors initialized
+    // i2c_scan(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());  // scan again, after sensors initialized
+
+    if (pinConfig.hasSPI() && pinConfig.hasLoRa()) {
+        ESP_LOGI(TAG, "Initializing LoRa module.");
+        loraInited = initLora(pinConfig);
+        if (!loraInited) {
+            ESP_LOGE(TAG, "Failed to initialize LoRa module.");
+        }
+    }
 
     PPHandler::set_module_name("ESP32PP");
     PPHandler::set_module_version(1);
@@ -688,6 +698,16 @@ void app_main(void) {
                                                     return true; });
 
     PPHandler::init((gpio_num_t)pinConfig.I2cSclSlavePin(), (gpio_num_t)pinConfig.I2cSdaSlavePin(), 0x51);
+
+    lora_set_onmessage([](std::string& sender, std::string& chan, std::string& message) {
+        char buff[500] = {0};
+        snprintf(buff, 500,
+                 "#$##$$#GOTLORAMSG"
+                 "{\"sender\":\"%s\",\"chan\":\"%s\",\"message\":\"%s\"}\r\n",
+                 sender.c_str(), chan.c_str(), message.c_str());
+        ws_sendall((uint8_t*)buff, strlen(buff), true);
+        // todo send to pp
+    });
 
     while (true) {
         time_millis = esp_timer_get_time() / 1000;
