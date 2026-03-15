@@ -3,6 +3,7 @@
 #include "pinconfig.h"
 #include "MtCompact.hpp"
 // todo do something with txco and ldo
+bool loraInited = false;
 
 Radio_PINS radio_pins = {
     /* sck*/ 35,
@@ -45,6 +46,15 @@ void on_message_int(MCT_Header& header, MCT_TextMessage& message) {
     }
 }
 
+void on_nodeinfo_int(MCT_Header& header, MCT_NodeInfo& nodeinfo, bool needReply, bool newNode) {
+    std::string peers_json = "#$##$$#GOTLORAPEERS[";
+    char buf[200];
+    snprintf(buf, sizeof(buf), "{\"name\":\"%s\",\"id\":\"0x%08" PRIx32 "\",\"hop\":%d,\"rssi\":%.1f,\"snr\":%.1f}", nodeinfo.short_name, nodeinfo.node_id, 0, 0.0, 0.0);
+    peers_json += buf;
+    peers_json += "]\r\n";
+    ws_sendall((uint8_t*)peers_json.c_str(), peers_json.length(), true);
+}
+
 bool initLora(PinConfig& pinConfig) {
     pinConfig.debugPrint();
     radio_pins.cs = pinConfig.LoraNssPin();
@@ -57,9 +67,7 @@ bool initLora(PinConfig& pinConfig) {
     // todo load settings from mtCompact, like lora config
     if (!mtCompact.RadioInit((RadioType)5, radio_pins, lora_config)) return false;
     mtCompact.setMyNames("PP32", "PortaPack32");
-    uint8_t my_p_key[32] = {0xf0, 0x69, 0x3d, 0xfd, 0x3e, 0x2c, 0x68, 0xcb, 0xb3, 0xcc, 0x09, 0xe6, 0xdb, 0x6c, 0xe0, 0x6a, 0xf7, 0xea, 0x33, 0xaa, 0x3c, 0xdf, 0xde, 0xaf, 0xd3, 0xaa, 0xe5, 0x0c, 0x22, 0xba, 0x0b, 0x74};
-    memcpy(mtCompact.getMyNodeInfo()->private_key, my_p_key, 32);
-    MtCompactHelpers::RegenerateOrGeneratePrivateKey(*mtCompact.getMyNodeInfo());
+    mtCompact.loadPrivKey();
     // mtCompact.setPrimaryChanByHash(8);
     mtCompact.setDebugMode(true);
     mtCompact.loadNodeDb();
@@ -69,9 +77,38 @@ bool initLora(PinConfig& pinConfig) {
     mtCompact.setSendHopLimit(7);
     mtCompact.sendMyNodeInfo();
     mtCompact.setOnMessage(on_message_int);
+    mtCompact.setOnNodeInfoMessage(on_nodeinfo_int);
+    loraInited = true;
     return true;
 }
 
 void lora_set_onmessage(OnLoraMessageCallback cb) {
     onLoraMessageCallback = cb;
 }
+
+// #$##$$#GOTLORAPEERS[{"name":"Frnk","id":"0xe0f74d14","hop":0,"rssi":0.0,"snr":0.0},{"name":"Tot4","id":"0x050d5990","hop":0,"rssi":0.0,"snr":0.0},]#$##$$#GOTSENS{"gps":{"y":2026,"m":3,"d":15,"h":10,"mi":54,"s":50,"siu":0,"siv":0,"lat":0.000000,"lon":0.000000,"alt":0.00,"speed":0.000000},"ori":{"head":400.0, "tilt":400.0 },"env":{"tempesp":44.9,"temp":0.0,"humi":0.0, "press":0.0, "light":0 }}
+
+void lora_send_init_data_to_web() {
+    if (loraInited == false) return;
+    // send lora peers and history to web
+    // sendinf peers
+    // #$##$$#GOTLORAPEERS[{"name":"BaseStation","id":"0x1A2B3C4D","hop":0,"rssi":-85,"snr":6},{"name":"MobileNode_1","id":"0x9F8E7D6C","hop":1,"rssi":0,"snr":0}]
+    std::string peers_json = "#$##$$#GOTLORAPEERS[";
+    bool first = true;
+    for (auto e : mtCompact.nodeinfo_db) {
+        char buf[200];
+        snprintf(buf, sizeof(buf), "{\"name\":\"%s\",\"id\":\"0x%08" PRIx32 "\",\"hop\":%d,\"rssi\":%.1f,\"snr\":%.1f}", e.short_name, e.node_id, 0, 0.0, 0.0);
+        if (!first) {
+            peers_json += ",";
+        }
+        peers_json += buf;
+        first = false;
+    }
+    peers_json += "]\r\n";
+    ws_sendall((uint8_t*)peers_json.c_str(), peers_json.length(), true);
+    // #$##$$#GOTLORAHISTORY[{"sender":"BaseStation","message":"Node online. Awaiting data."},{"sender":"MobileNode_1","message":"Checking in from the field!"}]
+}
+
+// add loop
+// add debug info (telemetry, .. to web)
+// add web interface stuff

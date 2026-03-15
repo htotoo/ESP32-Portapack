@@ -46,6 +46,7 @@ extern const char ota_start[] asm("_binary_ota_html_start");
 extern const char ota_end[] asm("_binary_ota_html_end");
 
 extern PinConfig pinConfig;
+void lora_send_init_data_to_web();
 
 static int hex_to_int(char c) {
     if (c >= '0' && c <= '9') {
@@ -592,6 +593,9 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
             if ((PPShellComm::getAnyConnected() & 2) == 2) {
                 ws_notify_cc_i2c();
             }
+            // send lora data to web
+            lora_send_init_data_to_web();
+
             free(buf);
             return ESP_OK;
         }

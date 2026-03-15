@@ -167,6 +167,10 @@
             gap: 20px;
         }
 
+        #lorachat {
+            display: none;
+        }
+
         .dev-data-rows {
             display: flex;
             justify-content: space-around;
@@ -539,12 +543,6 @@
             var loraEls = document.querySelectorAll('.loracontrols');
             loraEls.forEach(function (e) { e.disabled = false; });
             sendMessage("#$##$$#GETINITDATA\r\n");
-            try {
-                log("< #$##$$#GETLORAPEERS\r\n");
-                websocket.send("#$##$$#GETLORAPEERS\r\n");
-                log("< #$##$$#GETLORAHISTORY\r\n");
-                websocket.send("#$##$$#GETLORAHISTORY\r\n");
-            } catch (err) { console.log(err); }
         }
 
         function onClose(event) {
@@ -741,6 +739,9 @@
                     if (msg.startsWith("#$##$$#GOTLORAPEERS")) {
                         var jsStr = msg.substring(19);
                         var peers = JSON.parse(jsStr);
+                        //got the lora peers, so i have lora.
+                        const loraDiv = document.getElementById("lorachat");
+                        loraDiv.style.display = "flex";
                         updateLoraPeers(peers);
                         return false;
                     }

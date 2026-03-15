@@ -90,7 +90,7 @@ uint8_t airplane_mode_new = 0;  // 0 no change, other: new value
 #include "../extapps/espapps.h"
 
 #include "display/displaymanager.hpp"
-bool loraInited = false;
+
 #include "lora.hpp"
 
 #define TAG "ESP32PP"
