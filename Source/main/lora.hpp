@@ -67,7 +67,7 @@ bool initLora(PinConfig& pinConfig) {
     radio_pins.miso = pinConfig.SpiMisoPin();
     radio_pins.mosi = pinConfig.SpiMosiPin();
     // todo load settings from mtCompact, like lora config
-    if (!mtCompact.RadioInit((RadioType)5, radio_pins, lora_config)) return false;
+    if (!mtCompact.RadioInit((RadioType)pinConfig.LoraChipType(), radio_pins, lora_config)) return false;
     mtCompact.setMyNames("PP32", "PortaPack32");
     mtCompact.loadPrivKey();
     // mtCompact.setPrimaryChanByHash(8);
