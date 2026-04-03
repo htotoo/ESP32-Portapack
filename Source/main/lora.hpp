@@ -2,6 +2,7 @@
 #include "esp_err.h"
 #include "pinconfig.h"
 #include "MtCompact.hpp"
+#include "MtMessageStore.hpp"
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 // todo do something with txco and ldo
@@ -27,6 +28,7 @@ LoraConfig lora_config = {
     /*.use_regulator_ldo = */ false,
 };  // default LoRa configuration for EU MFFAST 868
 MtCompact mtCompact;
+MtMessageStore mtMessageStore;
 
 using OnLoraMessageCallback = void (*)(std::string& sender, std::string& chan, std::string& message);
 OnLoraMessageCallback onLoraMessageCallback = nullptr;
@@ -36,6 +38,9 @@ void lora_name_from_nodeinfo(const MCT_NodeInfo& nodeinfo, std::string& out) {
     out += " (";
     out += std::string_view(nodeinfo.long_name).substr(0, 20);
     out += ")";
+}
+
+void on_message_pre() {
 }
 
 void on_message_int(MCT_Header& header, MCT_TextMessage& message) {
@@ -49,10 +54,8 @@ void on_message_int(MCT_Header& header, MCT_TextMessage& message) {
         sender = hexbuf;
     }
 
-    std::string chan = (header.dstnode == 0xffffffff) ? std::to_string(message.chan) : "PRIV";
-    if (onLoraMessageCallback) {
-        onLoraMessageCallback(sender, chan, message.text);
-    }
+    MtMessageStore::MessageEntry ent{sender.c_str(), message.chan, header.dstnode != 0xffffffff, message.text.c_str(), header.srcnode == mtCompact.getMyNodeInfo()->node_id, std::time(nullptr)};
+    mtMessageStore.addMessage(ent);
 }
 
 void on_nodeinfo_int(MCT_Header& header, MCT_NodeInfo& nodeinfo, bool needReply, bool newNode) {
@@ -89,6 +92,14 @@ bool initLora(PinConfig& pinConfig) {
     mtCompact.sendMyNodeInfo();
     mtCompact.setOnMessage(on_message_int);
     mtCompact.setOnNodeInfoMessage(on_nodeinfo_int);
+    mtMessageStore.addListener([](const MtMessageStore::MessageEntry& entry) {
+        if (onLoraMessageCallback) {
+            std::string sender = entry.sender.c_str();
+            std::string chan = std::to_string(entry.channel);
+            std::string message = entry.message.c_str();
+            onLoraMessageCallback(sender, chan, message);
+        }
+    });
     loraInited = true;
     return true;
 }
@@ -119,7 +130,21 @@ void lora_send_init_data_to_web() {
     }
     peers_json += "]\r\n";
     ws_sendall((uint8_t*)peers_json.c_str(), peers_json.length(), true);
+    peers_json = "";
     // #$##$$#GOTLORAHISTORY[{"sender":"BaseStation","message":"Node online. Awaiting data."},{"sender":"MobileNode_1","message":"Checking in from the field!"}]
+    std::string history_json = "#$##$$#GOTLORAHISTORY[";
+    first = true;
+    for (const auto& entry : mtMessageStore) {
+        char buf[300];
+        snprintf(buf, sizeof(buf), "{\"sender\":\"%s\",\"message\":\"%s\"}", entry.sender.c_str(), entry.message.c_str());
+        if (!first) {
+            history_json += ",";
+        }
+        history_json += buf;
+        first = false;
+    }
+    history_json += "]\r\n";
+    ws_sendall((uint8_t*)history_json.c_str(), history_json.length(), true);
 }
 
 void lora_send_message_to_mesh(const char* msg, size_t len) {
@@ -134,7 +159,7 @@ void lora_send_message_to_mesh(const char* msg, size_t len) {
     std::string to_type = data["totype"];
     std::string dest = data["dest"];
     std::string deststr = "TO: ";
-
+    uint8_t chani = 0;
     if (to_type == "private") {
         uint32_t dest_id = std::stoul(dest, nullptr, 16);
         MCT_NodeInfo* nodeinfo = mtCompact.nodeinfo_db.get(dest_id);
@@ -149,14 +174,13 @@ void lora_send_message_to_mesh(const char* msg, size_t len) {
         deststr += s;
         mtCompact.sendTextMessage(message, dest_id);
     } else if (to_type == "chan") {
+        chani = std::stoi(dest);
         deststr += "CH: " + dest;
         uint8_t chan = std::stoi(dest);
         mtCompact.sendTextMessage(message, 0xffffffff, chan);
     }
-
-    if (onLoraMessageCallback) {
-        onLoraMessageCallback(deststr, dest, message);
-    }
+    MtMessageStore::MessageEntry ent{deststr.c_str(), chani, to_type != "chan", message.c_str(), true, std::time(nullptr)};
+    mtMessageStore.addMessage(ent);
 }
 
 // add loop
