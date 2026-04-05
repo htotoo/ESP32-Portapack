@@ -7,6 +7,9 @@
 using json = nlohmann::json;
 // todo do something with txco and ldo
 bool loraInited = false;
+uint32_t loraLastLoopMillis = 0;
+uint32_t loraSecs = 0;
+uint16_t loraNodeInfoMins = 30;
 
 Radio_PINS radio_pins = {
     /* sck*/ 35,
@@ -183,6 +186,20 @@ void lora_send_message_to_mesh(const char* msg, size_t len) {
     mtMessageStore.addMessage(ent);
 }
 
-// add loop
+void lora_loop(uint32_t currentMillis) {
+    if (!loraInited) return;
+    if (currentMillis - loraLastLoopMillis >= 1000) {
+        loraLastLoopMillis = currentMillis;
+        loraSecs++;
+        if (loraSecs % (60 * loraNodeInfoMins) == 0) {
+            mtCompact.sendMyNodeInfo();  // send nodeinfo every n mins to keep the network updated
+        }
+        if (mtCompact.nodeinfo_db.needsSave()) {
+            mtCompact.saveNodeDb();
+        }
+    }
+}
+
+// add loop stuff
 // add debug info (telemetry, .. to web)
 // add web interface stuff
