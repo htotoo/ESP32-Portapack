@@ -33,7 +33,7 @@ LoraConfig lora_config = {
 MtCompact mtCompact;
 MtMessageStore mtMessageStore;
 
-using OnLoraMessageCallback = void (*)(std::string& sender, std::string& chan, std::string& message);
+using OnLoraMessageCallback = void (*)(const MtMessageStore::MessageEntry& entry);
 OnLoraMessageCallback onLoraMessageCallback = nullptr;
 
 void lora_name_from_nodeinfo(const MCT_NodeInfo& nodeinfo, std::string& out) {
@@ -43,7 +43,31 @@ void lora_name_from_nodeinfo(const MCT_NodeInfo& nodeinfo, std::string& out) {
     out += ")";
 }
 
-void on_message_pre() {
+std::string lora_chan_name(uint8_t chan) {
+    auto ch = mtCompact.chan_mgr.getChannelByHash(chan);
+    if (ch) {
+        return ch->name;
+    }
+    return std::to_string(chan);
+}
+
+void lora_message_to_json(const MtMessageStore::MessageEntry& entry, std::string& out) {
+    // "{\"sender\":\"%s\",\"chan\":\"%s\",\"message\":\"%s\"}\r\n",
+    out = "{\"dir\":\"";
+    if (entry.isFromMe) {
+        out += "out";
+    } else {
+        out += "in";
+    }
+    out += "\",\"sender\":\"";
+    if (entry.isDirect) {
+        out += entry.sender.c_str();
+    } else {
+        out += "CH: " + lora_chan_name(entry.channel);
+    }
+    out += "\",\"message\":\"";
+    out += entry.message.c_str();
+    out += "\"}\r\n";
 }
 
 void on_message_int(MCT_Header& header, MCT_TextMessage& message) {
@@ -97,10 +121,7 @@ bool initLora(PinConfig& pinConfig) {
     mtCompact.setOnNodeInfoMessage(on_nodeinfo_int);
     mtMessageStore.addListener([](const MtMessageStore::MessageEntry& entry) {
         if (onLoraMessageCallback) {
-            std::string sender = entry.sender.c_str();
-            std::string chan = std::to_string(entry.channel);
-            std::string message = entry.message.c_str();
-            onLoraMessageCallback(sender, chan, message);
+            onLoraMessageCallback(entry);
         }
     });
     loraInited = true;
@@ -138,8 +159,8 @@ void lora_send_init_data_to_web() {
     std::string history_json = "#$##$$#GOTLORAHISTORY[";
     first = true;
     for (const auto& entry : mtMessageStore) {
-        char buf[300];
-        snprintf(buf, sizeof(buf), "{\"sender\":\"%s\",\"message\":\"%s\"}", entry.sender.c_str(), entry.message.c_str());
+        std::string buf;
+        lora_message_to_json(entry, buf);
         if (!first) {
             history_json += ",";
         }
@@ -161,7 +182,6 @@ void lora_send_message_to_mesh(const char* msg, size_t len) {
     std::string message = data["message"];
     std::string to_type = data["totype"];
     std::string dest = data["dest"];
-    std::string deststr = "TO: ";
     uint8_t chani = 0;
     if (to_type == "private") {
         uint32_t dest_id = std::stoul(dest, nullptr, 16);
@@ -174,15 +194,15 @@ void lora_send_message_to_mesh(const char* msg, size_t len) {
             snprintf(hexbuf, sizeof(hexbuf), "0x%08" PRIx32, dest_id);
             s = hexbuf;
         }
-        deststr += s;
         mtCompact.sendTextMessage(message, dest_id);
+        dest = s;
     } else if (to_type == "chan") {
         chani = std::stoi(dest);
-        deststr += "CH: " + dest;
         uint8_t chan = std::stoi(dest);
         mtCompact.sendTextMessage(message, 0xffffffff, chan);
+        dest = "ME";
     }
-    MtMessageStore::MessageEntry ent{deststr.c_str(), chani, to_type != "chan", message.c_str(), true, std::time(nullptr)};
+    MtMessageStore::MessageEntry ent{dest.c_str(), chani, to_type != "chan", message.c_str(), true, std::time(nullptr)};
     mtMessageStore.addMessage(ent);
 }
 
@@ -195,7 +215,7 @@ void lora_loop(uint32_t currentMillis) {
             mtCompact.sendMyNodeInfo();  // send nodeinfo every n mins to keep the network updated
         }
         if (mtCompact.nodeinfo_db.needsSave()) {
-            mtCompact.saveNodeDb();
+            // mtCompact.saveNodeDb(); //causes crash, skip
         }
     }
 }

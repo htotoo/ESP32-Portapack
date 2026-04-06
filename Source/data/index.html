@@ -595,11 +595,12 @@
             )
         }
 
-        function appendLoraMessage(sender, message) {
+        function appendLoraMessage(sender, message, dir = "in") {
             const msgContainer = document.getElementById("loraMessages");
             const msgLine = document.createElement("div");
             msgLine.style.marginBottom = "5px";
-            msgLine.innerHTML = `<strong>[${escapeHTML(sender)}]:</strong> ${escapeHTML(message)}`;
+            const dirtxt = (dir == "in") ? "&#8592;" : "&#8594;";
+            msgLine.innerHTML = `<strong>${dirtxt} [${escapeHTML(sender)}]:</strong> ${escapeHTML(message)}`;
             msgContainer.appendChild(msgLine);
             msgContainer.scrollTop = msgContainer.scrollHeight;
         }
@@ -732,7 +733,7 @@
                     if (msg.startsWith("#$##$$#GOTLORAMSG")) {
                         var jsStr = msg.substring(17);
                         var loraData = JSON.parse(jsStr);
-                        appendLoraMessage(loraData.sender, loraData.message);
+                        appendLoraMessage(loraData.sender, loraData.message, loraData.dir);
                         return false;
                     }
 

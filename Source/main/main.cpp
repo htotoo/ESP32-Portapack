@@ -699,13 +699,11 @@ void app_main(void) {
 
     PPHandler::init((gpio_num_t)pinConfig.I2cSclSlavePin(), (gpio_num_t)pinConfig.I2cSdaSlavePin(), 0x51);
 
-    lora_set_onmessage([](std::string& sender, std::string& chan, std::string& message) {
-        char buff[500] = {0};
-        snprintf(buff, 500,
-                 "#$##$$#GOTLORAMSG"
-                 "{\"sender\":\"%s\",\"chan\":\"%s\",\"message\":\"%s\"}\r\n",
-                 sender.c_str(), chan.c_str(), message.c_str());
-        ws_sendall((uint8_t*)buff, strlen(buff), true);
+    lora_set_onmessage([](const MtMessageStore::MessageEntry& entry) {
+        std::string buff;
+        lora_message_to_json(entry, buff);
+        buff = "#$##$$#GOTLORAMSG" + buff + "\r\n ";
+        ws_sendall((uint8_t*)buff.c_str(), buff.length(), true);
         // todo send to pp
     });
 
