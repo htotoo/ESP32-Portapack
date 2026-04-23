@@ -135,6 +135,9 @@ void PPHandler::on_command_ISR(uint16_t command, std::vector<uint8_t> additional
         case (uint16_t)Command::COMMAND_GETFEATURE_MASK:
             break;
 
+        case (uint16_t)Command::COMMAND_POWER_OFF:
+            break;
+
         case (uint16_t)Command::COMMAND_SHELL_PPTOMOD_DATA:
             if (got_shell_data_cb)
                 got_shell_data_cb(additional_data);
@@ -301,12 +304,6 @@ std::vector<uint8_t> PPHandler::on_send_ISR() {
             return data;
         }
 
-        case (uint16_t)PPCMD_APPMGR_APPMGR: {
-            std::vector<uint8_t> data;
-            AppManager::handlePPReqAppmgrCommands(data);
-            return data;
-        }
-
         case (uint16_t)Command::COMMAND_POWER_OFF: {
             std::vector<uint8_t> data;
             if (shutdown_command_cb)
@@ -314,6 +311,13 @@ std::vector<uint8_t> PPHandler::on_send_ISR() {
             return data.size() > 0 ? data : std::vector<uint8_t>{0x00};  // if the shutdown command callback return some data, send it. otherwise just send 0xFF as a signal of shutdown command received
             break;
         }
+
+        case (uint16_t)PPCMD_APPMGR_APPMGR: {
+            std::vector<uint8_t> data;
+            AppManager::handlePPReqAppmgrCommands(data);
+            return data;
+        }
+
         default:
             for (auto element : custom_command_list) {
                 if (element.command == (uint16_t)command_state) {
