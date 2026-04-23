@@ -28,9 +28,9 @@ class PPHandler {
     static void set_get_shell_data_size_CB(get_shell_data_size_CB cb);    // IRQ CALLBACK!  this will be called when the module asked for shell tx data size
     static void set_got_shell_data_CB(got_shell_data_CB cb);              // IRQ CALLBACK!  this will be called when the PP sent data to the shell
     static void set_send_shell_data_CB(send_shell_data_CB cb);            // IRQ CALLBACK!  this will be called when the module needs to send data to the shell (when prev get_shell_data_size_CB give >0 value)
-
-    static uint32_t get_appCount();                       // this will return the app count
-    static bool add_app(uint8_t* binary, uint32_t size);  // this will add an app to the module.app size must be %32 == 0
+    static void set_shutdown_command_CB(get_shutdown_command_CB cb);      // IRQ CALLBACK!  this will be called when the module needs to handle shutdown command
+    static uint32_t get_appCount();                                       // this will return the app count
+    static bool add_app(uint8_t* binary, uint32_t size);                  // this will add an app to the module.app size must be %32 == 0
 
     static void add_custom_command(uint16_t command, pp_i2c_command got_command, pp_i2c_command send_command);  // Callbacks are from IRQ! This will add a custom command to the module, see pp_custom_command_list_element_t!
 
@@ -61,6 +61,7 @@ class PPHandler {
     static get_shell_data_size_CB shell_data_size_cb;
     static got_shell_data_CB got_shell_data_cb;
     static send_shell_data_CB send_shell_data_cb;
+    static get_shutdown_command_CB shutdown_command_cb;
 };
 
 class ChipFeatures {

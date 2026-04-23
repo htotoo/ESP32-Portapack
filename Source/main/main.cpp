@@ -82,6 +82,8 @@ uint8_t time_method = 0;  // 0 = no valid, 1 = gps, 2 = ntp
 uint8_t airplane_mode = 1;      // 1 off, 2 on. 0 query
 uint8_t airplane_mode_new = 0;  // 0 no change, other: new value
 
+uint8_t shutdown_countdown = 0;  // when it is 1, init a shutdown. if >1 decrease it in every loop. if 0, ignore it. when the callback hits, set it to 10, so i2c reply can go through, and then shut down.
+
 #include "sgp4/Sgp4.h"
 #include "../extapps/sattrack.h"
 #include "../extapps/wifisettings.h"
@@ -154,6 +156,28 @@ bool wifi_config_changed = false;  // if wifi config changed from pp. (irq, so n
 
 void SetDisplayDirtyMain() {
     displayManager.setDirty();
+}
+
+#include "esp_sleep.h"
+#include "driver/rtc_io.h"
+
+void shutdownme() {
+    ESP_LOGI(TAG, "Shutting down...");
+    LedFeedback::rgb_set(0, 0, 0);  // turn off led
+    // todo power off other pheriphrals.
+    for (int gpio = 0; gpio < GPIO_NUM_MAX; gpio++) {
+        // CRITICAL: Skip internal SPI Flash and PSRAM pins.  Without these, the ESP32-S3 cannot read its own code.
+        if (gpio >= 26 && gpio <= 37) {
+            continue;
+        }
+        // Check if the pin actually exists on this hardware
+        if (GPIO_IS_VALID_GPIO(gpio)) {
+            // Attempt to isolate. Non-RTC pins will return an error, which is safely ignored.
+            rtc_gpio_isolate((gpio_num_t)gpio);
+        }
+    }
+
+    esp_deep_sleep_start();
 }
 
 static void i2c_scan(int sda, int scl) {
@@ -681,6 +705,12 @@ void app_main(void) {
                                             memcpy(data.data(), PPShellComm::get_i2c_tx_queue_data(), size);
                                             PPShellComm::clear_tx_queue(); });
 
+    PPHandler::set_shutdown_command_CB([](std::vector<uint8_t>& data) {
+        data.resize(1);
+        data[0] = 1;
+        shutdown_countdown = 10;  // set to 1, so in the main loop it will trigger the shutdown, and set to 10, so i2c reply can go through
+    });
+
     // shell helper
     PPShellComm::set_data_rx_callback([](const uint8_t* data, size_t data_len) -> bool {
                                                     ws_sendall((uint8_t*)data, data_len);
@@ -843,6 +873,13 @@ void app_main(void) {
         AppManager::loop(time_millis);
         displayManager.loop(time_millis);
         vTaskDelay(15 / portTICK_PERIOD_MS);
+
+        if (shutdown_countdown > 1) {
+            shutdown_countdown--;
+            if (shutdown_countdown == 1) {
+                shutdownme();
+            }
+        }
     }
 }
 
