@@ -19,6 +19,7 @@ get_light_data_CB PPHandler::light_data_cb = nullptr;
 get_shell_data_size_CB PPHandler::shell_data_size_cb = nullptr;
 got_shell_data_CB PPHandler::got_shell_data_cb = nullptr;
 send_shell_data_CB PPHandler::send_shell_data_cb = nullptr;
+get_shutdown_command_CB PPHandler::shutdown_command_cb = nullptr;
 
 std::vector<app_list_element_t> PPHandler::app_list;
 std::vector<pp_custom_command_list_element_t> PPHandler::custom_command_list;
@@ -81,6 +82,10 @@ void PPHandler::set_send_shell_data_CB(send_shell_data_CB cb) {
     send_shell_data_cb = cb;
 }
 
+void PPHandler::set_shutdown_command_CB(get_shutdown_command_CB cb) {
+    shutdown_command_cb = cb;
+}
+
 // endregion
 
 void PPHandler::set_module_name(std::string name) {
@@ -130,6 +135,9 @@ void PPHandler::on_command_ISR(uint16_t command, std::vector<uint8_t> additional
         case (uint16_t)Command::COMMAND_GETFEATURE_MASK:
             break;
 
+        case (uint16_t)Command::COMMAND_POWER_OFF:
+            break;
+
         case (uint16_t)Command::COMMAND_SHELL_PPTOMOD_DATA:
             if (got_shell_data_cb)
                 got_shell_data_cb(additional_data);
@@ -138,6 +146,7 @@ void PPHandler::on_command_ISR(uint16_t command, std::vector<uint8_t> additional
         case (uint16_t)PPCMD_APPMGR_APPMGR:
             AppManager::handlePPAppmgrCommands(additional_data);
             break;
+
         default:
             for (auto element : custom_command_list) {
                 if (element.command == (uint16_t)command) {
@@ -295,11 +304,20 @@ std::vector<uint8_t> PPHandler::on_send_ISR() {
             return data;
         }
 
+        case (uint16_t)Command::COMMAND_POWER_OFF: {
+            std::vector<uint8_t> data;
+            if (shutdown_command_cb)
+                shutdown_command_cb(data);
+            return data.size() > 0 ? data : std::vector<uint8_t>{0x00};  // if the shutdown command callback return some data, send it. otherwise just send 0xFF as a signal of shutdown command received
+            break;
+        }
+
         case (uint16_t)PPCMD_APPMGR_APPMGR: {
             std::vector<uint8_t> data;
             AppManager::handlePPReqAppmgrCommands(data);
             return data;
         }
+
         default:
             for (auto element : custom_command_list) {
                 if (element.command == (uint16_t)command_state) {

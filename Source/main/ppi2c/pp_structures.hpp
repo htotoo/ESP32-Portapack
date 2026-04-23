@@ -40,7 +40,7 @@ enum class Command : uint16_t {
     COMMAND_SHELL_PPTOMOD_DATA,       // pp shell to esp. size not defined
     COMMAND_SHELL_MODTOPP_DATA_SIZE,  // how many bytes the esp has to send to pp's shell
     COMMAND_SHELL_MODTOPP_DATA,       // the actual bytes sent by esp. 1st byte's 1st bit is the "hasmore" flag, the remaining 7 bits are the size of the data. exactly 64 byte follows.
-
+    COMMAND_POWER_OFF,                // requests power off from the esp, and after it needs a full power cycle to get it back again
 };
 
 // data structures
@@ -160,5 +160,5 @@ typedef void (*get_light_data_CB)(uint16_t& light);
 typedef uint16_t (*get_shell_data_size_CB)();                                   // this wil be called when PP request MOD to send how many bytes it has in the outgoing (to shell) tx buffer. IRQ
 typedef void (*got_shell_data_CB)(std::vector<uint8_t>& data);                  // this wil be called when got shell data from pp. IRQ
 typedef void (*send_shell_data_CB)(std::vector<uint8_t>& data, bool& hasmore);  // this will be called when the module needs to send serial data to pp. Just pass the data, and set the hasmore. NO 0th byte set needed. IRQ
-
+typedef void (*get_shutdown_command_CB)(std::vector<uint8_t>& data);            // this will be called when got shutdown command from pp. IRQ
 #endif
