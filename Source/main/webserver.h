@@ -26,6 +26,8 @@
 #include "ppshellcomm.h"
 #include "pinconfig.h"
 #include "pinconfig_html.h"
+#include "MtCompactStructs.hpp"
+#include "RadioStructs.hpp"
 
 static httpd_handle_t server = NULL;
 static bool disable_esp_async = false;  // for example while in file transfer mode, don't send anything else
@@ -44,12 +46,18 @@ extern const char setupcss_start[] asm("_binary_setup_css_start");
 extern const char setupcss_end[] asm("_binary_setup_css_end");
 extern const char ota_start[] asm("_binary_ota_html_start");
 extern const char ota_end[] asm("_binary_ota_html_end");
+extern const char mtsetup_start[] asm("_binary_mtsetup_html_start");
+extern const char mtsetup_end[] asm("_binary_mtsetup_html_end");
 
 extern PinConfig pinConfig;
-void lora_send_init_data_to_web();
-void lora_send_message_to_mesh(const char* msg, size_t len);
+extern void lora_send_init_data_to_web();
+extern void lora_send_message_to_mesh(const char* msg, size_t len);
+extern MCT_MyNodeInfo* lora_get_my_node_info();
+extern void lora_set_config(char* long_name, char* short_name, float* freq, char* priv_key_hex, uint8_t* preset, uint32_t* gps_interval, char* channels_json);
+extern LoraConfig* lora_get_config();
 
-static int hex_to_int(char c) {
+static int
+hex_to_int(char c) {
     if (c >= '0' && c <= '9') {
         return c - '0';
     }
@@ -473,6 +481,92 @@ static esp_err_t post_req_handler_pinconfig(httpd_req_t* req) {
     return ESP_OK;
 }
 
+static esp_err_t get_req_handler_mtsetup(httpd_req_t* req) {
+    char* out = (char*)malloc(4096);
+    if (!out) return ESP_FAIL;
+    MCT_MyNodeInfo* my = lora_get_my_node_info();
+    LoraConfig* cfg = lora_get_config();
+    if (!my || !cfg) {
+        free(out);
+        httpd_resp_set_status(req, "303 See Other");
+        httpd_resp_set_hdr(req, "Location", "/");
+        httpd_resp_set_hdr(req, "Connection", "close");
+        httpd_resp_sendstr(req, "MT no module");
+        return ESP_FAIL;
+    }
+    // snprintf(out, 4096, mtsetup_start, mt_long_name, mt_short_name, mt_freq, mt_preset, mt_gps_interval, mt_channels_json);
+    // todo preset, channels, gps interval
+    snprintf(out, 4096, mtsetup_start, my->long_name, my->short_name, cfg->frequency, 0, 0, "[]");
+    int response = httpd_resp_send(req, out, HTTPD_RESP_USE_STRLEN);
+    free(out);
+    return response;
+}
+
+static esp_err_t post_req_handler_mtsetup(httpd_req_t* req) {
+    char* buf = (char*)malloc(req->content_len + 1);
+    if (!buf) return ESP_FAIL;
+
+    size_t off = 0;
+    while (off < req->content_len) {
+        int ret = httpd_req_recv(req, buf + off, req->content_len - off);
+        if (ret <= 0) {
+            if (ret == HTTPD_SOCK_ERR_TIMEOUT) httpd_resp_send_408(req);
+            free(buf);
+            return ESP_FAIL;
+        }
+        off += ret;
+    }
+    buf[off] = '\0';
+
+    char tmp[1025] = {0};
+
+    char loc_long_name[40] = {0};
+    char loc_short_name[5] = {0};
+    float loc_freq = 0.0f;
+    char loc_priv_key_hex[65] = {0};
+    uint8_t loc_preset = 0;
+    uint32_t loc_gps_interval = 0;
+    char loc_channels_json[1024] = {0};
+
+    // get from post data
+    if (find_post_value((char*)"mtN=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        strncpy(loc_long_name, tmp2.c_str(), sizeof(loc_long_name) - 1);
+    }
+    if (find_post_value((char*)"mtS=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        strncpy(loc_short_name, tmp2.c_str(), sizeof(loc_short_name) - 1);
+    }
+    if (find_post_value((char*)"mtF=", buf, tmp) > 0) {
+        loc_freq = atof(tmp);
+    }
+    if (find_post_value((char*)"mtPr=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        strncpy(loc_priv_key_hex, tmp2.c_str(), sizeof(loc_priv_key_hex) - 1);
+    }
+    if (find_post_value((char*)"mtP=", buf, tmp) > 0) {
+        loc_preset = (uint8_t)atoi(tmp);
+    }
+    if (find_post_value((char*)"mtG=", buf, tmp) > 0) {
+        loc_gps_interval = (uint32_t)atoi(tmp);
+    }
+    if (find_post_value((char*)"mtCD=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        strncpy(loc_channels_json, tmp2.c_str(), sizeof(loc_channels_json) - 1);
+    }
+
+    lora_set_config(loc_long_name, loc_short_name, &loc_freq, loc_priv_key_hex, &loc_preset, &loc_gps_interval, loc_channels_json);
+
+    free(buf);
+
+    httpd_resp_set_status(req, "303 See Other");
+    httpd_resp_set_hdr(req, "Location", "/");
+    httpd_resp_set_hdr(req, "Connection", "close");
+    httpd_resp_sendstr(req, "MT config saved");
+
+    return ESP_OK;
+}
+
 // send data to all ws clients.
 bool ws_sendall(uint8_t* data, size_t len, bool asyncmsg = false) {
     if (disable_esp_async && asyncmsg) {
@@ -721,6 +815,21 @@ static httpd_handle_t setup_websocket_server(void) {
                       .handle_ws_control_frames = false,
                       .supported_subprotocol = NULL};
 
+    httpd_uri_t uri_getmtsetup = {.uri = "/mtsetup.html",
+                                  .method = HTTP_GET,
+                                  .handler = get_req_handler_mtsetup,
+                                  .user_ctx = NULL,
+                                  .is_websocket = false,
+                                  .handle_ws_control_frames = false,
+                                  .supported_subprotocol = NULL};
+    httpd_uri_t uri_postmtsetup = {.uri = "/mtsetup.html",
+                                   .method = HTTP_POST,
+                                   .handler = post_req_handler_mtsetup,
+                                   .user_ctx = NULL,
+                                   .is_websocket = false,
+                                   .handle_ws_control_frames = false,
+                                   .supported_subprotocol = NULL};
+
     if (httpd_start(&server, &config) == ESP_OK) {
         httpd_register_uri_handler(server, &uri_get);
         httpd_register_uri_handler(server, &uri_getsetup);
@@ -731,6 +840,8 @@ static httpd_handle_t setup_websocket_server(void) {
         httpd_register_uri_handler(server, &uri_getota);
         httpd_register_uri_handler(server, &update_post);
         httpd_register_uri_handler(server, &ws);
+        httpd_register_uri_handler(server, &uri_getmtsetup);
+        httpd_register_uri_handler(server, &uri_postmtsetup);
     }
 
     return server;

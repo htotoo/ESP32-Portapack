@@ -166,6 +166,7 @@ void SetDisplayDirtyMain() {
 void shutdownme() {
     ESP_LOGI(TAG, "Shutting down...");
     LedFeedback::rgb_set(0, 0, 0);  // turn off led
+    lora_poweroff();
     // todo power off other pheriphrals.
     for (int gpio = 0; gpio < GPIO_NUM_MAX; gpio++) {
         // CRITICAL: Skip internal SPI Flash and PSRAM pins.  Without these, the ESP32-S3 cannot read its own code.

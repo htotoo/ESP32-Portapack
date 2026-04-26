@@ -220,6 +220,54 @@ void lora_loop(uint32_t currentMillis) {
     }
 }
 
+void lora_poweroff() {
+    if (loraInited) {
+        // mtCompact.RadioSleep(); //todo when lib supports it
+    }
+}
+
+MCT_MyNodeInfo* lora_get_my_node_info() {
+    if (loraInited) {
+        return mtCompact.getMyNodeInfo();
+    }
+    return nullptr;
+}
+
+LoraConfig* lora_get_config() {
+    if (loraInited) {
+        return &lora_config;
+    }
+    return nullptr;
+}
+
+void lora_set_config(char* long_name, char* short_name, float* freq, char* priv_key_hex, uint8_t* preset, uint32_t* gps_interval, char* channels_json) {
+    if (!loraInited) return;
+    if (long_name && short_name) {
+        mtCompact.setMyNames(long_name, short_name);  // todo save it
+    }
+    if (priv_key_hex) {
+        size_t priv_key_len = strlen(priv_key_hex);
+        if (priv_key_len == 64) {
+            for (size_t i = 0; i < 32; ++i) {
+                std::string byte_str(priv_key_hex + i * 2, 2);
+                mtCompact.getMyNodeInfo()->private_key[i] = std::stoul(byte_str, nullptr, 16);
+            }
+        } else {
+            ESP_LOGW("LORA", "Invalid private key length: %d (expected 64 hex chars)", priv_key_len);
+        }
+        MtCompactHelpers::RegenerateOrGeneratePrivateKey(*mtCompact.getMyNodeInfo());
+        mtCompact.savePrivKey();
+    }
+    // todo save the config too
+    if (freq) {
+        lora_config.frequency = *freq;
+        mtCompact.setRadioFrequency(*freq);
+    }
+    if (preset) {
+        //.... TODO set all preset params, and apply them
+    }
+}
+
 // add loop stuff
 // add debug info (telemetry, .. to web)
 // add web interface stuff
