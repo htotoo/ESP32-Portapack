@@ -1,0 +1,28 @@
+name: Build ESP-IDF Project
+
+on:
+  push:
+    branches: [ "main", "master" ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v5.3.1
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build with ESP-IDF
+      run: |
+        . $IDF_PATH/export.sh
+        cd Source
+        idf.py build
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware
+        path: |
+          Source/build/**/*.bin
+          Source/build/**/*.elf
+          Source/build/flasher_args.json
