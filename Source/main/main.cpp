@@ -25,7 +25,7 @@
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 // select this if you want to let user choose pin config from the web ui
-#define HW_VARIANT_SELECTED HW_VARIANT_CUSTOM
+#define HW_VARIANT_SELECTED HW_VARIANT_MDK_BOARD
 
 // select this if you have OSDR AI EXTENSION BOARD
 // #define HW_VARIANT_SELECTED HW_VARIANT_PRFAI
@@ -92,6 +92,8 @@ uint8_t shutdown_countdown = 0;  // when it is 1, init a shutdown. if >1 decreas
 #include "../extapps/espapps.h"
 
 #include "display/displaymanager.hpp"
+
+#include "lora.hpp"
 
 #define TAG "ESP32PP"
 
@@ -164,6 +166,7 @@ void SetDisplayDirtyMain() {
 void shutdownme() {
     ESP_LOGI(TAG, "Shutting down...");
     LedFeedback::rgb_set(0, 0, 0);  // turn off led
+    lora_poweroff();
     // todo power off other pheriphrals.
     for (int gpio = 0; gpio < GPIO_NUM_MAX; gpio++) {
         // CRITICAL: Skip internal SPI Flash and PSRAM pins.  Without these, the ESP32-S3 cannot read its own code.
@@ -568,7 +571,15 @@ void app_main(void) {
     displayManager.setEnvironmentDataSource(&environment);
     displayManager.setLightDataSource(&light);
     displayManager.setSatTrackDataSource(&sattrackdata, &sat_to_track);
-    i2c_scan(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());  // scan again, after sensors initialized
+    // i2c_scan(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());  // scan again, after sensors initialized
+
+    if (pinConfig.hasSPI() && pinConfig.hasLoRa()) {
+        ESP_LOGI(TAG, "Initializing LoRa module.");
+        loraInited = initLora(pinConfig);
+        if (!loraInited) {
+            ESP_LOGE(TAG, "Failed to initialize LoRa module.");
+        }
+    }
 
     PPHandler::set_module_name("ESP32PP");
     PPHandler::set_module_version(1);
@@ -718,6 +729,14 @@ void app_main(void) {
                                                     return true; });
 
     PPHandler::init((gpio_num_t)pinConfig.I2cSclSlavePin(), (gpio_num_t)pinConfig.I2cSdaSlavePin(), 0x51);
+
+    lora_set_onmessage([](const MtMessageStore::MessageEntry& entry) {
+        std::string buff;
+        lora_message_to_json(entry, buff);
+        buff = "#$##$$#GOTLORAMSG" + buff + "\r\n ";
+        ws_sendall((uint8_t*)buff.c_str(), buff.length(), true);
+        // todo send to pp
+    });
 
     while (true) {
         time_millis = esp_timer_get_time() / 1000;
@@ -872,6 +891,7 @@ void app_main(void) {
         WifiM::wifi_loop(time_millis);
         AppManager::loop(time_millis);
         displayManager.loop(time_millis);
+        lora_loop(time_millis);
         vTaskDelay(15 / portTICK_PERIOD_MS);
 
         if (shutdown_countdown > 1) {

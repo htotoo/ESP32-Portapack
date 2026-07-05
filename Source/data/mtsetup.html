@@ -1,0 +1,99 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>ESP32PP MT Setup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="setup.css">
+</head>
+
+<body>
+    <h1>MT Configuration</h1>
+    <h2><a href="/setup.html">General Setup</a></h2>
+    <form method="post" onsubmit="pS()">
+        <div class="form-section">
+            <p>Node Settings</p>
+            <label>Long Name:</label>
+            <input type="text" maxlength="30" name="mtN" value="%s" />
+            <label>Short Name:</label>
+            <input type="text" maxlength="4" name="mtS" value="%s" />
+            <label>Frequency (MHz):</label>
+            <input type="number" step="0.001" name="mtF" value="%.3f" />
+            <label>Private Key (Hex):</label>
+            <input type="text" maxlength="64" name="mtPr" value="%s" placeholder="Optional 64-char hex key" />
+            <label>Public Key (Hex):</label>
+            <input type="text" value="%s" readonly
+                style="background-color: #1a1a1a; color: #888; border: 1px solid #333;" />
+            <label>Modem Preset:</label>
+            <select name="mtP" id="mtP">
+                <option value="0">LongFast</option>
+                <option value="1">LongSlow</option>
+                <option value="2">VeryLongSlow</option>
+                <option value="3">MediumSlow</option>
+                <option value="4">MediumFast</option>
+                <option value="5">ShortFast</option>
+                <option value="6">ShortSlow</option>
+            </select>
+        </div>
+        <div class="form-section">
+            <p>Position</p>
+            <label>GPS Share Interval:</label>
+            <select name="mtG" id="mtG">
+                <option value="0">Disabled</option>
+                <option value="5">5 min</option>
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">60 min</option>
+                <option value="90">90 min</option>
+                <option value="180">180 min</option>
+            </select>
+        </div>
+        <div class="form-section">
+            <p>Channels</p>
+            <div id="cL"></div>
+            <div class="mt-add-box">
+                <input type="text" id="cN" placeholder="Channel Name" />
+                <div class="flex-row">
+                    <input type="text" id="cK" placeholder="Hex Key" maxlength="32" />
+                    <button type="button" class="btn-sub" onclick="sD()">Default Key</button>
+                </div>
+                <button type="button" class="btn-add" onclick="aC()">+ Add Channel</button>
+            </div>
+        </div>
+        <input type="hidden" id="mtCD" name="mtCD" value="" />
+        <div class="actions">
+            <input type="submit" value="Save" />
+            <a href="/">Cancel</a>
+        </div>
+    </form>
+    <script>
+        let chs = [];
+        const D_HEX = "d4f1bb3a20290759f0bcffabcf4e6901";
+        function sD() { document.getElementById('cK').value = D_HEX; }
+        function aC() {
+            const n = document.getElementById('cN').value, k = document.getElementById('cK').value;
+            if (!n || !k) return;
+            chs.push({ n, k });
+            document.getElementById('cN').value = ""; document.getElementById('cK').value = "";
+            rC();
+        }
+        function rC() {
+            const l = document.getElementById('cL');
+            l.innerHTML = chs.map((c, i) => `
+                <div class="ch-item">
+                    <span><b>${c.n}</b><br><small>${c.k}</small></span>
+                    <button type="button" class="btn-del" onclick="rm(${i})">X</button>
+                </div>`).join('');
+        }
+        function rm(i) { chs.splice(i, 1); rC(); }
+        function pS() { document.getElementById('mtCD').value = JSON.stringify(chs); }
+        window.onload = () => {
+            document.getElementById('mtP').value = "%d";
+            document.getElementById('mtG').value = "%d";
+            try { chs = JSON.parse('%s'); rC(); } catch (e) { chs = []; }
+        };
+    </script>
+</body>
+
+</html>

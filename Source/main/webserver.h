@@ -26,6 +26,8 @@
 #include "ppshellcomm.h"
 #include "pinconfig.h"
 #include "pinconfig_html.h"
+#include "MtCompactStructs.hpp"
+#include "RadioStructs.hpp"
 
 static httpd_handle_t server = NULL;
 static bool disable_esp_async = false;  // for example while in file transfer mode, don't send anything else
@@ -44,10 +46,18 @@ extern const char setupcss_start[] asm("_binary_setup_css_start");
 extern const char setupcss_end[] asm("_binary_setup_css_end");
 extern const char ota_start[] asm("_binary_ota_html_start");
 extern const char ota_end[] asm("_binary_ota_html_end");
+extern const char mtsetup_start[] asm("_binary_mtsetup_html_start");
+extern const char mtsetup_end[] asm("_binary_mtsetup_html_end");
 
 extern PinConfig pinConfig;
+extern void lora_send_init_data_to_web();
+extern void lora_send_message_to_mesh(const char* msg, size_t len);
+extern MCT_MyNodeInfo* lora_get_my_node_info();
+extern void lora_set_config(char* long_name, char* short_name, float* freq, char* priv_key_hex, uint8_t* preset, uint32_t* gps_interval, char* channels_json);
+extern LoraConfig* lora_get_config();
 
-static int hex_to_int(char c) {
+static int
+hex_to_int(char c) {
     if (c >= '0' && c <= '9') {
         return c - '0';
     }
@@ -108,6 +118,40 @@ static esp_err_t get_req_handler_pinconfig(httpd_req_t* req) {
 
     // Send variable 4 (i2cSclPin)
     snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.I2cSclPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // SPI Section
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_SPI_START, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.SpiSckPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_SPI_1, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.SpiMisoPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_SPI_2, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.SpiMosiPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    // LoRa Section
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_START, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%d", (int)pinConfig.LoraChipType());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_1, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.LoraNssPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_2, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.LoraResetPin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_3, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.LoraDio0Pin());
+    httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
+
+    httpd_resp_send_chunk(req, PINCONFIG_HTML_PART_LORA_4, HTTPD_RESP_USE_STRLEN);
+    snprintf(val_buf, sizeof(val_buf), "%ld", pinConfig.LoraDio1Pin());
     httpd_resp_send_chunk(req, val_buf, HTTPD_RESP_USE_STRLEN);
 
     // Send part 5
@@ -343,6 +387,17 @@ static esp_err_t post_req_handler_pinconfig(httpd_req_t* req) {
     int32_t irTx = pinConfig.IrTxPin();
     int32_t i2cSdaSlave = pinConfig.I2cSdaSlavePin();
     int32_t i2cSclSlave = pinConfig.I2cSclSlavePin();
+
+    int32_t spiSck = pinConfig.SpiSckPin();
+    int32_t spiMiso = pinConfig.SpiMisoPin();
+    int32_t spiMosi = pinConfig.SpiMosiPin();
+
+    int32_t loraChip = (int32_t)pinConfig.LoraChipType();
+    int32_t loraNss = pinConfig.LoraNssPin();
+    int32_t loraReset = pinConfig.LoraResetPin();
+    int32_t loraDio0 = pinConfig.LoraDio0Pin();
+    int32_t loraDio1 = pinConfig.LoraDio1Pin();
+
     if (find_post_value((char*)"ledRgbPin=", buf, tmp) > 0) {
         ledRgb = (int32_t)atoi(tmp);
         changed = true;
@@ -359,6 +414,41 @@ static esp_err_t post_req_handler_pinconfig(httpd_req_t* req) {
         i2cScl = (int32_t)atoi(tmp);
         changed = true;
     }
+    // SPI
+    if (find_post_value((char*)"spiSckPin=", buf, tmp) > 0) {
+        spiSck = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"spiMisoPin=", buf, tmp) > 0) {
+        spiMiso = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"spiMosiPin=", buf, tmp) > 0) {
+        spiMosi = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    // LoRa
+    if (find_post_value((char*)"loraChipType=", buf, tmp) > 0) {
+        loraChip = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"loraNssPin=", buf, tmp) > 0) {
+        loraNss = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"loraResetPin=", buf, tmp) > 0) {
+        loraReset = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"loraDio0Pin=", buf, tmp) > 0) {
+        loraDio0 = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    if (find_post_value((char*)"loraDio1Pin=", buf, tmp) > 0) {
+        loraDio1 = (int32_t)atoi(tmp);
+        changed = true;
+    }
+    // IR
     if (find_post_value((char*)"irRxPin=", buf, tmp) > 0) {
         irRx = (int32_t)atoi(tmp);
         changed = true;
@@ -377,7 +467,7 @@ static esp_err_t post_req_handler_pinconfig(httpd_req_t* req) {
     }
     if (changed) {
         ESP_LOGI("WEBS", "Saving new PinConfig to NVS.");
-        pinConfig.setPins(ledRgb, gpsRx, i2cSda, i2cScl, irRx, irTx, i2cSdaSlave, i2cSclSlave);
+        pinConfig.setPins(ledRgb, gpsRx, i2cSda, i2cScl, irRx, irTx, i2cSdaSlave, i2cSclSlave, spiSck, spiMiso, spiMosi, loraChip, loraNss, loraReset, loraDio0, loraDio1);
         pinConfig.saveToNvs();
     } else {
         ESP_LOGI("WEBS", "No pin changes detected.");
@@ -388,6 +478,92 @@ static esp_err_t post_req_handler_pinconfig(httpd_req_t* req) {
     httpd_resp_set_hdr(req, "Location", "/");  // Redirects to root
     httpd_resp_set_hdr(req, "Connection", "close");
     httpd_resp_sendstr(req, "Pin config saved successfully");
+    return ESP_OK;
+}
+
+static esp_err_t get_req_handler_mtsetup(httpd_req_t* req) {
+    char* out = (char*)malloc(4096);
+    if (!out) return ESP_FAIL;
+    MCT_MyNodeInfo* my = lora_get_my_node_info();
+    LoraConfig* cfg = lora_get_config();
+    if (!my || !cfg) {
+        free(out);
+        httpd_resp_set_status(req, "303 See Other");
+        httpd_resp_set_hdr(req, "Location", "/");
+        httpd_resp_set_hdr(req, "Connection", "close");
+        httpd_resp_sendstr(req, "MT no module");
+        return ESP_FAIL;
+    }
+    // snprintf(out, 4096, mtsetup_start, mt_long_name, mt_short_name, mt_freq, mt_preset, mt_gps_interval, mt_channels_json);
+    // todo preset, channels, gps interval
+    snprintf(out, 4096, mtsetup_start, my->long_name, my->short_name, cfg->frequency, 0, 0, "[]");
+    int response = httpd_resp_send(req, out, HTTPD_RESP_USE_STRLEN);
+    free(out);
+    return response;
+}
+
+static esp_err_t post_req_handler_mtsetup(httpd_req_t* req) {
+    char* buf = (char*)malloc(req->content_len + 1);
+    if (!buf) return ESP_FAIL;
+
+    size_t off = 0;
+    while (off < req->content_len) {
+        int ret = httpd_req_recv(req, buf + off, req->content_len - off);
+        if (ret <= 0) {
+            if (ret == HTTPD_SOCK_ERR_TIMEOUT) httpd_resp_send_408(req);
+            free(buf);
+            return ESP_FAIL;
+        }
+        off += ret;
+    }
+    buf[off] = '\0';
+
+    char tmp[1025] = {0};
+
+    char loc_long_name[40] = {0};
+    char loc_short_name[5] = {0};
+    float loc_freq = 0.0f;
+    char loc_priv_key_hex[65] = {0};
+    uint8_t loc_preset = 0;
+    uint32_t loc_gps_interval = 0;
+    char loc_channels_json[1024] = {0};
+
+    // get from post data
+    if (find_post_value((char*)"mtN=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        strncpy(loc_long_name, tmp2.c_str(), sizeof(loc_long_name) - 1);
+    }
+    if (find_post_value((char*)"mtS=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        strncpy(loc_short_name, tmp2.c_str(), sizeof(loc_short_name) - 1);
+    }
+    if (find_post_value((char*)"mtF=", buf, tmp) > 0) {
+        loc_freq = atof(tmp);
+    }
+    if (find_post_value((char*)"mtPr=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        strncpy(loc_priv_key_hex, tmp2.c_str(), sizeof(loc_priv_key_hex) - 1);
+    }
+    if (find_post_value((char*)"mtP=", buf, tmp) > 0) {
+        loc_preset = (uint8_t)atoi(tmp);
+    }
+    if (find_post_value((char*)"mtG=", buf, tmp) > 0) {
+        loc_gps_interval = (uint32_t)atoi(tmp);
+    }
+    if (find_post_value((char*)"mtCD=", buf, tmp) > 0) {
+        std::string tmp2 = url_decode(tmp);
+        strncpy(loc_channels_json, tmp2.c_str(), sizeof(loc_channels_json) - 1);
+    }
+
+    lora_set_config(loc_long_name, loc_short_name, &loc_freq, loc_priv_key_hex, &loc_preset, &loc_gps_interval, loc_channels_json);
+
+    free(buf);
+
+    httpd_resp_set_status(req, "303 See Other");
+    httpd_resp_set_hdr(req, "Location", "/");
+    httpd_resp_set_hdr(req, "Connection", "close");
+    httpd_resp_sendstr(req, "MT config saved");
+
     return ESP_OK;
 }
 
@@ -512,6 +688,9 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
             if ((PPShellComm::getAnyConnected() & 2) == 2) {
                 ws_notify_cc_i2c();
             }
+            // send lora data to web
+            lora_send_init_data_to_web();
+
             free(buf);
             return ESP_OK;
         }
@@ -547,6 +726,13 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
             free(buf);
             return ESP_OK;
         }
+
+        if (strncmp((const char*)ws_pkt.payload, "#$##$$#SENDLORAMSG", 18) == 0) {
+            // send lora message based on the json
+            lora_send_message_to_mesh((const char*)ws_pkt.payload + 18, ws_pkt.len - 18);
+            free(buf);
+            return ESP_OK;
+        }
         if (AppManager::handleWebData((const char*)ws_pkt.payload, ws_pkt.len)) {
             // handled by app
             free(buf);
@@ -563,6 +749,7 @@ static httpd_handle_t setup_websocket_server(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 10;
     config.max_open_sockets = 10;
+    config.stack_size = 8192;
 
     httpd_uri_t uri_get = {.uri = "/",
                            .method = HTTP_GET,
@@ -628,6 +815,21 @@ static httpd_handle_t setup_websocket_server(void) {
                       .handle_ws_control_frames = false,
                       .supported_subprotocol = NULL};
 
+    httpd_uri_t uri_getmtsetup = {.uri = "/mtsetup.html",
+                                  .method = HTTP_GET,
+                                  .handler = get_req_handler_mtsetup,
+                                  .user_ctx = NULL,
+                                  .is_websocket = false,
+                                  .handle_ws_control_frames = false,
+                                  .supported_subprotocol = NULL};
+    httpd_uri_t uri_postmtsetup = {.uri = "/mtsetup.html",
+                                   .method = HTTP_POST,
+                                   .handler = post_req_handler_mtsetup,
+                                   .user_ctx = NULL,
+                                   .is_websocket = false,
+                                   .handle_ws_control_frames = false,
+                                   .supported_subprotocol = NULL};
+
     if (httpd_start(&server, &config) == ESP_OK) {
         httpd_register_uri_handler(server, &uri_get);
         httpd_register_uri_handler(server, &uri_getsetup);
@@ -638,6 +840,8 @@ static httpd_handle_t setup_websocket_server(void) {
         httpd_register_uri_handler(server, &uri_getota);
         httpd_register_uri_handler(server, &update_post);
         httpd_register_uri_handler(server, &ws);
+        httpd_register_uri_handler(server, &uri_getmtsetup);
+        httpd_register_uri_handler(server, &uri_postmtsetup);
     }
 
     return server;

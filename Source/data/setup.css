@@ -144,3 +144,61 @@ a:hover {
     margin-top: 10px;
     font-size: 0.95rem;
 }
+
+.mt-add-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #333;
+}
+
+.flex-row {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-sub {
+    background: #03dac6;
+    color: #121212;
+    border: none;
+    border-radius: 5px;
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+.btn-add {
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.ch-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #2e2e2e;
+    padding: 8px;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    border-left: 3px solid #bb86fc;
+}
+
+.ch-item small {
+    font-size: 0.75rem;
+    color: #03dac6;
+    word-break: break-all;
+}
+
+.btn-del {
+    background: #ef4c53;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 8px;
+    cursor: pointer;
+}
