@@ -6,47 +6,23 @@ An addon module for Portapack H4 / PortaRF to add GPS and extra sensors to it fo
 
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
 
+This fork adds a suite of on-system ESP apps, each available as a PortaPack icon
+under **Utilities**. They are driven over I2C from a matching standalone
+PortaPack app ([mayhem-mdk](https://github.com/Xmoo26/mayhem-mdk)).
+
 ## How to build one for yourself, or other questions? Check WIKI!
 If you got the MDK hardware, it has a different pinout, so check the corresponding wiki page for that! Also download the right binary!
 
 
 ### Features:
-
-- **Web interface** with remote control
-- **GPS**
-- **Compass**
-- **Temperature + humidity + pressure + light**
-- Portapack / PortaRF I2C interface support! Can add unique apps to PortaX!
-- On system apps! The ESP can handle it's own apps built into it. For example Wifi SSID spoofer. (see [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/On-system-apps) for it)
-
-For detailed info check Wiki
-
-### Features not yet ready: 
-
-- **IR blaster**
-  - To add IR remote functions to PP. May be available only over I2C connection. Now only experimental RX.
-
-- **LoRa**
-  - Meshtastic support. (functions not yet decided for it)
-
-### Standalone apps
-The module will supply additional apps for PortaX devices. Check the list in the [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/Apps-over-I2C)
-
-Suggest in Issues if you get any ideas.
-
-
-### WiFi / BLE / Drone security apps (this fork)
-
-> ⚠️ **Authorized penetration testing and security-awareness use only** — only on
-> networks/devices you own or have **written permission** to test. See
-> **[DISCLAIMER.md](DISCLAIMER.md)**. No warranty; use at your own risk.
-
-This fork adds a suite of on-system ESP apps, each available as a PortaPack icon
-under **Utilities**. They are driven over I2C from a matching standalone
-PortaPack app ([mayhem-mdk](https://github.com/Xmoo26/mayhem-mdk)).
-
 | App | What it does |
 |-----|--------------|
+| **Web Interface** | with remote control |
+| **GPS** | |
+| **Compass** | |
+| **Sensors** | Temperature + humidity + pressure + light |
+| **Portapack I2C Interface** | Can add unique apps to Portapack |
+| **On system apps!** | The ESP can handle it's own apps built into it. |
 | **EvilPortal** | Captive portal with credential capture. Open/WPA2 AP, pick a built-in page or load custom HTML from SD (`WIFI/EvilPortal/html/`). Shows connected clients and captured credentials, each savable to SD. |
 | **WiFi Analyzer** | Passive 2.4 GHz scan: per network SSID, channel, exact center frequency, RSSI, auth. **Channel-usage graph** (APs per channel, 1/6/11 highlighted) and **Send to Jammer** — writes the channel's range to `FREQMAN/` for the PortaPack jammer. |
 | **Probe Sniffer** | Captures probe requests — which networks nearby devices are looking for (device MAC + requested SSID + RSSI). Save to SD as CSV. |
@@ -62,6 +38,21 @@ the `README.md` in each folder for the file formats.
 
 > Note: the ESP32-S3 has a **2.4 GHz-only** radio, so the WiFi tools do not see
 > 5 GHz networks.
+
+For detailed info check Wiki
+
+### Features not yet ready: 
+
+- **IR blaster**
+  - To add IR remote functions to PP. May be available only over I2C connection. Now only experimental RX.
+
+- **LoRa**
+  - Meshtastic support. (functions not yet decided for it)
+
+### Standalone apps
+The module will supply additional apps for PortaX devices. Check the list in the [Wiki](https://github.com/htotoo/ESP32-Portapack/wiki/Apps-over-I2C)
+
+Suggest in Issues if you get any ideas.
 
 ### Screenshots:
 **ADS-B with location**
