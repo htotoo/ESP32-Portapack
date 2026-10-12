@@ -35,11 +35,12 @@
 #ifndef __I2CDEV_H__
 #define __I2CDEV_H__
 
-#include "driver/i2c.h"
+#include <stdbool.h>
+#include "driver/i2c_master.h"
+#include "driver/gpio.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <esp_err.h>
-#include "esp_idf_lib_helpers.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,35 +49,18 @@ extern "C" {
 #define CONFIG_I2CDEV_TIMEOUT 100
 #define CONFIG_I2CDEV_NOLOCK 1
 
-#if HELPER_TARGET_IS_ESP8266
-
-#define I2CDEV_MAX_STRETCH_TIME 0xffffffff
-
-#else
-
-#include <soc/i2c_reg.h>
-#if defined(I2C_TIME_OUT_VALUE_V)
-#define I2CDEV_MAX_STRETCH_TIME I2C_TIME_OUT_VALUE_V
-#elif defined(I2C_TIME_OUT_REG_V)
-#define I2CDEV_MAX_STRETCH_TIME I2C_TIME_OUT_REG_V
-#else
-#define I2CDEV_MAX_STRETCH_TIME 0x00ffffff
-#endif
-
-#endif /* HELPER_TARGET_IS_ESP8266 */
-
 /**
  * I2C device descriptor
  */
 typedef struct
 {
-    i2c_port_t port;          //!< I2C port number
-    i2c_config_t cfg;         //!< I2C driver configuration
-    uint8_t addr;             //!< Unshifted address
-    SemaphoreHandle_t mutex;  //!< Device mutex
-    uint32_t timeout_ticks;   /*!< HW I2C bus timeout (stretch time), in ticks. 80MHz APB clock
-                                   ticks for ESP-IDF, CPU ticks for ESP8266.
-                                   When this value is 0, I2CDEV_MAX_STRETCH_TIME will be used */
+    i2c_port_num_t port;       //!< I2C port number
+    gpio_num_t sda_io_num;     //!< SDA GPIO
+    gpio_num_t scl_io_num;     //!< SCL GPIO
+    uint32_t scl_speed_hz;     //!< I2C clock speed
+    bool enable_internal_pullup;
+    uint8_t addr;              //!< Unshifted 7-bit address
+    SemaphoreHandle_t mutex;   //!< Device mutex
 } i2c_dev_t;
 
 /**

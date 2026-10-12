@@ -57,7 +57,7 @@
 #define INACT_Y_EN 0x02
 #define INACT_Z_EN 0x01
 
-esp_err_t adxl345_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
+esp_err_t adxl345_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
 esp_err_t adxl345_free_desc(i2c_dev_t *dev);
 
 esp_err_t adxl345_init(i2c_dev_t *dev);

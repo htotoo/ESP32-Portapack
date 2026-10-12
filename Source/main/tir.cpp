@@ -55,15 +55,15 @@ void TIR::recvIRTask(void* param) {
         rmt_receive_config_t rx_config = {
             .signal_range_min_ns = 1250,
             .signal_range_max_ns = 12000000,
+            .flags = {0},
         };
 
-        rmt_rx_channel_config_t rx_ch_conf = {
-            .gpio_num = static_cast<gpio_num_t>(rx_pin),
-            .clk_src = RMT_CLK_SRC_DEFAULT,
-            .resolution_hz = 1000000,
-            .mem_block_symbols = 64,
-            .intr_priority = 0,
-        };
+        rmt_rx_channel_config_t rx_ch_conf{};
+        rx_ch_conf.gpio_num = static_cast<gpio_num_t>(rx_pin);
+        rx_ch_conf.clk_src = RMT_CLK_SRC_DEFAULT;
+        rx_ch_conf.resolution_hz = 1000000;
+        rx_ch_conf.mem_block_symbols = 64;
+        rx_ch_conf.intr_priority = 0;
 
         rmt_new_rx_channel(&rx_ch_conf, &rx_channel);
         rmt_rx_event_callbacks_t cbs = {
@@ -268,21 +268,13 @@ void TIR::processSendTask(void* pvParameters) {
             // wait for rx to finish. todo
             rmt_channel_handle_t tx_channel = NULL;
 
-            rmt_tx_channel_config_t txconf = {
-                .gpio_num = static_cast<gpio_num_t>(tx_pin),
-                .clk_src = RMT_CLK_SRC_DEFAULT,
-                .resolution_hz = 1000000,  // 1MHz resolution, 1 tick = 1us
-                .mem_block_symbols = 64,
-                .trans_queue_depth = 4,
-                .intr_priority = 0,
-
-                .flags = {
-                    .invert_out = 0,  // do not invert output signal
-                    .with_dma = 0,
-                    .io_loop_back = 0,
-                    .io_od_mode = 0,
-                }  // do not need DMA backend
-            };
+            rmt_tx_channel_config_t txconf{};
+            txconf.gpio_num = static_cast<gpio_num_t>(tx_pin);
+            txconf.clk_src = RMT_CLK_SRC_DEFAULT;
+            txconf.resolution_hz = 1000000;  // 1MHz resolution, 1 tick = 1us
+            txconf.mem_block_symbols = 64;
+            txconf.trans_queue_depth = 4;
+            txconf.intr_priority = 0;
             if (rmt_new_tx_channel(&txconf, &tx_channel) != ESP_OK) {
                 continue;
             }

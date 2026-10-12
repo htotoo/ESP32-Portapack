@@ -9,7 +9,9 @@ extern "C" {
 #include <vector>
 #include <queue>
 #include <algorithm>
-#include "driver/i2c.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include "driver/i2c_master.h"
 
 /*
     All callbasck are from IRQ, so a lot of things won't work from it. Also the code needs to be as fast as possible.

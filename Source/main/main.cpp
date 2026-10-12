@@ -25,7 +25,7 @@
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 // select this if you want to let user choose pin config from the web ui
-#define HW_VARIANT_SELECTED HW_VARIANT_MDK_BOARD
+#define HW_VARIANT_SELECTED HW_VARIANT_CUSTOM
 
 // select this if you have OSDR AI EXTENSION BOARD
 // #define HW_VARIANT_SELECTED HW_VARIANT_PRFAI
@@ -200,9 +200,9 @@ static void i2c_scan(int sda, int scl) {
     esp_err_t res;
     printf("i2c scan: \n");
     i2c_dev_t dev = {};
-    dev.cfg.sda_io_num = sda;
-    dev.cfg.scl_io_num = scl;
-    dev.cfg.master.clk_speed = 400000;
+    dev.sda_io_num = static_cast<gpio_num_t>(sda);
+    dev.scl_io_num = static_cast<gpio_num_t>(scl);
+    dev.scl_speed_hz = 400000;
     for (uint8_t i = 1; i < 127; i++) {
         dev.addr = i;
         res = i2c_dev_probe(&dev, I2C_DEV_WRITE);
@@ -514,7 +514,7 @@ void app_main(void) {
     sat_data_loaded = (load_satellite_tle(sat_to_track) == ESP_OK);
 
     // end config load
-    i2cdev_init();
+    ESP_ERROR_CHECK(i2cdev_init());
     // i2c scanner
     i2c_scan(pinConfig.I2cSdaPin(), pinConfig.I2cSclPin());
 
@@ -599,11 +599,11 @@ void app_main(void) {
     PPHandler::add_app((uint8_t*)evilportal, sizeof(evilportal));      // app #6 - WIFI Evil Portal (Utilities)
     PPHandler::add_app((uint8_t*)wifianalyzer, sizeof(wifianalyzer));  // app #7 - WiFi Analyzer (Utilities)
     PPHandler::add_app((uint8_t*)probesniffer, sizeof(probesniffer));  // app #8 - Probe Sniffer (Utilities)
-    PPHandler::add_app((uint8_t*)pmkid, sizeof(pmkid));  // app #9 - PMKID Capture (Utilities)
-    PPHandler::add_app((uint8_t*)deauth, sizeof(deauth));  // app #10 - Deauth (Utilities)
-    PPHandler::add_app((uint8_t*)blescan, sizeof(blescan));  // app #11 - BLE Scanner (Utilities)
-    PPHandler::add_app((uint8_t*)blespam, sizeof(blespam));  // app #12 - BLE Spam (Utilities)
-    PPHandler::add_app((uint8_t*)drone, sizeof(drone));  // app #13 - Drone Detector (Utilities)
+    PPHandler::add_app((uint8_t*)pmkid, sizeof(pmkid));                // app #9 - PMKID Capture (Utilities)
+    PPHandler::add_app((uint8_t*)deauth, sizeof(deauth));              // app #10 - Deauth (Utilities)
+    PPHandler::add_app((uint8_t*)blescan, sizeof(blescan));            // app #11 - BLE Scanner (Utilities)
+    PPHandler::add_app((uint8_t*)blespam, sizeof(blespam));            // app #12 - BLE Spam (Utilities)
+    PPHandler::add_app((uint8_t*)drone, sizeof(drone));                // app #13 - Drone Detector (Utilities)
     PPHandler::set_get_features_CB([](uint64_t& feat) {
                                         i2c_pp_last_comm_time = time_millis;
                                     update_features();

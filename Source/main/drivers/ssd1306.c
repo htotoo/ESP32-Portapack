@@ -1480,13 +1480,13 @@ esp_err_t ssd1306_delete(ssd1306_handle_t handle) {
     return ESP_OK;
 }
 
-esp_err_t ssd1306_init_desc(i2c_dev_t* dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio) {
+esp_err_t ssd1306_init_desc(i2c_dev_t* dev, uint8_t addr, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio) {
     dev->port = port;
     dev->addr = addr;
-    dev->cfg.sda_io_num = sda_gpio;
-    dev->cfg.scl_io_num = scl_gpio;
+    dev->sda_io_num = sda_gpio;
+    dev->scl_io_num = scl_gpio;
 #if HELPER_TARGET_IS_ESP32
-    dev->cfg.master.clk_speed = I2C_SSD1306_DEV_CLK_SPD;
+    dev->scl_speed_hz = I2C_SSD1306_DEV_CLK_SPD;
 #endif
     return i2c_dev_create_mutex(dev);
 }

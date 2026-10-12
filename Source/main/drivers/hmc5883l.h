@@ -157,7 +157,7 @@ extern "C"
      * @param addr addres of device
      * @return `ESP_OK` on success
      */
-    esp_err_t hmc5883l_init_desc(hmc5883l_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio, uint8_t addr);
+    esp_err_t hmc5883l_init_desc(hmc5883l_dev_t *dev, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio, uint8_t addr);
 
     /**
      * @brief Free device descriptor

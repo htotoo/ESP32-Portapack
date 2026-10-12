@@ -19,7 +19,7 @@
 #define MPU_I2C_MST_EN 0x20
 #define MPU_I2C_MST_CTRL 0x24
 
-esp_err_t mpu925x_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
+esp_err_t mpu925x_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
 esp_err_t mpu925x_free_desc(i2c_dev_t *dev);
 
 esp_err_t mpu925x_init(i2c_dev_t *dev);

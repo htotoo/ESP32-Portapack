@@ -161,7 +161,7 @@ inline static esp_err_t read_mag_reg_nolock(lsm303_t *dev, uint8_t reg, uint8_t 
     return i2c_dev_read_reg(&dev->i2c_dev_mag, reg, val, 1);
 }
 
-esp_err_t lsm303_init_desc(lsm303_t *dev, uint8_t acc_addr, uint8_t mag_addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
+esp_err_t lsm303_init_desc(lsm303_t *dev, uint8_t acc_addr, uint8_t mag_addr, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
 {
     CHECK_ARG(dev);
 
@@ -176,16 +176,16 @@ esp_err_t lsm303_init_desc(lsm303_t *dev, uint8_t acc_addr, uint8_t mag_addr, i2
 
     dev->i2c_dev_acc.port = port;
     dev->i2c_dev_acc.addr = acc_addr;
-    dev->i2c_dev_acc.cfg.sda_io_num = sda_gpio;
-    dev->i2c_dev_acc.cfg.scl_io_num = scl_gpio;
+    dev->i2c_dev_acc.sda_io_num = sda_gpio;
+    dev->i2c_dev_acc.scl_io_num = scl_gpio;
 
     dev->i2c_dev_mag.port = port;
     dev->i2c_dev_mag.addr = mag_addr;
-    dev->i2c_dev_mag.cfg.sda_io_num = sda_gpio;
-    dev->i2c_dev_mag.cfg.scl_io_num = scl_gpio;
+    dev->i2c_dev_mag.sda_io_num = sda_gpio;
+    dev->i2c_dev_mag.scl_io_num = scl_gpio;
 #if HELPER_TARGET_IS_ESP32
-    dev->i2c_dev_acc.cfg.master.clk_speed = I2C_FREQ_HZ;
-    dev->i2c_dev_mag.cfg.master.clk_speed = I2C_FREQ_HZ;
+    dev->i2c_dev_acc.scl_speed_hz = I2C_FREQ_HZ;
+    dev->i2c_dev_mag.scl_speed_hz = I2C_FREQ_HZ;
 #endif
 
     dev->acc_mode = LSM303_ACC_MODE_NORMAL;

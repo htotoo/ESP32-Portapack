@@ -191,17 +191,17 @@ static inline bool is_measuring(sht4x_t* dev) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-esp_err_t sht4x_init_desc(sht4x_t* dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio) {
+esp_err_t sht4x_init_desc(sht4x_t* dev, uint8_t addr, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio) {
     CHECK_ARG(dev);
 
     if (addr != 0x44 && addr != 0x45) return ESP_ERR_INVALID_ARG;
 
     dev->i2c_dev.port = port;
     dev->i2c_dev.addr = addr;
-    dev->i2c_dev.cfg.sda_io_num = sda_gpio;
-    dev->i2c_dev.cfg.scl_io_num = scl_gpio;
+    dev->i2c_dev.sda_io_num = sda_gpio;
+    dev->i2c_dev.scl_io_num = scl_gpio;
 #if HELPER_TARGET_IS_ESP32
-    dev->i2c_dev.cfg.master.clk_speed = I2C_FREQ_HZ;
+    dev->i2c_dev.scl_speed_hz = I2C_FREQ_HZ;
 #endif
 
     return i2c_dev_create_mutex(&dev->i2c_dev);

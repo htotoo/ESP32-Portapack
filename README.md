@@ -1,14 +1,11 @@
 # ESP32-Portapack (ESP32PP)
 An addon module for Portapack H4 / PortaRF to add GPS and extra sensors to it for more fun. (H2 too, but needs HW mod)
 
-> ⚠️ **This fork adds WiFi security-testing apps (EvilPortal, WiFi Analyzer, Probe Sniffer, handshake/PMKID capture).**
+> ⚠️ **This firmware has WiFi security-testing apps (EvilPortal, WiFi Analyzer, Probe Sniffer, handshake/PMKID capture).**
 > They are for **authorized penetration testing and security-awareness use only** — only on networks and devices you own or have **written permission** to test. Unauthorized use may be illegal, and operating a jammer is prohibited in NL/EU regardless of consent. See **[DISCLAIMER.md](DISCLAIMER.md)**. No warranty; use at your own risk.
 
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
 
-This fork adds a suite of on-system ESP apps, each available as a PortaPack icon
-under **Utilities**. They are driven over I2C from a matching standalone
-PortaPack app ([mayhem-mdk](https://github.com/Xmoo26/mayhem-mdk)).
 
 ## How to build one for yourself, or other questions? Check WIKI!
 If you got the MDK hardware, it has a different pinout, so check the corresponding wiki page for that! Also download the right binary!
@@ -44,7 +41,7 @@ For detailed info check Wiki
 ### Features not yet ready: 
 
 - **IR blaster**
-  - To add IR remote functions to PP. May be available only over I2C connection. Now only experimental RX.
+  - To add IR remote functions to PP. May be available only over I2C connection. Now only experimental.
 
 - **LoRa**
   - Meshtastic support. (functions not yet decided for it)
@@ -57,21 +54,21 @@ Suggest in Issues if you get any ideas.
 ### Screenshots:
 **ADS-B with location**
 
-![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords.png?raw=true)  ![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords_with_orientation.png?raw=true)
+![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords.png?raw=true)  ![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords_with_orientation.png?raw=true)
 
 **ExtSensor app**
 
-![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/ExtSensorTester.png?raw=true)
+![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ExtSensorTester.png?raw=true)
 
 
 **Fox hunt app**
 
-![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/foxhunt.png?raw=true)
+![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/foxhunt.png?raw=true)
 
 
 **SatTrack**
 
-![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/sattrack.png?raw=true)
+![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/sattrack.png?raw=true)
 
 **EvilPortal**
 
@@ -90,7 +87,7 @@ More screenshots in [`ScreenShots/evilportal/`](ScreenShots/evilportal) and [`Sc
 
 **Web app**
 
-![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/esp32pp_web.png?raw=true)
+![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/esp32pp_web.png?raw=true)
 
 
 

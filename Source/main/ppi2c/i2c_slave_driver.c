@@ -33,6 +33,7 @@
 #include "esp_attr.h"
 #include "esp_intr_types.h"
 #include "hal/i2c_hal.h"
+#include "hal/i2c_ll.h"
 #include "driver/gpio.h"
 #include "soc/io_mux_reg.h"
 #include "esp_private/gpio.h"
@@ -126,7 +127,7 @@ static IRAM_ATTR void s_i2c_handle_complete(i2c_slave_dev_private_t* i2c_slave) 
         // sending, check to see if there were bytes that didn't get sent.
         uint32_t tx_fifo_len;
         i2c_ll_get_txfifo_len(hal->dev, &tx_fifo_len);
-        tx_fifo_len = SOC_I2C_FIFO_LEN - tx_fifo_len;
+        tx_fifo_len = I2C_LL_FIFO_LEN - tx_fifo_len;
         if (tx_fifo_len > 0) {
             s->bufstart -= tx_fifo_len;
             // clear the fifo
@@ -281,8 +282,8 @@ esp_err_t i2c_slave_new(i2c_slave_config_t* config, i2c_slave_device_t** result)
     i2c_hal_slave_init(hal);
     i2c_ll_set_source_clk(hal->dev, 4);
     i2c_ll_set_slave_addr(hal->dev, config->address, false);
-    i2c_ll_set_txfifo_empty_thr(hal->dev, SOC_I2C_FIFO_LEN / 2);
-    i2c_ll_set_rxfifo_full_thr(hal->dev, SOC_I2C_FIFO_LEN / 2);
+    i2c_ll_set_txfifo_empty_thr(hal->dev, I2C_LL_FIFO_LEN / 2);
+    i2c_ll_set_rxfifo_full_thr(hal->dev, I2C_LL_FIFO_LEN / 2);
     i2c_ll_set_sda_timing(hal->dev, 10, 10);
     i2c_ll_set_tout(hal->dev, 32000);
 

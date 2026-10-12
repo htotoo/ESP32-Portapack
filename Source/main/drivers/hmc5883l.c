@@ -89,15 +89,15 @@ static const float gain_values[] = {
             return ESP_ERR_INVALID_ARG; \
     } while (0)
 
-esp_err_t hmc5883l_init_desc(hmc5883l_dev_t* dev, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio, uint8_t addr) {
+esp_err_t hmc5883l_init_desc(hmc5883l_dev_t* dev, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio, uint8_t addr) {
     CHECK_ARG(dev);
     if (addr == 0) return ESP_ERR_INVALID_ARG;
     dev->i2c_dev.port = port;
     dev->i2c_dev.addr = addr;
-    dev->i2c_dev.cfg.sda_io_num = sda_gpio;
-    dev->i2c_dev.cfg.scl_io_num = scl_gpio;
+    dev->i2c_dev.sda_io_num = sda_gpio;
+    dev->i2c_dev.scl_io_num = scl_gpio;
 #if HELPER_TARGET_IS_ESP32
-    dev->i2c_dev.cfg.master.clk_speed = I2C_FREQ_HZ;
+    dev->i2c_dev.scl_speed_hz = I2C_FREQ_HZ;
 #endif
     return i2c_dev_create_mutex(&dev->i2c_dev);
 }

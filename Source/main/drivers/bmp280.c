@@ -162,7 +162,7 @@ static esp_err_t read_hum_calibration_data(bmp280_t *dev)
     return ESP_OK;
 }
 
-esp_err_t bmp280_init_desc(bmp280_t *dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
+esp_err_t bmp280_init_desc(bmp280_t *dev, uint8_t addr, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio)
 {
     CHECK_ARG(dev);
 
@@ -173,10 +173,10 @@ esp_err_t bmp280_init_desc(bmp280_t *dev, uint8_t addr, i2c_port_t port, gpio_nu
 
     dev->i2c_dev.port = port;
     dev->i2c_dev.addr = addr;
-    dev->i2c_dev.cfg.sda_io_num = sda_gpio;
-    dev->i2c_dev.cfg.scl_io_num = scl_gpio;
+    dev->i2c_dev.sda_io_num = sda_gpio;
+    dev->i2c_dev.scl_io_num = scl_gpio;
 #if HELPER_TARGET_IS_ESP32
-    dev->i2c_dev.cfg.master.clk_speed = I2C_FREQ_HZ;
+    dev->i2c_dev.scl_speed_hz = I2C_FREQ_HZ;
 #endif
 
     return i2c_dev_create_mutex(&dev->i2c_dev);

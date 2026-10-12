@@ -86,5 +86,11 @@
   "idf.espIdfPathWin": "C:\\Users\\ttoto\\esp\\v5.4.1\\esp-idf",
   "idf.toolsPathWin": "C:\\Users\\gyorg\\.espressif",
   "idf.pythonInstallPath": "C:\\Users\\gyorg\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
-  "idf.currentSetup": "C:\\Users\\ttoto\\esp\\v5.4.1\\esp-idf"
+  "idf.currentSetup": "C:\\esp\\v6.1\\esp-idf",
+  "clangd.path": "C:\\Espressif\\tools\\esp-clangd\\esp-21.1.3_20260408\\esp-clangd\\bin\\clangd.exe",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=**",
+    "--compile-commands-dir=d:\\work\\ESP32-Portapack\\Source\\build"
+  ]
 }

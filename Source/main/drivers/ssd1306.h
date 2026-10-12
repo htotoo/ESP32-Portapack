@@ -667,7 +667,7 @@ esp_err_t ssd1306_remove(ssd1306_handle_t handle);
  */
 esp_err_t ssd1306_delete(ssd1306_handle_t handle);
 
-esp_err_t ssd1306_init_desc(i2c_dev_t* dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
+esp_err_t ssd1306_init_desc(i2c_dev_t* dev, uint8_t addr, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
 
 #ifdef __cplusplus
 }

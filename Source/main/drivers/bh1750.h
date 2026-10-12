@@ -87,7 +87,7 @@ extern "C"
      * @param[in] scl_gpio GPIO pin number for SCL
      * @return `ESP_OK` on success
      */
-    esp_err_t bh1750_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
+    esp_err_t bh1750_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_num_t port, gpio_num_t sda_gpio, gpio_num_t scl_gpio);
 
     /**
      * @brief Free device descriptor
