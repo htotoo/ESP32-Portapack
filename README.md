@@ -65,7 +65,7 @@ the `README.md` in each folder for the file formats.
 
 #### EvilPortal
 
-![EvilPortal clients](ScreenShots/evilportal/EVL_0005.PNG) ![Captive page on a phone](ScreenShots/evilportal/EVL_0008.jpeg)
+![EvilPortal clients](ScreenShots/evilportal/EVL_0005.PNG) ![EvilPortal interface](ScreenShots/evilportal/EVL_0004.jpeg)
 
 #### WiFi Analyzer
 
