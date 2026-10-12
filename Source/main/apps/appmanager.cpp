@@ -1,10 +1,20 @@
 #include "appmanager.hpp"
 
 #include "ep_app_wifispam.hpp"
+#include "ep_app_evilportal.hpp"
+#include "ep_app_wifianalyzer.hpp"
+#include "ep_app_probesniffer.hpp"
+#include "ep_app_pmkid.hpp"
+#include "ep_app_deauth.hpp"
+#include "ep_app_blescan.hpp"
+#include "ep_app_blespam.hpp"
+#include "ep_app_drone.hpp"
 
 void SetDisplayDirtyMain();
 EPApp* AppManager::currentApp = nullptr;
 uint16_t AppManager::currentAppId = 0;
+volatile bool AppManager::pendingChange = false;
+volatile uint16_t AppManager::pendingAppId = 0;
 
 void AppManager::startApp(AppList app) {
     stopApp();
@@ -17,6 +27,35 @@ void AppManager::startApp(AppList app) {
             currentAppId = (uint16_t)app;
             break;
         case AppList::WIFIPROBESNIFFER:
+            currentApp = new EPAppProbeSniffer();
+            currentAppId = (uint16_t)app;
+            break;
+        case AppList::EVILPORTAL:
+            currentApp = new EPAppEvilPortal();
+            currentAppId = (uint16_t)app;
+            break;
+        case AppList::WIFIANALYZER:
+            currentApp = new EPAppWifiAnalyzer();
+            currentAppId = (uint16_t)app;
+            break;
+        case AppList::PMKIDCAPTURE:
+            currentApp = new EPAppPmkid();
+            currentAppId = (uint16_t)app;
+            break;
+        case AppList::DEAUTH:
+            currentApp = new EPAppDeauth();
+            currentAppId = (uint16_t)app;
+            break;
+        case AppList::BLESCAN:
+            currentApp = new EPAppBleScan();
+            currentAppId = (uint16_t)app;
+            break;
+        case AppList::BLESPAM:
+            currentApp = new EPAppBleSpam();
+            currentAppId = (uint16_t)app;
+            break;
+        case AppList::DRONE:
+            currentApp = new EPAppDrone();
             currentAppId = (uint16_t)app;
             break;
         case AppList::NONE:
@@ -28,18 +67,22 @@ void AppManager::startApp(AppList app) {
 }
 
 void AppManager::loop(uint32_t currentMillis) {
+    // Execute any queued start/stop in task context (safe for new/delete and
+    // the app's httpd/socket teardown).
+    if (pendingChange) {
+        pendingChange = false;
+        startApp((AppList)pendingAppId);
+    }
     if (currentApp) {
         currentApp->Loop(currentMillis);
     }
 }
 
-// IRQ CALLBACK!!!!!
+// IRQ CALLBACK!!!!! Only queue the request; loop() performs it.
 bool AppManager::handlePPAppmgrCommands(std::vector<uint8_t>& data) {
-    // ESP_DRAM_LOGW("Appmgr", "appmgrcmd");
     if (data.size() < 2) return false;
-    uint16_t appcmd = *(uint16_t*)data.data();
-    startApp((AppList)appcmd);
-    // ESP_DRAM_LOGW("Appmgr", "appmgrcmd: %u", appcmd);
+    pendingAppId = *(uint16_t*)data.data();
+    pendingChange = true;
     return true;
 }
 
@@ -89,11 +132,13 @@ bool AppManager::handleWebData(const char* data, size_t len) {
             uint16_t appid = (uint16_t)(((data[7] - '0') * 10) + (data[8] - '0'));
             ESP_LOGI("AppManager", "MATCHED APPMGR_PRE_STR. appid: %d", appid);
             if (appid == 0) {
-                stopApp();  // stop app
+                pendingAppId = 0;  // stop app (deferred to loop/main task)
+                pendingChange = true;
                 return true;
             } else if (appid < (uint16_t)AppList::MAX) {
-                startApp((AppList)appid);
-                return true;  // start app
+                pendingAppId = appid;  // start app (deferred to loop/main task)
+                pendingChange = true;
+                return true;
             } else {
                 if (appid == 99) {
                     // requesting for the currently running app's id

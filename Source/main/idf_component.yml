@@ -4,6 +4,6 @@ dependencies:
   espressif/mdns: 1.*
   espressif/led_strip: 2.*
   EspMeshCompact:
-    git: https://github.com/htotoo/EspMeshCompact
+    git: https://codeberg.org/htotoo/EspMeshCompact
     path: EspMeshCompact
   johboh/nlohmann-json: ^3.12.0

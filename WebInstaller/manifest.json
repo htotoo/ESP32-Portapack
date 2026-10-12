@@ -1,6 +1,6 @@
 {
   "name": "ESP32PP",
-  "version": "0.33",
+  "version": "1.00-drone",
   "home_assistant_domain": "slim_player",
   "builds": [
     {

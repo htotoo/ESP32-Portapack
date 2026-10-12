@@ -17,6 +17,86 @@ esp_netif_t* WifiM::esp_netif_sta = nullptr;
 uint32_t WifiM::last_wifi_conntry = 0;
 bool WifiM::wifi_sta_ok = false;
 
+char WifiM::portalAPSSID[64] = "Free WiFi";
+char WifiM::portalAPPASS[64] = {0};
+char WifiM::savedAPSSID[64] = {0};
+char WifiM::savedAPPASS[64] = {0};
+volatile bool WifiM::portalApDesired = false;
+volatile bool WifiM::portalApActive = false;
+volatile bool WifiM::portalApReapply = false;
+
+void WifiM::set_portal_ap(const char* ssid, const char* pass) {
+    strncpy(portalAPSSID, ssid, sizeof(portalAPSSID) - 1);
+    portalAPSSID[sizeof(portalAPSSID) - 1] = 0;
+    strncpy(portalAPPASS, pass, sizeof(portalAPPASS) - 1);
+    portalAPPASS[sizeof(portalAPPASS) - 1] = 0;
+    portalApReapply = true;  // re-apply live if the portal is already running
+}
+
+void WifiM::get_portal_ap(char* ssid_out, char* pass_out) {
+    memcpy(ssid_out, portalAPSSID, 30);
+    memcpy(pass_out, portalAPPASS, 30);
+}
+
+void WifiM::request_portal_ap(bool on) {
+    portalApDesired = on;
+}
+
+bool WifiM::is_portal_ap_active() {
+    return portalApActive;
+}
+
+// Bring up the dedicated portal AP (AP-only, so the STA radio never scans and
+// disrupts client DHCP) and make DHCP hand out the AP itself as the DNS server
+// (so the captive DNS hijack is actually used). On revert, restore the normal
+// APSTA management config. The persistent NVS management AP is never touched.
+void WifiM::apply_portal_ap(bool on) {
+    if (on) {
+        // Use the firmware's OWN proven AP bring-up (config_wifi_apsta, the same
+        // path that brings the AP up at boot) instead of a custom AP-only setup.
+        // Temporarily point the live AP creds at the portal network; the
+        // persistent NVS management config is left untouched (no save).
+        strncpy(savedAPSSID, wifiAPSSID, sizeof(savedAPSSID) - 1);
+        savedAPSSID[sizeof(savedAPSSID) - 1] = 0;
+        strncpy(savedAPPASS, wifiAPPASS, sizeof(savedAPPASS) - 1);
+        savedAPPASS[sizeof(savedAPPASS) - 1] = 0;
+        strncpy(wifiAPSSID, portalAPSSID, sizeof(wifiAPSSID) - 1);
+        wifiAPSSID[sizeof(wifiAPSSID) - 1] = 0;
+        strncpy(wifiAPPASS, portalAPPASS, sizeof(wifiAPPASS) - 1);
+        wifiAPPASS[sizeof(wifiAPPASS) - 1] = 0;
+        esp_wifi_set_mode(WIFI_MODE_APSTA);
+        config_wifi_apsta();
+        ESP_LOGI(TAG, "Portal AP up (APSTA via firmware path): %s", wifiAPSSID);
+    } else {
+        strncpy(wifiAPSSID, savedAPSSID, sizeof(wifiAPSSID) - 1);
+        wifiAPSSID[sizeof(wifiAPSSID) - 1] = 0;
+        strncpy(wifiAPPASS, savedAPPASS, sizeof(wifiAPPASS) - 1);
+        wifiAPPASS[sizeof(wifiAPPASS) - 1] = 0;
+        esp_wifi_set_mode(WIFI_MODE_APSTA);
+        config_wifi_apsta();  // restore management AP (+ STA)
+        ESP_LOGI(TAG, "Management AP restored (APSTA): %s", wifiAPSSID);
+    }
+}
+
+// Runs from the main loop (task context) so all esp_wifi work stays out of ISRs.
+void WifiM::reconcile_portal_ap() {
+    if (portalApDesired) {
+        if (!portalApActive) {
+            apply_portal_ap(true);
+            portalApActive = true;
+            portalApReapply = false;
+        } else if (portalApReapply) {
+            apply_portal_ap(true);
+            portalApReapply = false;
+        }
+    } else {
+        if (portalApActive) {
+            apply_portal_ap(false);
+            portalApActive = false;
+        }
+    }
+}
+
 bool WifiM::getWifiStaStatus() {
     return wifi_sta_ok;
 }
@@ -132,6 +212,9 @@ bool WifiM::config_wifi_apsta() {
 void WifiM::wifi_loop(uint32_t millis) {
     if (mode == 2) {
         return;
+    }
+    if (portalApActive) {
+        return;  // portal is AP-only; don't let the STA connect/scan disrupt it
     }
     if (ap_client_num > 0 || wifi_sta_ok)
         return;

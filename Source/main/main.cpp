@@ -43,7 +43,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "wifihack.hpp"
+#include "wifihack.hpp"  // not the DHCP cause (pristine has it and works).
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -90,6 +90,14 @@ uint8_t shutdown_countdown = 0;  // when it is 1, init a shutdown. if >1 decreas
 #include "../extapps/tirapp.h"
 #include "../extapps/espmanager.h"
 #include "../extapps/espapps.h"
+#include "../extapps/evilportal.h"
+#include "../extapps/wifianalyzer.h"
+#include "../extapps/probesniffer.h"
+#include "../extapps/pmkid.h"
+#include "../extapps/deauth.h"
+#include "../extapps/blescan.h"
+#include "../extapps/blespam.h"
+#include "../extapps/drone.h"
 
 #include "display/displaymanager.hpp"
 
@@ -588,6 +596,14 @@ void app_main(void) {
     PPHandler::add_app((uint8_t*)espapps, sizeof(espapps));
     if (pinConfig.hasIRrx() || pinConfig.hasIRrx()) PPHandler::add_app((uint8_t*)tirapp, sizeof(tirapp));  // only add this app, if the user has ir tx or rx
     PPHandler::add_app((uint8_t*)espmanager, sizeof(espmanager));
+    PPHandler::add_app((uint8_t*)evilportal, sizeof(evilportal));      // app #6 - WIFI Evil Portal (Utilities)
+    PPHandler::add_app((uint8_t*)wifianalyzer, sizeof(wifianalyzer));  // app #7 - WiFi Analyzer (Utilities)
+    PPHandler::add_app((uint8_t*)probesniffer, sizeof(probesniffer));  // app #8 - Probe Sniffer (Utilities)
+    PPHandler::add_app((uint8_t*)pmkid, sizeof(pmkid));  // app #9 - PMKID Capture (Utilities)
+    PPHandler::add_app((uint8_t*)deauth, sizeof(deauth));  // app #10 - Deauth (Utilities)
+    PPHandler::add_app((uint8_t*)blescan, sizeof(blescan));  // app #11 - BLE Scanner (Utilities)
+    PPHandler::add_app((uint8_t*)blespam, sizeof(blespam));  // app #12 - BLE Spam (Utilities)
+    PPHandler::add_app((uint8_t*)drone, sizeof(drone));  // app #13 - Drone Detector (Utilities)
     PPHandler::set_get_features_CB([](uint64_t& feat) {
                                         i2c_pp_last_comm_time = time_millis;
                                     update_features();
@@ -670,6 +686,24 @@ void app_main(void) {
                                         WifiM::wifiAPSSID[30] = 0;
                                         WifiM::wifiAPPASS[30] = 0;
                                         wifi_config_changed= true; }, nullptr);
+
+    PPHandler::add_custom_command(PPCMD_EVILPORTAL_SET_AP, [](pp_command_data_t data) {
+                                        if (data.data->size() != sizeof(wifi_config_comp_t)) {
+                                            ESP_DRAM_LOGW(TAG, "epap: wrong size");
+                                            return;
+                                        }
+                                        wifi_config_comp_t tmp;
+                                        memcpy(&tmp, data.data->data(), sizeof(wifi_config_comp_t));
+                                        tmp.ssid[sizeof(tmp.ssid) - 1] = 0;
+                                        tmp.password[sizeof(tmp.password) - 1] = 0;
+                                        WifiM::set_portal_ap(tmp.ssid, tmp.password); }, nullptr);
+
+    PPHandler::add_custom_command(PPCMD_EVILPORTAL_GET_AP, nullptr, [](pp_command_data_t data) {
+        data.data->resize(sizeof(wifi_config_comp_t));
+        wifi_config_comp_t tmp;
+        memset(&tmp, 0, sizeof(tmp));
+        WifiM::get_portal_ap(tmp.ssid, tmp.password);
+        memcpy((*data.data).data(), &tmp, sizeof(wifi_config_comp_t)); });
 
     PPHandler::add_custom_command(PPCMD_WIFI_GET_CONFIG, nullptr, [](pp_command_data_t data) {
         data.data->resize(sizeof(wifi_current_data_t));
@@ -889,6 +923,7 @@ void app_main(void) {
         }
         // try wifi client connect
         WifiM::wifi_loop(time_millis);
+        WifiM::reconcile_portal_ap();  // apply/revert the dedicated Evil Portal AP
         AppManager::loop(time_millis);
         displayManager.loop(time_millis);
         lora_loop(time_millis);

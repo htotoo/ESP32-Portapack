@@ -20,8 +20,17 @@ idf_component_register(SRCS "pinconfig.cpp" "tir.cpp" "ppshellcomm.cpp" "wifim.c
 "display/display_ws.cpp"
 "apps/appmanager.cpp"
 "apps/ep_app_wifispam.cpp"
-INCLUDE_DIRS "." "./sgp4" 
+"apps/ep_app_evilportal.cpp"
+"apps/ep_app_wifianalyzer.cpp"
+"apps/ep_app_probesniffer.cpp"
+"apps/ep_app_pmkid.cpp"
+"apps/ep_app_deauth.cpp"
+"apps/ep_app_blescan.cpp"
+"apps/ep_app_blespam.cpp"
+"apps/ep_app_drone.cpp"
+"apps/ble_common.cpp"
+INCLUDE_DIRS "." "./sgp4"
 EMBED_FILES ../data/index.html ../data/ota.html ../data/setup.html ../data/setup.css ../data/mtsetup.html
-REQUIRES esp_wifi esp_driver_i2c driver esp_driver_gpio app_update esp_driver_spi esp_driver_tsens esp_driver_uart esp_timer nvs_flash spi_flash spiffs esp_netif esp_http_server esp_http_client
+REQUIRES esp_wifi esp_driver_i2c driver esp_driver_gpio app_update esp_driver_spi esp_driver_tsens esp_driver_uart esp_timer nvs_flash spi_flash spiffs esp_netif esp_http_server esp_http_client lwip bt
 )
 
