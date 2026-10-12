@@ -11,6 +11,13 @@ enum class AppList {
     WIFISPAM,
     WIFILIST,
     WIFIPROBESNIFFER,
+    EVILPORTAL,
+    WIFIANALYZER,
+    PMKIDCAPTURE,
+    DEAUTH,
+    BLESCAN,
+    BLESPAM,
+    DRONE,
     MAX
 };
 
@@ -43,6 +50,12 @@ class AppManager {
    private:
     static EPApp* currentApp;
     static uint16_t currentAppId;
+
+    // App start/stop requests arrive from IRQ (I2C) and the httpd task. Doing
+    // new/delete (and the heavy app teardown) there is unsafe, so requests are
+    // queued here and executed from loop() in the main task context.
+    static volatile bool pendingChange;
+    static volatile uint16_t pendingAppId;
 };
 
 #endif  // APPMANAGER_HPP

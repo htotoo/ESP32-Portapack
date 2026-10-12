@@ -64,6 +64,14 @@ class WifiM {
     static std::string getApIp();
     static void copyIpToArray(uint8_t* arr);
 
+    // Evil Portal dedicated AP: applied at runtime only while the portal app
+    // runs, then reverted. The persistent management AP config is untouched.
+    static void set_portal_ap(const char* ssid, const char* pass);       // store portal creds (ISR-safe)
+    static void get_portal_ap(char* ssid_out, char* pass_out);           // read portal creds back
+    static void request_portal_ap(bool on);                              // desired on/off (ISR-safe flag)
+    static void reconcile_portal_ap();                                   // apply/revert; call from main loop (task ctx)
+    static bool is_portal_ap_active();
+
     static char wifiAPSSID[64];
     static char wifiAPPASS[64];
     static char wifiStaSSID[64];
@@ -80,6 +88,16 @@ class WifiM {
     static uint8_t mode;  // 1 off, 2 on //airplane mode
     static esp_netif_t* esp_netif_ap;
     static esp_netif_t* esp_netif_sta;
+
+    // Evil Portal dedicated-AP state
+    static char portalAPSSID[64];
+    static char portalAPPASS[64];
+    static char savedAPSSID[64];
+    static char savedAPPASS[64];
+    static volatile bool portalApDesired;
+    static volatile bool portalApActive;
+    static volatile bool portalApReapply;
+    static void apply_portal_ap(bool on);  // bring up AP-only portal / revert to APSTA mgmt
 };
 
 #endif

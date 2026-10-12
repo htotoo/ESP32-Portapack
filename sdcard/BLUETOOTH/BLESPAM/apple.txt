@@ -1,0 +1,14 @@
+# Apple proximity-pairing popups (iOS "connect" cards)
+# Format: one raw BLE advertisement per line, as hex (max 31 bytes = 62 hex).
+# Bytes 8-9 are the device model; the trailing bytes can be anything.
+# Layout: 1e ff 4c00 07 19 07 <model_hi model_lo> 55 <21 filler bytes>
+# AirPods
+1eff4c00071907022055aabbccddeeff00112233445566778899aabbccddee
+# AirPods Pro
+1eff4c000719070e2055112233445566778899aabbccddeeff001122334455
+# AirPods Max
+1eff4c000719070a2055ffeeddccbbaa998877665544332211aabbccddeeff
+# AirPods (3rd gen)
+1eff4c00071907132055a1b2c3d4e5f6071829304a5b6c7d8e9fa0b1c2d3e4
+# Beats Studio Buds
+1eff4c00071907112055dead00beef11223344556677889900aabbccddeeff

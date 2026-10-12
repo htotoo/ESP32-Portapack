@@ -1,6 +1,9 @@
 # ESP32-Portapack (ESP32PP)
 An addon module for Portapack H4 / PortaRF to add GPS and extra sensors to it for more fun. (H2 too, but needs HW mod)
 
+> ⚠️ **This fork adds WiFi security-testing apps (EvilPortal, WiFi Analyzer, Probe Sniffer, handshake/PMKID capture).**
+> They are for **authorized penetration testing and security-awareness use only** — only on networks and devices you own or have **written permission** to test. Unauthorized use may be illegal, and operating a jammer is prohibited in NL/EU regardless of consent. See **[DISCLAIMER.md](DISCLAIMER.md)**. No warranty; use at your own risk.
+
 **This module is in early development. Suggest features via Issues, even for this module, even for the PortaPack (HackRf) part.**
 
 ## How to build one for yourself, or other questions? Check WIKI!
@@ -35,26 +38,26 @@ Suggest in Issues if you get any ideas.
 ### Screenshots:
 **ADS-B with location**
 
-![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords.png?raw=true)  ![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords_with_orientation.png?raw=true)
+![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords.png?raw=true)  ![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/ADSB_mycoords_with_orientation.png?raw=true)
 
 **ExtSensor app**
 
-![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/ExtSensorTester.png?raw=true)
+![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/ExtSensorTester.png?raw=true)
 
 
 **Fox hunt app**
 
-![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/foxhunt.png?raw=true)
+![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/foxhunt.png?raw=true)
 
 
 **SatTrack**
 
-![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/sattrack.png?raw=true)
+![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/sattrack.png?raw=true)
 
 
 **Web app**
 
-![](https://github.com/htotoo/ESP32-Portapack/blob/main/ScreenShots/esp32pp_web.png?raw=true)
+![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/esp32pp_web.png?raw=true)
 
 
 
@@ -64,5 +67,4 @@ You can get more info in the [Wiki page](https://github.com/htotoo/ESP32-Portapa
 
 ### Support
 - Links are affiliate links! If you don't want to use them, feel free to just search for the modules yourself. Using the affiliate links gives me some credits, so I can buy and integrate more modules to this (or other) projects.
-- If you want, you can buy me a coffee (fuel of programmers): https://www.buymeacoffee.com/htotoo
 - This FW will be always open source and free to use all functions!

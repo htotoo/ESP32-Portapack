@@ -1,0 +1,8 @@
+# Windows "Swift Pair" popups. One advertisement per line, hex.
+# Layout: <len> ff 0600 03 00 80 <device-name ascii as hex>
+# len = 6 + name_length. Name here = "MyDevice" (4d79446576696365)
+0eff06000300804d79446576696365
+# Name = "Free-AirPods" (46 7265652d416972506f6473)
+12ff060003008046 7265652d416972506f6473
+# Name = "Printer" (5072696e746572)
+0dff0600030080 5072696e746572
