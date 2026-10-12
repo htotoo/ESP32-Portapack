@@ -63,20 +63,6 @@ the `README.md` in each folder for the file formats.
 > Note: the ESP32-S3 has a **2.4 GHz-only** radio, so the WiFi tools do not see
 > 5 GHz networks.
 
-#### EvilPortal
-
-![EvilPortal clients](ScreenShots/evilportal/EVL_0005.PNG) ![EvilPortal interface](ScreenShots/evilportal/EVL_0004.jpeg)
-
-#### WiFi Analyzer
-
-![Network list](ScreenShots/wifi-analyzer/WIFI_0002.PNG) ![AP detail + Send to Jammer](ScreenShots/wifi-analyzer/WIFI_0004.PNG)
-
-The selected range loaded straight into the PortaPack jammer via **Send to Jammer**:
-
-![Jammer TX with the loaded range](ScreenShots/wifi-analyzer/WIFI_0006.PNG)
-
-More screenshots in [`ScreenShots/evilportal/`](ScreenShots/evilportal) and [`ScreenShots/wifi-analyzer/`](ScreenShots/wifi-analyzer).
-
 ### Screenshots:
 **ADS-B with location**
 
@@ -95,6 +81,20 @@ More screenshots in [`ScreenShots/evilportal/`](ScreenShots/evilportal) and [`Sc
 **SatTrack**
 
 ![](https://github.com/Xmoo26/ESP32-Portapack/blob/main/ScreenShots/sattrack.png?raw=true)
+
+**EvilPortal**
+
+![EvilPortal clients](ScreenShots/evilportal/EVL_0005.PNG) ![EvilPortal interface](ScreenShots/evilportal/EVL_0004.PNG)
+
+**WiFi Analyzer**
+
+![Network list](ScreenShots/wifi-analyzer/WIFI_0002.PNG) ![AP detail + Send to Jammer](ScreenShots/wifi-analyzer/WIFI_0004.PNG)
+
+The selected range loaded straight into the PortaPack jammer via **Send to Jammer**:
+
+![Jammer TX with the loaded range](ScreenShots/wifi-analyzer/WIFI_0006.PNG)
+
+More screenshots in [`ScreenShots/evilportal/`](ScreenShots/evilportal) and [`ScreenShots/wifi-analyzer/`](ScreenShots/wifi-analyzer).
 
 
 **Web app**
