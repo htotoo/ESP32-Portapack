@@ -154,10 +154,7 @@ static inline esp_err_t ssd1306_i2c_write(ssd1306_handle_t handle, const uint8_t
     ESP_ARG_CHECK(handle);
 
     /* attempt i2c write transaction */
-    i2c_dev_write(&handle->i2c_handle, 0, 0, buffer, size);
-    // ESP_RETURN_ON_ERROR(i2c_master_transmit(handle->i2c_handle, buffer, size, I2C_XFR_TIMEOUT_MS), TAG, "i2c_master_transmit, i2c write failed");
-
-    return ESP_OK;
+    return i2c_dev_write(&handle->i2c_handle, NULL, 0, buffer, size);
 }
 
 esp_err_t ssd1306_load_bitmap_font(const uint8_t* font, int encoding, uint8_t* bitmap, ssd1306_bdf_font_t* const bdf_font) {
@@ -1485,8 +1482,6 @@ esp_err_t ssd1306_init_desc(i2c_dev_t* dev, uint8_t addr, i2c_port_num_t port, g
     dev->addr = addr;
     dev->sda_io_num = sda_gpio;
     dev->scl_io_num = scl_gpio;
-#if HELPER_TARGET_IS_ESP32
     dev->scl_speed_hz = I2C_SSD1306_DEV_CLK_SPD;
-#endif
     return i2c_dev_create_mutex(dev);
 }
